@@ -1,4 +1,10 @@
 'use client'
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Login | Geev',
+  description: 'Connect your wallet to get started',
+};
 
 import { useAuth } from '@/hooks/use-auth'
 import { LoginForm } from '@/components/login-form'
@@ -62,5 +68,5 @@ export default function LoginPage() {
         </div>
       </main>
     </div>
-  )
+  ) 
 }
