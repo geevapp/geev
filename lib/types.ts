@@ -193,6 +193,12 @@ export interface AppContextType extends AppState {
    */
   setCurrentUser: (user: User | null) => void;
 
+  // ============ Hydration State ============
+  /**
+   * Whether the state has been hydrated from localStorage (for SSR)
+   */
+  isHydrated: boolean;
+
   // ============ Post Actions ============
   /**
    * Creates a new post and adds it to the global state

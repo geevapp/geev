@@ -28,8 +28,9 @@ import type {
   Reply,
   User,
 } from '@/lib/types';
-import { createContext, useContext, useEffect, useReducer, useCallback } from 'react';
+import { createContext, useContext, useEffect, useReducer, useCallback, useState } from 'react';
 import { mockPosts, mockUsers } from '@/lib/mock-data';
+import { getCurrentUser, login as mockAuthLogin, logout as mockAuthLogout, AUTH_STORAGE_KEY } from '@/lib/mock-auth';
 
 import type React from 'react';
 
@@ -411,8 +412,9 @@ function deserializeState(stored: string): Partial<AppState> | null {
  */
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Load state from localStorage on mount
+  // Load state from localStorage and mock data on mount
   useEffect(() => {
     try {
       const savedState = localStorage.getItem(STORAGE_KEY);
@@ -429,6 +431,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Load mock data
     dispatch({ type: 'SET_USERS', payload: mockUsers });
     dispatch({ type: 'SET_POSTS', payload: mockPosts });
+  }, []);
+
+  // Restore user session from localStorage on mount (mock auth persistence)
+  useEffect(() => {
+    const storedUser = getCurrentUser();
+    if (storedUser) {
+      dispatch({ type: 'SET_USER', payload: storedUser });
+    }
+    setIsHydrated(true);
   }, []);
 
   // Load saved theme on mount
@@ -513,23 +524,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // ============ User Actions ============
     login: (user: User) => {
+      // Use mock auth to persist login
+      mockAuthLogin(user.id);
       dispatch({ type: 'SET_USER', payload: user });
-      localStorage.setItem('user', JSON.stringify(user));
     },
 
     logout: () => {
+      // Use mock auth to clear persistence
+      mockAuthLogout();
       dispatch({ type: 'SET_USER', payload: null });
-      localStorage.removeItem('user');
     },
 
     setCurrentUser: (user: User | null) => {
       dispatch({ type: 'SET_USER', payload: user });
       if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
+        mockAuthLogin(user.id);
       } else {
-        localStorage.removeItem('user');
+        mockAuthLogout();
       }
     },
+
+    // Hydration state for SSR
+    isHydrated,
 
     // ============ Post Actions ============
     createPost: (postData) => {
