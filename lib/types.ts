@@ -154,6 +154,8 @@ export interface AppContextType extends AppState {
   // Auth actions
   login: (user: User) => void
   logout: () => void
+  // Hydration state (for SSR)
+  isHydrated: boolean
   // Post actions
   createPost: (post: Omit<Post, "id" | "createdAt" | "updatedAt" | "author" | "entriesCount" | "shareCount" | "burnCount" | "commentCount" | "likesCount">) => void
   updatePost: (postId: string, updates: Partial<Post>) => void

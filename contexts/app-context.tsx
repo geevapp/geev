@@ -10,8 +10,9 @@ import type {
   Reply,
   User,
 } from '@/lib/types';
-import { createContext, useContext, useEffect, useReducer } from 'react';
+import { createContext, useContext, useEffect, useReducer, useState } from 'react';
 import { mockPosts, mockUsers } from '@/lib/mock-data';
+import { getCurrentUser, login as mockAuthLogin, logout as mockAuthLogout, AUTH_STORAGE_KEY } from '@/lib/mock-auth';
 
 import type React from 'react';
 
@@ -160,10 +161,21 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const [isHydrated, setIsHydrated] = useState(false);
 
+  // Load mock data on mount
   useEffect(() => {
     dispatch({ type: 'SET_USERS', payload: mockUsers });
     dispatch({ type: 'SET_POSTS', payload: mockPosts });
+  }, []);
+
+  // Restore user session from localStorage on mount (mock auth persistence)
+  useEffect(() => {
+    const storedUser = getCurrentUser();
+    if (storedUser) {
+      dispatch({ type: 'SET_USER', payload: storedUser });
+    }
+    setIsHydrated(true);
   }, []);
 
   useEffect(() => {
@@ -181,13 +193,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const contextValue: AppContextType = {
     ...state,
     login: (user: User) => {
+      // Use mock auth to persist login
+      mockAuthLogin(user.id);
       dispatch({ type: 'SET_USER', payload: user });
-      localStorage.setItem('user', JSON.stringify(user));
     },
     logout: () => {
+      // Use mock auth to clear persistence
+      mockAuthLogout();
       dispatch({ type: 'SET_USER', payload: null });
-      localStorage.removeItem('user');
     },
+    isHydrated,
     createPost: (postData) => {
       const newPost: Post = {
         ...postData,
