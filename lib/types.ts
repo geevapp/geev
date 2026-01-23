@@ -536,8 +536,14 @@ export interface AppState {
   comments: Comment[];
   /** All replies in the application */
   replies: Reply[];
+  /** Set of IDs for liked items */
+  likes: Set<string>;
+  /** Set of IDs for burned items */
+  burns: Set<string>;
   /** Whether the app is loading */
   isLoading: boolean;
+  /** Current error message or null */
+  error: string | null;
   /** Current theme */
   theme: 'light' | 'dark';
   /** Create modal visibility */
@@ -553,31 +559,61 @@ export interface AppState {
  * Defines the full context API for the application.
  */
 export interface AppContextType extends AppState {
-  // Auth actions
+  // ============ User/Auth Actions ============
   /** Log in a user */
   login: (user: User) => void;
   /** Log out the current user */
   logout: () => void;
-  // Post actions
+  /** Set the current user directly */
+  setCurrentUser: (user: User | null) => void;
+
+  // ============ Hydration State ============
+  /** Whether the state has been hydrated from localStorage (for SSR) */
+  isHydrated: boolean;
+
+  // ============ Post Actions ============
   /** Create a new post */
   createPost: (post: Omit<Post, 'id' | 'createdAt' | 'updatedAt' | 'author' | 'entriesCount' | 'shareCount' | 'burnCount' | 'commentCount' | 'likesCount'>) => void;
+  /** Add a post directly to state */
+  addPost: (post: Post) => void;
   /** Update an existing post */
   updatePost: (postId: string, updates: Partial<Post>) => void;
   /** Delete a post */
   deletePost: (postId: string) => void;
   /** Burn a post */
   burnPost: (postId: string) => void;
-  // Entry actions
+
+  // ============ Entry Actions ============
   /** Submit an entry to a post */
   submitEntry: (entry: Omit<Entry, 'id' | 'submittedAt' | 'user'>) => void;
-  // Contribution actions
+  /** Add an entry directly to state */
+  addEntry: (entry: Entry) => void;
+  /** Update an existing entry */
+  updateEntry: (id: string, updates: Partial<Entry>) => void;
+
+  // ============ Contribution Actions ============
   /** Make a contribution to a help request */
   makeContribution: (contribution: Omit<HelpContribution, 'id' | 'contributedAt' | 'user'>) => void;
+
+  // ============ Reply Actions ============
   /** Add a reply to an entry or contribution */
   addReply: (reply: Omit<Reply, 'id' | 'createdAt' | 'user' | 'burnCount'>) => void;
   /** Burn a reply */
   burnReply: (replyId: string) => void;
-  // Theme actions
+
+  // ============ Interaction Actions ============
+  /** Toggle like status for an item */
+  toggleLike: (id: string) => void;
+  /** Toggle burn status for an item */
+  toggleBurn: (id: string) => void;
+  /** Increment share count for a post */
+  incrementShare: (postId: string) => void;
+
+  // ============ Utility Actions ============
+  /** Clear current error state */
+  clearError: () => void;
+  /** Set the loading state */
+  setLoading: (loading: boolean) => void;
   /** Toggle between light and dark theme */
   toggleTheme: () => void;
   /** Set create modal visibility */
