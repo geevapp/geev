@@ -35,11 +35,20 @@ export interface Badge {
 export interface Activity {
   id: string
   userId: string
-  type: "post_created" | "entry_submitted" | "contribution_made"
-  description: string
-  postId: string
+  type: "posted" | "entered" | "won" | "liked"
+  item_id: string
+  item_title: string
+  timestamp: Date
   amount?: number
-  createdAt?: Date
+}
+
+export interface Interaction {
+  id: string
+  userId: string
+  postId: string
+  type: "like" | "burn" | "share"
+  createdAt: Date
+  post?: Post
 }
 
 export interface Post {

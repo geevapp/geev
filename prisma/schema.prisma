@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id          String        @id @default(cuid())
+  // ... other user fields
+  name        String?
+  email       String?       @unique
+  posts       Post[]        @relation("UserPosts")
+  entries     Entry[]       @relation("UserEntries")
+  interactions Interaction[] @relation("UserInteractions")
+}
+
+model Post {
+  id          String        @id @default(cuid())
+  title       String
+  creatorId   String
+  creator     User          @relation("UserPosts", fields: [creatorId], references: [id])
+  createdAt   DateTime      @default(now())
+  // ... other post fields
+  entries     Entry[]
+  interactions Interaction[]
+  
+  @@index([creatorId, createdAt])
+}
+
+model Entry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation("UserEntries", fields: [userId], references: [id])
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id])
+  isWinner    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  // ... other entry fields
+  
+  @@index([userId, isWinner, createdAt])
+}
+
+model Interaction {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("UserInteractions", fields: [userId], references: [id])
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id])
+  type      String   // 'like', 'burn', 'share'
+  createdAt DateTime @default(now())
+  
+  @@index([userId, type, createdAt])
+}
