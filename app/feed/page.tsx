@@ -1,6 +1,7 @@
 'use client'
 
 import { AuthGuard } from '@/components/auth-guard';
+
 import { useAuth } from '@/hooks/use-auth'
 import { AuthNavbar } from '@/components/auth-navbar'
 import { useApp } from '@/contexts/app-context'
@@ -8,17 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent } from '@/components/ui/card'
 import { PostCard, PostCardSkeleton } from '@/components/post-card'
 
-/**
- * Feed Page
- *
- * Main feed for authenticated users showing giveaways and help requests.
- * Protected route - redirects to login if not authenticated.
- */
 export default function FeedPage() {
   const { isLoading } = useAuth({ required: true })
   const { user, posts } = useApp()
 
-  // Show loading state while checking auth
   if (isLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -42,8 +36,7 @@ export default function FeedPage() {
         <AuthNavbar />
 
         <main className="container max-w-3xl mx-auto px-4 py-6">
-          {/* Welcome Banner */}
-          <Card className="mb-6 bg-linear-to-r from-orange-500 to-orange-600 text-white border-0">
+          <Card className="mb-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 border-4 border-white/20">
@@ -62,7 +55,6 @@ export default function FeedPage() {
             </CardContent>
           </Card>
 
-          {/* Feed */}
           <div className="space-y-4">
             {posts.length === 0 ? (
               <Card>
