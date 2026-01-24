@@ -4,14 +4,8 @@ import { AuthNavbar } from "@/components/auth-navbar";
 import { useApp } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { PostCard } from "@/components/post-card";
+import { PostCard, PostCardSkeleton } from "@/components/post-card";
 
-/**
- * Feed Page
- *
- * Main feed for authenticated users showing giveaways and help requests.
- * Protected by middleware - only authenticated users can access.
- */
 export default function FeedPage() {
   const { user, posts, isHydrated } = useApp();
 

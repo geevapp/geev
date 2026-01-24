@@ -1,4 +1,5 @@
 "use client";
+// REMOVED: metadata export - moved to layout.tsx (Server Component)
 
 import { LoginForm } from "@/components/login-form";
 import { GuestNavbar } from "@/components/guest-navbar";
