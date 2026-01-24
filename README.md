@@ -11,6 +11,12 @@ Geev is a decentralized social platform built on the Stellar blockchain that ena
 - **State Management**: React Context API + SWR for data fetching
 - **Icons**: Lucide React
 - **Animations**: Framer Motion (for scroll animations and transitions)
+- **Theme System**: next-themes with light/dark mode support
+
+## DOCUMENTATION
+
+- [Theme System](docs/theme.md) - Light/dark mode implementation and usage guide
+- [Components](docs/components.md) - Component library documentation
 
 ## RESOURCES
 
@@ -30,3 +36,256 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing and creating pages and components.
+
+# API Reference
+
+This document provides detailed information about the public and authenticated API endpoints of the platform.
+
+**Base URL**
+
+* Development: `http://localhost:3000/api`
+
+**Response Format**
+All endpoints return JSON with a consistent shape:
+
+**Success**
+
+```json
+{
+  "success": true,
+  "data": { ... },           // the main payload
+  "message": "optional text" // sometimes present
+}
+```
+
+**Error**
+
+```json
+{
+  "success": false,
+  "error": "Human-readable message",
+  "status": 400              // HTTP status code (sometimes included)
+}
+```
+
+## Authentication
+
+* Most write operations (`POST`, `PATCH`, `DELETE`) require authentication.
+* Authentication is currently handled via session / cookies (implementation detail may change).
+* The server uses `getCurrentUser(request)` to identify the authenticated user.
+
+## Endpoints
+
+### Posts
+
+#### `POST /posts`
+
+Create a new post (giveaway, job request, collaboration request, etc.)
+
+**Authentication**: Required
+**Rate limit**: Subject to change
+
+**Request Body** (application/json)
+
+```json
+{
+  "title":        string,     // required, 10–200 characters
+  "description":  string,     // required, minimum 50 characters
+  "category":     string,     // optional, e.g. "crypto", "nft", "development", "general", "memes"
+  "type":         string,     // required – "giveaway" | "request"
+  "winnerCount":  number,     // optional, positive integer, defaults to 1
+  "endsAt":       string      // optional, ISO 8601 datetime (e.g. "2025-03-15T23:59:59Z")
+}
+```
+
+**Success Response** (201 Created)
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "post_abc123xyz",
+    "creatorId": "usr_456",
+    "type": "giveaway",
+    "title": "...",
+    "description": "...",
+    "category": "crypto",
+    "status": "open",
+    "selectionMethod": "random",
+    "winnerCount": 3,
+    "endsAt": "2025-03-15T23:59:59.000Z",
+    "createdAt": "2025-01-20T14:30:22.000Z",
+    "updatedAt": "2025-01-20T14:30:22.000Z",
+    "creator": {
+      "id": "usr_456",
+      "name": "Adekolu",
+      "avatarUrl": "https://..."
+    }
+  },
+  "message": "Post created successfully"
+}
+```
+
+**Error cases**
+
+* 400 – Validation failure (title too short/long, description too short, invalid date, etc.)
+* 401 – Not authenticated
+* 500 – Server error
+
+---
+
+#### `GET /posts`
+
+List posts (paginated feed with filters)
+
+**Authentication**: Optional (public)
+
+**Query Parameters**
+
+```
+?page       number   default: 1
+&limit      number   default: 20  (max ~50 recommended)
+&category   string   e.g. crypto, nft, development
+&status     string   currently mostly "open"
+&type       string   giveaway | request
+```
+
+**Success Response** (200 OK)
+
+```json
+{
+  "success": true,
+  "data": {
+    "posts": [
+      {
+        "id": "post_a1",
+        "title": "Win 0.5 SOL – Retweet & Tag 3 Friends",
+        "type": "giveaway",
+        "category": "crypto",
+        "status": "open",
+        "createdAt": "...",
+        "endsAt": "...",
+        "creator": {
+          "id": "...",
+          "name": "Alex Chen",
+          "avatarUrl": "..."
+        }
+      }
+    ],
+    "page": 1,
+    "limit": 20,
+    "total": 87
+  }
+}
+```
+
+---
+
+#### `GET /posts/:id`
+
+Get a single post with detailed information
+
+**Authentication**: Optional (public)
+
+**Path param**: `:id` (post ID)
+
+**Success Response** (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "post_a1",
+    "title": "...",
+    "description": "...",
+    "type": "giveaway",
+    "category": "...",
+    "status": "open",
+    "winnerCount": 3,
+    "selectionMethod": "random",
+    "endsAt": "...",
+    "createdAt": "...",
+    "updatedAt": "...",
+    "creator": { ... },
+    "_count": {
+      "entries": 12,
+      "interactions": 45
+    }
+  }
+}
+```
+
+**Errors**
+
+* 404 – Post not found
+
+---
+
+#### `PATCH /posts/:id`
+
+Update title or description of your own post
+
+**Authentication**: Required
+**Authorization**: Must be the creator
+
+**Constraints**
+
+* Cannot edit if the post already has entries (`entries > 0`)
+
+**Request Body** (partial – only fields you want to change)
+
+```json
+{
+  "title": "Updated: Win 1 SOL – Like + RT",
+  "description": "New longer description here..."
+}
+```
+
+**Success Response** (200)
+
+```json
+{
+  "success": true,
+  "data": { "updated": "post" }
+}
+```
+
+**Errors**
+
+* 400 – Cannot edit post with entries
+* 401 – Not authenticated
+* 403 – Not the owner
+* 404 – Post not found
+
+---
+
+#### `DELETE /posts/:id`
+
+Delete your own post
+
+**Authentication**: Required
+**Authorization**: Must be the creator
+
+**Constraints**
+
+* Cannot delete if the post has entries (`entries > 0`)
+
+**Success Response** (200)
+
+```json
+{
+  "success": true,
+  "data": {
+    "deleted": true
+  }
+}
+```
+
+**Errors**
+
+* 400 – Cannot delete post with entries
+* 401 – Not authenticated
+* 403 – Not the owner
+* 404 – Post not found
+
+##
