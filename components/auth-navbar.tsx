@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
+  Moon,
+  Sun,
   Bell,
   Search,
   Plus,
@@ -22,7 +24,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ThemeToggle } from '@/components/theme-toggle'
 
 /**
  * AuthNavbar Component
@@ -30,10 +31,16 @@ import { ThemeToggle } from '@/components/theme-toggle'
  * Navigation bar for authenticated users.
  * Shows user info, quick actions, and navigation links.
  *
-
+ * Features:
+ * - User avatar with dropdown menu
+ * - Theme toggle
+ * - Notifications (placeholder)
+ * - Create post button
+ * - Logout functionality
+ */
 export function AuthNavbar() {
   const router = useRouter()
-  const { user, logout, setShowCreateModal } = useApp()
+  const { user, theme, toggleTheme, logout, setShowCreateModal } = useApp()
 
   if (!user) {
     return null
@@ -100,7 +107,18 @@ export function AuthNavbar() {
           </Button>
 
           {/* Theme Toggle */}
-          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </Button>
 
           {/* User Menu */}
           <DropdownMenu>

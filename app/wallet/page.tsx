@@ -1,8 +1,9 @@
 import { AuthGuard } from "@/components/auth-guard";
-import { AuthNavbar } from "@/components/auth-navbar";
+
 import WalletFooter from "./components/footer";
 import WalletMain from "./components/wallet-main";
 import { MobileSidebarToggle } from "@/components/mobile-sidebar-toggle";
+import { AuthNavbar } from "@/components/auth-navbar";
 
 export default function WalletPage() {
   return (
