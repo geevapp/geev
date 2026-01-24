@@ -30,7 +30,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
  * Navigation bar for authenticated users.
  * Shows user info, quick actions, and navigation links.
  *
-
+ */
 export function AuthNavbar() {
   const router = useRouter()
   const { user, logout, setShowCreateModal } = useApp()
