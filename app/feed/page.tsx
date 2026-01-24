@@ -1,13 +1,6 @@
 'use client'
 
-import type { Metadata } from 'next';
 import { AuthGuard } from '@/components/auth-guard';
-
-export const metadata: Metadata = {
-  title: 'Feed | Geev',
-  description: 'Browse giveaways and help requests',
-};
-
 import { useAuth } from '@/hooks/use-auth'
 import { AuthNavbar } from '@/components/auth-navbar'
 import { useApp } from '@/contexts/app-context'
@@ -17,17 +10,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { CheckCircle2, Gift, Heart, MessageCircle, Share2, Flame } from 'lucide-react'
 
-/**
- * Feed Page
- *
- * Main feed for authenticated users showing giveaways and help requests.
- * Protected route - redirects to login if not authenticated.
- */
 export default function FeedPage() {
   const { isLoading } = useAuth({ required: true })
   const { user, posts, burnPost } = useApp()
 
-  // Show loading state while checking auth
   if (isLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -51,7 +37,6 @@ export default function FeedPage() {
         <AuthNavbar />
 
         <main className="container max-w-3xl mx-auto px-4 py-6">
-          {/* Welcome Banner */}
           <Card className="mb-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white border-0">
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -71,7 +56,6 @@ export default function FeedPage() {
             </CardContent>
           </Card>
 
-          {/* Feed */}
           <div className="space-y-4">
             {posts.map((post) => (
               <Card key={post.id} className="overflow-hidden">
@@ -126,7 +110,6 @@ export default function FeedPage() {
                     {post.description}
                   </p>
 
-                  {/* Post Stats */}
                   <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
                     <div className="flex items-center gap-4">
                       <Button

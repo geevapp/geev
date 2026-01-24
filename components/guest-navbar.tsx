@@ -1,13 +1,12 @@
 'use client';
 
-import { Moon, Sun } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useApp } from '@/contexts/app-context';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function GuestNavbar() {
-  const { theme, user, toggleTheme } = useApp();
+  const { user } = useApp();
 
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
@@ -38,18 +37,7 @@ export function GuestNavbar() {
           </Link>
 
           {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleTheme}
-            className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4" />
-            ) : (
-              <Moon className="w-4 h-4" />
-            )}
-          </Button>
+          <ThemeToggle />
         </div>
       </div>
     </nav>
