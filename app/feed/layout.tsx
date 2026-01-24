@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata } from 'next'
 
+// METADATA EXPORT: Server Component that handles metadata for feed route
 export const metadata: Metadata = {
   title: 'Feed | Geev',
   description: 'Browse giveaways and help requests',
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
 export default function FeedLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  return children;
+  return children
 }
