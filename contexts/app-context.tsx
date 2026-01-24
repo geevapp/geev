@@ -416,16 +416,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Load state from localStorage and mock data on mount
   useEffect(() => {
-    try {
-      const savedState = localStorage.getItem(STORAGE_KEY);
-      if (savedState) {
-        const hydrated = deserializeState(savedState);
-        if (hydrated) {
-          dispatch({ type: 'HYDRATE_STATE', payload: hydrated });
+    // Only access localStorage on client side
+    if (typeof window !== 'undefined') {
+      try {
+        const savedState = localStorage.getItem(STORAGE_KEY);
+        if (savedState) {
+          const hydrated = deserializeState(savedState);
+          if (hydrated) {
+            dispatch({ type: 'HYDRATE_STATE', payload: hydrated });
+          }
         }
+      } catch (error) {
+        console.error('Failed to load state from localStorage:', error);
       }
-    } catch (error) {
-      console.error('Failed to load state from localStorage:', error);
+      
+      // Load saved theme on mount
+      const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+      if (savedTheme && savedTheme !== state.theme) {
+        dispatch({ type: 'TOGGLE_THEME' });
+      }
     }
     
     // Load mock data
@@ -435,39 +444,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Restore user session from localStorage on mount (mock auth persistence)
   useEffect(() => {
-    const storedUser = getCurrentUser();
-    if (storedUser) {
-      dispatch({ type: 'SET_USER', payload: storedUser });
+    if (typeof window !== 'undefined') {
+      const storedUser = getCurrentUser();
+      if (storedUser) {
+        dispatch({ type: 'SET_USER', payload: storedUser });
+      }
     }
     setIsHydrated(true);
   }, []);
 
-  // Load saved theme on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedTheme && savedTheme !== state.theme) {
-      dispatch({ type: 'TOGGLE_THEME' });
-    }
-  }, []);
-
   // Apply theme class to document
   useEffect(() => {
-    localStorage.setItem('theme', state.theme);
-    document.documentElement.classList.toggle('dark', state.theme === 'dark');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', state.theme);
+      document.documentElement.classList.toggle('dark', state.theme === 'dark');
+    }
   }, [state.theme]);
 
   // Save state to localStorage on changes (debounced)
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      try {
-        localStorage.setItem(STORAGE_KEY, serializeState(state));
-      } catch (error) {
-        console.error('Failed to save state to localStorage:', error);
-      }
-    }, 100); // Debounce by 100ms to avoid excessive writes
+    if (typeof window !== 'undefined' && isHydrated) {
+      const timeoutId = setTimeout(() => {
+        try {
+          localStorage.setItem(STORAGE_KEY, serializeState(state));
+        } catch (error) {
+          console.error('Failed to save state to localStorage:', error);
+        }
+      }, 100); // Debounce by 100ms to avoid excessive writes
 
-    return () => clearTimeout(timeoutId);
-  }, [state]);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [state, isHydrated]);
 
   /**
    * Checks and awards badges based on user activity

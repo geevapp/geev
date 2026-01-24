@@ -1,22 +1,15 @@
-"use client";
+'use client'
 
-import { useAuth } from "@/hooks/use-auth";
-import { LoginForm } from "@/components/login-form";
-import { GuestNavbar } from "@/components/guest-navbar";
+import { useAuth } from '@/hooks/use-auth'
+import { LoginForm } from '@/components/login-form'
+import { GuestNavbar } from '@/components/guest-navbar'
 
-/**
- * Login Page
- *
- * Displays the mock authentication form for selecting a test user.
- * Redirects to /feed if user is already authenticated.
- */
 export default function LoginPage() {
   const { isLoading } = useAuth({
     redirectIfAuthenticated: true,
     redirectAuthenticatedTo: "/feed",
   });
 
-  // Show loading state while checking auth
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -30,7 +23,6 @@ export default function LoginPage() {
       <GuestNavbar />
 
       <main className="container mx-auto px-4 py-8 md:py-12">
-        {/* Page Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Welcome to Geev
@@ -41,10 +33,8 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Login Form */}
         <LoginForm />
 
-        {/* Dev Note Banner */}
         <div className="mt-12 max-w-2xl mx-auto">
           <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
