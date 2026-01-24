@@ -1,3 +1,5 @@
+import React from "react"
+import { MediaUpload } from "@/components/media-upload"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -57,6 +59,31 @@ export default function ComponentsShowcase() {
                 </Dialog>
             </section>
 
+
+            <section className="space-y-4 rounded-lg border border-border p-6">
+                <h2 className="text-base font-semibold tracking-tight">Media Upload</h2>
+                <div className="max-w-xl">
+                    <MediaUploadWrapper />
+                </div>
+            </section>
+
+        </div>
+    )
+}
+
+function MediaUploadWrapper() {
+    const [files, setFiles] = React.useState<any[]>([])
+    return (
+        <div className="space-y-4">
+             <MediaUpload 
+                onChange={(files) => {
+                    console.log('Files changed:', files)
+                    setFiles(files)
+                }}
+             />
+             <div className="text-xs text-muted-foreground">
+                Files count: {files.length}
+             </div>
         </div>
     )
 }
