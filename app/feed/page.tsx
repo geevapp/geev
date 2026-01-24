@@ -1,12 +1,8 @@
 'use client'
 
-import type { Metadata } from 'next';
 import { AuthGuard } from '@/components/auth-guard';
 
-export const metadata: Metadata = {
-  title: 'Feed | Geev',
-  description: 'Browse giveaways and help requests',
-};
+
 
 import { useAuth } from '@/hooks/use-auth'
 import { AuthNavbar } from '@/components/auth-navbar'
