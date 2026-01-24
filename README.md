@@ -11,6 +11,12 @@ Geev is a decentralized social platform built on the Stellar blockchain that ena
 - **State Management**: React Context API + SWR for data fetching
 - **Icons**: Lucide React
 - **Animations**: Framer Motion (for scroll animations and transitions)
+- **Theme System**: next-themes with light/dark mode support
+
+## DOCUMENTATION
+
+- [Theme System](docs/theme.md) - Light/dark mode implementation and usage guide
+- [Components](docs/components.md) - Component library documentation
 
 ## RESOURCES
 

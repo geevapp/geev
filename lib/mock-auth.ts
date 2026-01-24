@@ -289,7 +289,9 @@ export function login(userId: string): User | null {
   }
 
   try {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData))
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authData))
+    }
   } catch (error) {
     console.error('[Mock Auth] Failed to save auth data to localStorage:', error)
   }
@@ -323,7 +325,9 @@ export function loginByUsername(username: string): User | null {
  */
 export function logout(): void {
   try {
-    localStorage.removeItem(AUTH_STORAGE_KEY)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(AUTH_STORAGE_KEY)
+    }
   } catch (error) {
     console.error('[Mock Auth] Failed to remove auth data from localStorage:', error)
   }
@@ -337,6 +341,11 @@ export function logout(): void {
  * @returns The current User object, or null if not authenticated
  */
 export function getCurrentUser(): User | null {
+  // Only access localStorage on client side
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   try {
     const authDataStr = localStorage.getItem(AUTH_STORAGE_KEY)
 
@@ -377,6 +386,11 @@ export function isAuthenticated(): boolean {
  * @returns The AuthData object or null if not authenticated
  */
 export function getAuthData(): AuthData | null {
+  // Only access localStorage on client side
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
   try {
     const authDataStr = localStorage.getItem(AUTH_STORAGE_KEY)
 

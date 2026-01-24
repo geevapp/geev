@@ -472,7 +472,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, 100); // Debounce by 100ms to avoid excessive writes
 
     return () => clearTimeout(timeoutId);
-  }, [state]);
+  }, [state, isHydrated]);
 
   /**
    * Checks and awards badges based on user activity
