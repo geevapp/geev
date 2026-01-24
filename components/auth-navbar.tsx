@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -10,10 +11,12 @@ import {
   Settings,
   User as UserIcon,
   CheckCircle2,
+  FileText,
 } from 'lucide-react'
 import { useApp } from '@/contexts/app-context'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +26,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { DraftsList } from '@/components/drafts-list'
+import { getDraftCount } from '@/lib/drafts'
 
 /**
  * AuthNavbar Component
@@ -34,10 +39,33 @@ import { ThemeToggle } from '@/components/theme-toggle'
 export function AuthNavbar() {
   const router = useRouter()
   const { user, logout, setShowCreateModal } = useApp()
+  const [draftCount, setDraftCount] = useState(0)
+  const [showDraftsList, setShowDraftsList] = useState(false)
 
   if (!user) {
     return null
   }
+
+  useEffect(() => {
+    // Load draft count
+    setDraftCount(getDraftCount())
+
+    // Listen for draft changes
+    const handleStorageChange = () => {
+      setDraftCount(getDraftCount())
+    }
+
+    // Listen to custom events for draft updates
+    window.addEventListener('draftSaved', handleStorageChange)
+    window.addEventListener('draftDeleted', handleStorageChange)
+    window.addEventListener('storage', handleStorageChange)
+
+    return () => {
+      window.removeEventListener('draftSaved', handleStorageChange)
+      window.removeEventListener('draftDeleted', handleStorageChange)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
 
   const handleLogout = () => {
     logout()
@@ -80,6 +108,22 @@ export function AuthNavbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {/* Drafts */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => setShowDraftsList(true)}
+            title="View drafts"
+          >
+            <FileText className="h-5 w-5" />
+            {draftCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-orange-500 hover:bg-orange-600">
+                {draftCount > 9 ? '9+' : draftCount}
+              </Badge>
+            )}
+          </Button>
+
           {/* Create Post */}
           <Button
             onClick={() => setShowCreateModal(true)}
@@ -159,6 +203,9 @@ export function AuthNavbar() {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Drafts List Modal */}
+      <DraftsList open={showDraftsList} onOpenChange={setShowDraftsList} />
     </nav>
   )
 }
