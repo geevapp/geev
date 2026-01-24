@@ -1,10 +1,5 @@
+// REMOVED: metadata export - moved to layout.tsx (Server Component)
 'use client'
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Login | Geev',
-  description: 'Connect your wallet to get started',
-};
 
 import { useAuth } from '@/hooks/use-auth'
 import { LoginForm } from '@/components/login-form'
