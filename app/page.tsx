@@ -47,7 +47,7 @@ export default function LandingPage() {
       <GuestNavbar />
 
       {/* Hero Section */}
-      <section className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
+      <section className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden ">
         <div className="absolute inset-0 pointer-events-none">
           <div
             className="absolute w-96 h-96 bg-orange-100 dark:bg-orange-900 rounded-full blur-3xl opacity-20"
