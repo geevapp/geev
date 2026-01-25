@@ -1,19 +1,17 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
-  Bell,
-  Search,
-  Plus,
   LogOut,
   Settings,
   User as UserIcon,
   CheckCircle2,
-} from "lucide-react";
-import { useApp } from "@/contexts/app-context";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+  Wallet,
+} from 'lucide-react';
+import { useApp } from '@/contexts/app-context';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,19 +19,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
+} from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/theme-toggle';
 
-/**
- * AuthNavbar Component
- *
- * Navigation bar for authenticated users.
- * Shows user info, quick actions, and navigation links.
- *
- */
-export function AuthNavbar() {
+export function Navbar() {
   const router = useRouter();
-  const { user, logout, setShowCreateModal } = useApp();
+  const { user, logout } = useApp();
 
   if (!user) {
     return null;
@@ -41,23 +32,23 @@ export function AuthNavbar() {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    router.push('/');
   };
 
   const getInitials = (name: string) => {
     return name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
-      .slice(0, 2);
-  };
+      .slice(0, 2)
+  }
 
   return (
-    <nav className="md:hidden sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <nav className="hidden md:block sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 h-16">
+      <div className="flex items-center justify-between h-full px-4 sm:px-6 lg:px-8">
         {/* Logo */}
-        <Link href="/feed" className="flex items-center gap-3">
+        <Link href="/feed" className="flex items-center gap-2">
           <img src="/logo-light.png" alt="Geev" className="h-8 dark:hidden" />
           <img
             src="/logo-dark.png"
@@ -66,34 +57,13 @@ export function AuthNavbar() {
           />
         </Link>
 
-        {/* Search (placeholder) */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search posts, users..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 border-0 focus:ring-2 focus:ring-orange-500 text-sm"
-            />
+        {/* Right Actions */}
+        <div className="flex items-center gap-3 md:gap-4">
+          {/* Wallet Balance */}
+          <div className="hidden sm:flex items-center gap-2 bg-[#FF6900] text-white px-2 py-0.5 rounded-full text-xs font-medium shadow-md shadow-orange-600/20 transition-transform hover:scale-105">
+            <Wallet className="h-4 w-4" />
+            <span>$2500.75</span>
           </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {/* Create Post */}
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-orange-600 hover:bg-orange-700 text-white gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Create</span>
-          </Button>
-
-          {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />
-          </Button>
 
           {/* Theme Toggle */}
           <ThemeToggle />
@@ -117,9 +87,7 @@ export function AuthNavbar() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium leading-none">
-                      {user.name}
-                    </p>
+                    <p className="text-sm font-medium leading-none">{user.name}</p>
                     {user.isVerified && (
                       <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
                     )}
@@ -134,10 +102,7 @@ export function AuthNavbar() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link
-                  href={`/profile/${user.username}`}
-                  className="cursor-pointer"
-                >
+                <Link href={`/profile/${user.username}`} className="cursor-pointer">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
