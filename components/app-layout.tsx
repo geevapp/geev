@@ -1,8 +1,12 @@
 'use client';
 
 import type React from 'react';
+import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { ScrollRestoration } from '@/components/scroll-restoration';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
+import { trackEvent } from '@/lib/analytics';
+import { useApp } from '@/contexts/app-context';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,10 +17,25 @@ import { DesktopSidebar } from '@/components/desktop-sidebar';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname();
+  const { user } = useApp();
+  const lastPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!pathname) return;
+    if (lastPathRef.current === pathname) return;
+
+    lastPathRef.current = pathname;
+    trackEvent(
+      'page_view',
+      { path: pathname },
+      user ? { userId: user.id } : undefined,
+    );
+  }, [pathname, user]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <ScrollRestoration />
-
 
       <div className="flex">
         <DesktopSidebar />
