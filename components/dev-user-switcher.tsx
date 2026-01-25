@@ -59,7 +59,7 @@ export function DevUserSwitcher() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed hidden md:block bottom-4 right-4 z-50">
       <div
         className={`
           bg-gray-900 dark:bg-gray-800 text-white rounded-lg shadow-xl
