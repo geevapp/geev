@@ -310,6 +310,7 @@ export default function SettingsBio() {
                 <Switch
                   checked={pushNotifications}
                   onCheckedChange={setPushNotifications}
+                  className="dark:data-[state=checked]:bg-white"
                 />
               </div>
             </div>
