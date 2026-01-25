@@ -1,3 +1,4 @@
+// REMOVED: metadata export - moved to layout.tsx (Server Component)
 'use client'
 
 import { useAuth } from '@/hooks/use-auth'
