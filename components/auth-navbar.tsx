@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   Search,
@@ -10,10 +10,10 @@ import {
   Settings,
   User as UserIcon,
   CheckCircle2,
-} from 'lucide-react'
-import { useApp } from '@/contexts/app-context'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+} from "lucide-react";
+import { useApp } from "@/contexts/app-context";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,8 +21,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { ThemeToggle } from '@/components/theme-toggle'
+} from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
  * AuthNavbar Component
@@ -32,26 +32,26 @@ import { ThemeToggle } from '@/components/theme-toggle'
  *
  */
 export function AuthNavbar() {
-  const router = useRouter()
-  const { user, logout, setShowCreateModal } = useApp()
+  const router = useRouter();
+  const { user, logout, setShowCreateModal } = useApp();
 
   if (!user) {
-    return null
+    return null;
   }
 
   const handleLogout = () => {
-    logout()
-    router.push('/')
-  }
+    logout();
+    router.push("/");
+  };
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <nav className="md:hidden sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
@@ -90,11 +90,7 @@ export function AuthNavbar() {
           </Button>
 
           {/* Notifications */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative"
-          >
+          <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full" />
           </Button>
@@ -121,7 +117,9 @@ export function AuthNavbar() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium leading-none">{user.name}</p>
+                    <p className="text-sm font-medium leading-none">
+                      {user.name}
+                    </p>
                     {user.isVerified && (
                       <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />
                     )}
@@ -136,7 +134,10 @@ export function AuthNavbar() {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href={`/profile/${user.username}`} className="cursor-pointer">
+                <Link
+                  href={`/profile/${user.username}`}
+                  className="cursor-pointer"
+                >
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
@@ -160,5 +161,5 @@ export function AuthNavbar() {
         </div>
       </div>
     </nav>
-  )
+  );
 }
