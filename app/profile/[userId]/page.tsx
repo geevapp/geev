@@ -1,4 +1,7 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
+import { ProfileCardSkeleton } from "@/components/skeletons/profile-card-skeleton";
+import { PostCardSkeleton } from "@/components/skeletons/post-card-skeleton";
 
 interface PageProps {
   params: Promise<{ userId: string }>;
@@ -14,7 +17,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function ProfilePage({ params }: PageProps) {
+async function ProfileContent({ params }: PageProps) {
   const { userId } = await params;
 
   return (
@@ -28,5 +31,27 @@ export default async function ProfilePage({ params }: PageProps) {
         </p>
       </div>
     </div>
+  );
+}
+
+function ProfileLoadingFallback() {
+  return (
+    <div className="container py-8">
+      <div className="h-10 bg-muted rounded w-48 mb-6 animate-pulse" />
+      <div className="space-y-4">
+        <ProfileCardSkeleton />
+        <div className="h-5 bg-muted rounded w-32 mb-4 animate-pulse" />
+        <PostCardSkeleton />
+        <PostCardSkeleton />
+      </div>
+    </div>
+  );
+}
+
+export default function ProfilePage({ params }: PageProps) {
+  return (
+    <Suspense fallback={<ProfileLoadingFallback />}>
+      <ProfileContent params={params} />
+    </Suspense>
   );
 }

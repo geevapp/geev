@@ -1,22 +1,16 @@
 "use client";
 
+import { Suspense } from "react";
 import { AuthNavbar } from "@/components/auth-navbar";
 import { useApp } from "@/contexts/app-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { PostCard, PostCardSkeleton } from "@/components/post-card";
+import { PostCard } from "@/components/post-card";
+import { PostCardSkeleton } from "@/components/skeletons/post-card-skeleton";
+import { PageLoader } from "@/components/page-loader";
 
-export default function FeedPage() {
-  const { user, posts, isHydrated } = useApp();
-
-  // Show loading state while hydrating user from session
-  if (!isHydrated || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent" />
-      </div>
-    );
-  }
+function FeedContent() {
+  const { user, posts } = useApp();
 
   const getInitials = (name: string) => {
     return name
@@ -26,6 +20,8 @@ export default function FeedPage() {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -54,20 +50,40 @@ export default function FeedPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          {posts.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground">
-                  No posts yet. Be the first to create one!
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            posts.map((post) => <PostCard key={post.id} post={post} />)
-          )}
-        </div>
+        <Suspense
+          fallback={
+            <div className="space-y-4">
+              <PostCardSkeleton />
+              <PostCardSkeleton />
+              <PostCardSkeleton />
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            {posts.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <p className="text-muted-foreground">
+                    No posts yet. Be the first to create one!
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              posts.map((post) => <PostCard key={post.id} post={post} />)
+            )}
+          </div>
+        </Suspense>
       </main>
     </div>
   );
+}
+
+export default function FeedPage() {
+  const { isHydrated, user } = useApp();
+
+  if (!isHydrated || !user) {
+    return <PageLoader />;
+  }
+
+  return <FeedContent />;
 }
