@@ -1,3 +1,12 @@
+<<<<<<< HEAD
+export function apiSuccess<T>(data: T, status = 200) {
+  return Response.json({ success: true, data }, { status });
+}
+
+export function apiError(message: string, status = 500) {
+  return Response.json({ success: false, error: message }, { status });
+}
+=======
 /**
  * API Response utilities for consistent API responses
  */
@@ -29,3 +38,4 @@ export function apiError(message: string, status: number = 400): Response {
     error: message,
   } as ApiResponse, { status });
 }
+>>>>>>> 22e9b8e74142061ba440a0b05f7d245c79eb1a1e

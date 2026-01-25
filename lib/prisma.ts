@@ -1,3 +1,33 @@
+<<<<<<< HEAD
+import { PrismaClient } from '@prisma/client';
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log:
+      process.env.NODE_ENV === 'development'
+        ? ['query', 'error', 'warn']
+        : ['error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+// Test connection
+export async function testConnection() {
+  try {
+    await prisma.$connect();
+    console.log('Prisma connected to database');
+    return true;
+  } catch (error) {
+    console.error('Prisma connection failed:', error);
+    return false;
+  }
+}
+=======
 /**
  * Prisma client setup for database operations
  * Note: This is a placeholder implementation. In a real app, you would:
@@ -258,3 +288,4 @@ export const prisma = {
     },
   },
 };
+>>>>>>> 22e9b8e74142061ba440a0b05f7d245c79eb1a1e

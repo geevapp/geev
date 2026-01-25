@@ -18,6 +18,28 @@ Geev is a decentralized social platform built on the Stellar blockchain that ena
 - [Theme System](docs/theme.md) - Light/dark mode implementation and usage guide
 - [Components](docs/components.md) - Component library documentation
 
+## BACKEND INFRASTRUCTURE
+
+The backend is integrated into the Next.js application using API Routes.
+
+- **ORM**: Prisma (PostgreSQL)
+- **API Routes**: Located in `app/api/`
+- **Utilities**:
+  - `lib/prisma.ts`: Prisma client singleton and connection testing.
+  - `lib/api-response.ts`: Standardized API response helpers (`apiSuccess`, `apiError`).
+- **Middleware**: Handles Request Logging and CORS in `middleware.ts`.
+
+### Setup
+
+1. Configure environment variables in `.env`:
+   ```env
+   DATABASE_URL="postgresql://user:password@localhost:5432/mydb?schema=public"
+   ```
+2. Generate Prisma Client:
+   ```bash
+   npx prisma generate
+   ```
+
 ## RESOURCES
 
 - [FIGMA UI KIT](https://www.figma.com/design/bx1z49rPLAXSsUSlQ03ElA/Geev-App?node-id=6-192&t=a3DcI1rqYjGvbhBd-0)
