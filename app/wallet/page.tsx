@@ -7,7 +7,7 @@ import { AuthNavbar } from "@/components/auth-navbar";
 
 export default function WalletPage() {
   return (
-    // <AuthGuard>
+    <AuthGuard>
     <div className="flex flex-col h-screen w-full">
       <div className="flex items-center gap-3 px-4 lg:px-0">
         <MobileSidebarToggle />
@@ -22,6 +22,6 @@ export default function WalletPage() {
 
       <WalletFooter />
     </div>
-    // </AuthGuard>
+    </AuthGuard>
   );
 }
