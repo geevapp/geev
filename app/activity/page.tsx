@@ -9,11 +9,12 @@ export const metadata: Metadata = {
 
 function ActivityContent() {
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-6">Activity</h1>
-      <p className="text-muted-foreground">
-        Activity history will be implemented here
-      </p>
+    <div className={`w-full h-screen flex flex-col ${isOpen ? "lg:ml-64" : "lg:ml-16"}`}>
+      <MobileSidebarToggle />
+      <UserNavbar />
+      <div className="flex-1 overflow-y-auto">
+      <ActivityMain />
+      </div>
     </div>
   );
 }
