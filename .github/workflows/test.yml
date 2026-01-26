@@ -47,7 +47,9 @@ jobs:
           fi
 
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: |
+          npx prisma format
+          npx prisma generate
 
       - name: Run database migrations
         env:
