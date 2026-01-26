@@ -39,6 +39,27 @@ export function AuthNavbar() {
     return null;
   }
 
+  useEffect(() => {
+    // Load draft count
+    setDraftCount(getDraftCount())
+
+    // Listen for draft changes
+    const handleStorageChange = () => {
+      setDraftCount(getDraftCount())
+    }
+
+    // Listen to custom events for draft updates
+    window.addEventListener('draftSaved', handleStorageChange)
+    window.addEventListener('draftDeleted', handleStorageChange)
+    window.addEventListener('storage', handleStorageChange)
+
+    return () => {
+      window.removeEventListener('draftSaved', handleStorageChange)
+      window.removeEventListener('draftDeleted', handleStorageChange)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
+
   const handleLogout = () => {
     logout();
     router.push("/");
@@ -80,6 +101,22 @@ export function AuthNavbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
+          {/* Drafts */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={() => setShowDraftsList(true)}
+            title="View drafts"
+          >
+            <FileText className="h-5 w-5" />
+            {draftCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-orange-500 hover:bg-orange-600">
+                {draftCount > 9 ? '9+' : draftCount}
+              </Badge>
+            )}
+          </Button>
+
           {/* Create Post */}
           <Button
             onClick={() => setShowCreateModal(true)}
@@ -168,6 +205,9 @@ export function AuthNavbar() {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Drafts List Modal */}
+      <DraftsList open={showDraftsList} onOpenChange={setShowDraftsList} />
     </nav>
   );
 }

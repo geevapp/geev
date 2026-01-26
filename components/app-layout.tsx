@@ -5,6 +5,9 @@ import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { ScrollRestoration } from '@/components/scroll-restoration';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
+import { CreateModal } from '@/components/create-modal';
+import { GiveawayModal } from '@/components/giveaway-modal';
+import { RequestModal } from '@/components/request-modal';
 import { trackEvent } from '@/lib/analytics';
 import { useApp } from '@/contexts/app-context';
 
@@ -49,6 +52,11 @@ export function AppLayout({ children }: AppLayoutProps) {
       </div>
 
       <MobileBottomNav />
+
+      {/* Create Modals */}
+      <CreateModal />
+      <GiveawayModal />
+      <RequestModal />
 
       {/* Dev User Switcher - Only visible in development mode */}
       <DevUserSwitcher />
