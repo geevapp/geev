@@ -37,7 +37,7 @@ export const badges: Badge[] = [
 
 export const mockUsers: User[] = [
   {
-    id: "1",
+    id: "user-1",
     name: "Alex Chen",
     username: "alexchen",
     email: "alex@example.com",
@@ -54,7 +54,7 @@ export const mockUsers: User[] = [
     isVerified: true,
   },
   {
-    id: "2",
+    id: "user-2",
     name: "Sarah Johnson",
     username: "sarahj",
     email: "sarah@example.com",
@@ -71,7 +71,7 @@ export const mockUsers: User[] = [
     isVerified: false,
   },
   {
-    id: "3",
+    id: "user-3",
     name: "Marcus Williams",
     username: "marcusw",
     email: "marcus@example.com",
@@ -88,7 +88,7 @@ export const mockUsers: User[] = [
     isVerified: true,
   },
   {
-    id: "4",
+    id: "user-4",
     name: "Emma Rodriguez",
     username: "emmar",
     email: "emma@example.com",
@@ -104,7 +104,7 @@ export const mockUsers: User[] = [
     isVerified: false,
   },
   {
-    id: "5",
+    id: "user-5",
     name: "David Kim",
     username: "davidk",
     email: "david@example.com",
@@ -126,7 +126,7 @@ export const mockEntries: Entry[] = [
   {
     id: "1",
     postId: "1",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     message:
       "Started coding 2 years ago with Python! Currently building a web app for local businesses. @davidk @emmar check this out!",
@@ -136,7 +136,7 @@ export const mockEntries: Entry[] = [
   {
     id: "2",
     postId: "1",
-    userId: "5",
+    userId: "user-5",
     user: mockUsers[4],
     message: "Been coding for 3 years, started with game development! Now working on streaming tools. @emmar @sarahj",
     submittedAt: new Date("2024-03-11T11:30:00Z"),
@@ -145,7 +145,7 @@ export const mockEntries: Entry[] = [
   {
     id: "7",
     postId: "1",
-    userId: "4",
+    userId: "user-4",
     user: mockUsers[3],
     message: "That's so cool @sarahj! I'm also learning web development. Would love to collaborate sometime!",
     submittedAt: new Date("2024-03-11T10:20:00Z"),
@@ -154,7 +154,7 @@ export const mockEntries: Entry[] = [
   {
     id: "8",
     postId: "1",
-    userId: "1",
+    userId: "user-1",
     user: mockUsers[0],
     message: "@davidk Your streaming tools look amazing! Have you considered open sourcing them?",
     submittedAt: new Date("2024-03-11T12:45:00Z"),
@@ -163,7 +163,7 @@ export const mockEntries: Entry[] = [
   {
     id: "9",
     postId: "1",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     message: "@emmar DM me and we can set up a call to discuss ideas 😊",
     submittedAt: new Date("2024-03-11T11:15:00Z"),
@@ -172,7 +172,7 @@ export const mockEntries: Entry[] = [
   {
     id: "13",
     postId: "1",
-    userId: "5",
+    userId: "user-5",
     user: mockUsers[4],
     message: "@alexchen Thanks! We're actually planning to open source it next quarter 🎉",
     submittedAt: new Date("2024-03-11T13:00:00Z"),
@@ -181,7 +181,7 @@ export const mockEntries: Entry[] = [
   {
     id: "14",
     postId: "1",
-    userId: "1",
+    userId: "user-1",
     user: mockUsers[0],
     message: "@davidk That's amazing! Can't wait to contribute 💪",
     submittedAt: new Date("2024-03-11T13:30:00Z"),
@@ -190,7 +190,7 @@ export const mockEntries: Entry[] = [
   {
     id: "15",
     postId: "1",
-    userId: "4",
+    userId: "user-4",
     user: mockUsers[3],
     message: "@sarahj Awesome! I'll definitely reach out, thanks so much! 🙌",
     submittedAt: new Date("2024-03-11T11:45:00Z"),
@@ -199,7 +199,7 @@ export const mockEntries: Entry[] = [
   {
     id: "3",
     postId: "3",
-    userId: "4",
+    userId: "user-4",
     user: mockUsers[3],
     message: "Here's my latest digital art piece! Been working on this cyberpunk series.",
     submittedAt: new Date("2024-03-09T10:20:00Z"),
@@ -208,7 +208,7 @@ export const mockEntries: Entry[] = [
   {
     id: "10",
     postId: "3",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     message: "@emmar This is incredible! The color palette is perfect. How long did this take you?",
     submittedAt: new Date("2024-03-09T11:30:00Z"),
@@ -217,7 +217,7 @@ export const mockEntries: Entry[] = [
   {
     id: "16",
     postId: "3",
-    userId: "4",
+    userId: "user-4",
     user: mockUsers[3],
     message: "@sarahj Thank you so much! About 40 hours total. Loved every minute of it! 🎨",
     submittedAt: new Date("2024-03-09T12:00:00Z"),
@@ -226,7 +226,7 @@ export const mockEntries: Entry[] = [
   {
     id: "17",
     postId: "3",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     message: "@emmar That dedication is inspiring! Worth every hour 👏",
     submittedAt: new Date("2024-03-09T12:30:00Z"),
@@ -235,7 +235,7 @@ export const mockEntries: Entry[] = [
   {
     id: "4",
     postId: "4",
-    userId: "1",
+    userId: "user-1",
     user: mockUsers[0],
     message: "Just watched the tutorial! Amazing content as always. Here's my attempt at the technique.",
     submittedAt: new Date("2024-03-12T14:20:00Z"),
@@ -243,7 +243,7 @@ export const mockEntries: Entry[] = [
   {
     id: "5",
     postId: "4",
-    userId: "3",
+    userId: "user-3",
     user: mockUsers[2],
     message: "This tutorial helped me so much! Sharing with my team.",
     submittedAt: new Date("2024-03-12T16:45:00Z"),
@@ -251,7 +251,7 @@ export const mockEntries: Entry[] = [
   {
     id: "11",
     postId: "4",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     message: "@alexchen Thanks for watching! Your attempt looks great, keep practicing! 🎨",
     submittedAt: new Date("2024-03-12T15:30:00Z"),
@@ -260,7 +260,7 @@ export const mockEntries: Entry[] = [
   {
     id: "18",
     postId: "4",
-    userId: "1",
+    userId: "user-1",
     user: mockUsers[0],
     message: "@sarahj Thanks so much! Really helps having detailed feedback 🙏",
     submittedAt: new Date("2024-03-12T16:00:00Z"),
@@ -269,7 +269,7 @@ export const mockEntries: Entry[] = [
   {
     id: "19",
     postId: "4",
-    userId: "3",
+    userId: "user-3",
     user: mockUsers[2],
     message: "@sarahj Can you share the UI kit link? My team would love to use it!",
     submittedAt: new Date("2024-03-12T17:15:00Z"),
@@ -278,7 +278,7 @@ export const mockEntries: Entry[] = [
   {
     id: "6",
     postId: "6",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     message: "Love this gaming setup! The RGB lighting is perfect.",
     submittedAt: new Date("2024-03-13T11:30:00Z"),
@@ -286,7 +286,7 @@ export const mockEntries: Entry[] = [
   {
     id: "12",
     postId: "6",
-    userId: "5",
+    userId: "user-5",
     user: mockUsers[4],
     message: "@sarahj Thanks! Took me months to get the lighting just right. What's your setup like?",
     submittedAt: new Date("2024-03-13T12:15:00Z"),
@@ -295,7 +295,7 @@ export const mockEntries: Entry[] = [
   {
     id: "20",
     postId: "6",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     message: "@davidk I'm still using my old MacBook 😅 but I love the setup! Inspiring me to upgrade",
     submittedAt: new Date("2024-03-13T13:00:00Z"),
@@ -307,7 +307,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "1",
     postId: "2",
-    userId: "1",
+    userId: "user-1",
     user: mockUsers[0],
     amount: 100,
     currency: "USDC",
@@ -317,7 +317,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "7",
     postId: "2",
-    userId: "4",
+    userId: "user-4",
     user: mockUsers[3],
     amount: 0,
     currency: "USDC",
@@ -328,7 +328,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "2",
     postId: "2",
-    userId: "3",
+    userId: "user-3",
     user: mockUsers[2],
     amount: 75,
     currency: "USDC",
@@ -338,7 +338,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "3",
     postId: "2",
-    userId: "5",
+    userId: "user-5",
     user: mockUsers[4],
     amount: 50,
     currency: "USDC",
@@ -348,7 +348,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "8",
     postId: "2",
-    userId: "4",
+    userId: "user-4",
     user: mockUsers[3],
     amount: 0,
     currency: "USDC",
@@ -359,7 +359,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "4",
     postId: "2",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     amount: 20,
     currency: "USDC",
@@ -369,7 +369,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "5",
     postId: "5",
-    userId: "1",
+    userId: "user-1",
     user: mockUsers[0],
     amount: 200,
     currency: "USDC",
@@ -379,7 +379,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "6",
     postId: "5",
-    userId: "3",
+    userId: "user-3",
     user: mockUsers[2],
     amount: 150,
     currency: "USDC",
@@ -389,7 +389,7 @@ export const mockContributions: HelpContribution[] = [
   {
     id: "9",
     postId: "5",
-    userId: "5",
+    userId: "user-5",
     user: mockUsers[4],
     amount: 0,
     currency: "USDC",
@@ -403,7 +403,7 @@ export const mockComments: Comment[] = [
   {
     id: "1",
     postId: "1",
-    userId: "2",
+    userId: "user-2",
     user: mockUsers[1],
     content: "This is amazing! Thanks for supporting new developers 🙏",
     createdAt: new Date("2024-03-10T10:30:00Z"),
@@ -412,7 +412,7 @@ export const mockComments: Comment[] = [
   {
     id: "2",
     postId: "1",
-    userId: "4",
+    userId: "user-4",
     user: mockUsers[3],
     content: "Just entered! This community is so supportive ❤️",
     createdAt: new Date("2024-03-10T11:15:00Z"),
@@ -421,7 +421,7 @@ export const mockComments: Comment[] = [
   {
     id: "3",
     postId: "1",
-    userId: "1",
+    userId: "user-1",
     user: mockUsers[0],
     content: "Love seeing everyone's coding journeys! Keep building! 🚀",
     createdAt: new Date("2024-03-10T12:00:00Z"),
@@ -430,7 +430,7 @@ export const mockComments: Comment[] = [
   {
     id: "4",
     postId: "2",
-    userId: "3",
+    userId: "user-3",
     user: mockUsers[2],
     content: "Just contributed! Education should be accessible to everyone 📚",
     createdAt: new Date("2024-03-09T18:25:00Z"),
@@ -439,7 +439,7 @@ export const mockComments: Comment[] = [
   {
     id: "5",
     postId: "3",
-    userId: "5",
+    userId: "user-5",
     user: mockUsers[4],
     content: "These NFTs look incredible! The art style is so unique 🎨",
     createdAt: new Date("2024-03-08T17:20:00Z"),
@@ -450,7 +450,7 @@ export const mockComments: Comment[] = [
 export const mockActivities: Activity[] = [
   {
     id: "1",
-    userId: "1",
+    userId: "user-1",
     type: "post_created",
     description: "created a new giveaway",
     postId: "1",
@@ -458,7 +458,7 @@ export const mockActivities: Activity[] = [
   },
   {
     id: "2",
-    userId: "2",
+    userId: "user-2",
     type: "entry_submitted",
     description: "entered a giveaway",
     postId: "1",
@@ -466,7 +466,7 @@ export const mockActivities: Activity[] = [
   },
   {
     id: "3",
-    userId: "1",
+    userId: "user-1",
     type: "contribution_made",
     description: "contributed to a help request",
     postId: "2",
@@ -475,7 +475,7 @@ export const mockActivities: Activity[] = [
   },
   {
     id: "4",
-    userId: "3",
+    userId: "user-3",
     type: "post_created",
     description: "created a new giveaway",
     postId: "3",
@@ -483,7 +483,7 @@ export const mockActivities: Activity[] = [
   },
   {
     id: "5",
-    userId: "4",
+    userId: "user-4",
     type: "post_created",
     description: "created a help request",
     postId: "2",
@@ -495,7 +495,7 @@ export const mockPosts: Post[] = [
   {
     id: "1",
     type: "giveaway",
-    authorId: "1",
+    authorId: "user-1",
     author: mockUsers[0],
     title: "🎁 $500 USDC Giveaway for New Developers!",
     description:
@@ -528,7 +528,7 @@ export const mockPosts: Post[] = [
   {
     id: "2",
     type: "help-request",
-    authorId: "4",
+    authorId: "user-4",
     author: mockUsers[3],
     title: "🙏 Help Me Get a New Laptop for Coding",
     description:
@@ -549,7 +549,7 @@ export const mockPosts: Post[] = [
   {
     id: "3",
     type: "giveaway",
-    authorId: "3",
+    authorId: "user-3",
     author: mockUsers[2],
     title: "🚀 NFT Collection Giveaway - 3 Winners!",
     description:
@@ -582,7 +582,7 @@ export const mockPosts: Post[] = [
   {
     id: "4",
     type: "giveaway",
-    authorId: "2",
+    authorId: "user-2",
     author: mockUsers[1],
     title: "🎨 Design Tutorial Video + Free Resources",
     description:
@@ -616,7 +616,7 @@ export const mockPosts: Post[] = [
   {
     id: "5",
     type: "help-request",
-    authorId: "5",
+    authorId: "user-5",
     author: mockUsers[4],
     title: "💚 Mental Health Support - Therapy Sessions",
     description:
@@ -637,7 +637,7 @@ export const mockPosts: Post[] = [
   {
     id: "6",
     type: "giveaway",
-    authorId: "5",
+    authorId: "user-5",
     author: mockUsers[4],
     title: "🎮 Ultimate Gaming Setup Showcase + Giveaway",
     description:
@@ -686,7 +686,7 @@ export const mockPosts: Post[] = [
   {
     id: "7",
     type: "help-request",
-    authorId: "1",
+    authorId: "user-1",
     author: mockUsers[0],
     title: "📚 Community Learning Resources Fund",
     description:
@@ -719,7 +719,7 @@ export const mockPosts: Post[] = [
   {
     id: "8",
     type: "giveaway",
-    authorId: "3",
+    authorId: "user-3",
     author: mockUsers[2],
     title: "💡 Startup Pitch Competition - Win Mentorship!",
     description:
