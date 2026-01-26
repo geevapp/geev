@@ -696,6 +696,8 @@ export interface AppContextType extends AppState {
   // ============ Utility Actions ============
   /** Clear current error state */
   clearError: () => void;
+  /** Set the current error state and optionally report analytics */
+  setError: (message: string | null, source?: string) => void;
   /** Set the loading state */
   setLoading: (loading: boolean) => void;
   /** Toggle between light and dark theme */
