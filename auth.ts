@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { mockAuthUsers } from "./lib/mock-auth";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  secret: process.env.AUTH_SECRET,
   providers: [
     Credentials({
       credentials: {
