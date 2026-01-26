@@ -1,20 +1,18 @@
-import type { Metadata } from 'next';
-import { AuthGuard } from '@/components/auth-guard';
-
-export const metadata: Metadata = {
-  title: 'Activity | Geev',
-  description: 'View your activity history',
-};
+"use client";
+import UserNavbar from "@/components/user-navbar";
+import { useSidebar } from "../wallet/components/sidebar-context";
+import ActivityMain from "./components/activity-main";
+import { MobileSidebarToggle } from "@/components/mobile-sidebar-toggle";
 
 export default function ActivityPage() {
+  const { isOpen } = useSidebar();
   return (
-    <AuthGuard>
-      <div className="container py-8">
-        <h1 className="text-3xl font-bold mb-6">Activity</h1>
-        <p className="text-muted-foreground">
-          Activity history will be implemented here
-        </p>
+    <div className={`w-full h-screen flex flex-col ${isOpen ? "lg:ml-64" : "lg:ml-16"}`}>
+      <MobileSidebarToggle />
+      <UserNavbar />
+      <div className="flex-1 overflow-y-auto">
+      <ActivityMain />
       </div>
-    </AuthGuard>
+    </div>
   );
 }
