@@ -1,9 +1,6 @@
-<<<<<<< HEAD
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-=======
->>>>>>> 22e9b8e74142061ba440a0b05f7d245c79eb1a1e
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,11 +11,6 @@ datasource db {
 }
 
 model User {
-<<<<<<< HEAD
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
-=======
   id            String         @id @default(uuid())
   walletAddress String         @unique @map("wallet_address") @db.VarChar(56)
   name          String         @db.VarChar(255)
@@ -157,7 +149,6 @@ model UserBadge {
 
   @@id([userId, badgeId])
   @@map("user_badges")
->>>>>>> 22e9b8e74142061ba440a0b05f7d245c79eb1a1e
 }
 
 model AnalyticsEvent {

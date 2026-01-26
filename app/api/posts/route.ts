@@ -46,7 +46,7 @@ const POST = async (request: NextRequest) => {
       },
     });
 
-    return apiSuccess(post, "Post created successfully");
+    return apiSuccess(post, "Post created successfully", 201);
   } catch (error) {
     return apiError('Failed to create post', 500);
   }
