@@ -147,3 +147,20 @@ model UserBadge {
   @@id([userId, badgeId])
   @@map("user_badges")
 }
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  eventType String   @map("event_type") @db.VarChar(50)
+  eventData Json?    @map("event_data")
+  pageUrl   String?  @map("page_url")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventType], name: "idx_analytics_events_type")
+  @@index([createdAt], name: "idx_analytics_events_created")
+  @@index([userId], name: "idx_analytics_events_user")
+  @@map("analytics_events")
+}
