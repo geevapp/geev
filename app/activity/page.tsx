@@ -1,11 +1,13 @@
-"use client";
-import UserNavbar from "@/components/user-navbar";
-import { useSidebar } from "../wallet/components/sidebar-context";
-import ActivityMain from "./components/activity-main";
-import { MobileSidebarToggle } from "@/components/mobile-sidebar-toggle";
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { Spinner } from "@/components/ui/spinner";
 
-export default function ActivityPage() {
-  const { isOpen } = useSidebar();
+export const metadata: Metadata = {
+  title: "Activity | Geev",
+  description: "View your activity history",
+};
+
+function ActivityContent() {
   return (
     <div className={`w-full h-screen flex flex-col ${isOpen ? "lg:ml-64" : "lg:ml-16"}`}>
       <MobileSidebarToggle />
@@ -14,5 +16,23 @@ export default function ActivityPage() {
       <ActivityMain />
       </div>
     </div>
+  );
+}
+
+function ActivityLoadingFallback() {
+  return (
+    <div className="container py-8">
+      <div className="flex items-center justify-center min-h-100">
+        <Spinner size="lg" />
+      </div>
+    </div>
+  );
+}
+
+export default function ActivityPage() {
+  return (
+    <Suspense fallback={<ActivityLoadingFallback />}>
+      <ActivityContent />
+    </Suspense>
   );
 }
