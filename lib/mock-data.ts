@@ -1,40 +1,143 @@
-import type { Activity, Badge, Comment, Entry, HelpContribution, Post, User, UserRank } from "./types"
+import type {
+	Activity,
+	Badge,
+	Comment,
+	Entry,
+	HelpContribution,
+	Post,
+	User,
+	UserRank,
+	Reply,
+	Wallet,
+	Burn,
+	Like,
+	Share,
+} from "./types";
+import { PostStatus, PostCategory, SelectionMethod, BadgeTier } from "./types";
+
+const now = Date.now();
+const daysAgo = (days: number) => new Date(now - days * 24 * 60 * 60 * 1000);
+const hoursAgo = (hours: number) => new Date(now - hours * 60 * 60 * 1000);
+const daysFromNow = (days: number) =>
+	new Date(now + days * 24 * 60 * 60 * 1000);
 
 export const userRanks: UserRank[] = [
-  { level: 1, title: "Newcomer", color: "text-gray-500", minPoints: 0 },
-  { level: 2, title: "Helper", color: "text-green-500", minPoints: 100 },
-  { level: 3, title: "Contributor", color: "text-blue-500", minPoints: 500 },
-  { level: 4, title: "Champion", color: "text-orange-500", minPoints: 1000 },
-  { level: 5, title: "Legend", color: "text-orange-500", minPoints: 2500 },
-]
+	{ level: 1, title: "Newcomer", color: "text-gray-500", minPoints: 0 },
+	{ level: 2, title: "Helper", color: "text-green-500", minPoints: 100 },
+	{ level: 3, title: "Contributor", color: "text-blue-500", minPoints: 500 },
+	{ level: 4, title: "Champion", color: "text-orange-500", minPoints: 1000 },
+	{ level: 5, title: "Legend", color: "text-orange-500", minPoints: 2500 },
+];
 
+// Mock badges covering all tiers.
 export const badges: Badge[] = [
-  {
-    id: "1",
-    name: "First Giveaway",
-    description: "Created your first giveaway",
-    icon: "🎁",
-    color: "bg-blue-100 text-blue-800",
-    earnedAt: new Date("2024-01-15"),
-  },
-  {
-    id: "2",
-    name: "Generous Heart",
-    description: "Helped 10 people with their requests",
-    icon: "❤️",
-    color: "bg-red-100 text-red-800",
-    earnedAt: new Date("2024-02-01"),
-  },
-  {
-    id: "3",
-    name: "Community Builder",
-    description: "Gained 100 followers",
-    icon: "🏗️",
-    color: "bg-green-100 text-green-800",
-    earnedAt: new Date("2024-02-15"),
-  },
-]
+	{
+		id: "badge-bronze",
+		name: "Helper",
+		description: "Awarded for making your first contribution",
+		tier: BadgeTier.Bronze,
+		icon: "🥉",
+		color: "bg-orange-100 text-orange-800",
+		xpReward: 10,
+		criteria: "1+ contributions",
+	},
+	{
+		id: "badge-silver",
+		name: "Contributor",
+		description: "Awarded for making 5 contributions",
+		tier: BadgeTier.Silver,
+		icon: "🥈",
+		color: "bg-slate-100 text-slate-800",
+		xpReward: 50,
+		criteria: "5+ contributions",
+	},
+	{
+		id: "badge-gold",
+		name: "Community Pillar",
+		description: "Awarded for making 10 contributions",
+		tier: BadgeTier.Gold,
+		icon: "🥇",
+		color: "bg-yellow-100 text-yellow-800",
+		xpReward: 100,
+		criteria: "10+ contributions",
+	},
+	{
+		id: "badge-platinum",
+		name: "Legend",
+		description: "Awarded for making 25 contributions",
+		tier: BadgeTier.Platinum,
+		icon: "💎",
+		color: "bg-indigo-100 text-indigo-800",
+		xpReward: 250,
+		criteria: "25+ contributions",
+	},
+	{
+		id: "badge-diamond",
+		name: "Icon",
+		description: "Awarded for making 50 contributions",
+		tier: BadgeTier.Diamond,
+		icon: "👑",
+		color: "bg-purple-100 text-purple-800",
+		xpReward: 500,
+		criteria: "50+ contributions",
+	},
+];
 
+// Mock wallets for development and testing.
+export const mockWallets: Wallet[] = [
+	{
+		publicKey: "GAS4Q3L3R6J2H7B7W4VJ4M7K7P6C4LQ5L3J6M7N8P9",
+		balance: 2500.75,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GB2J8K3P9N7M6L4C2V5B7N8M1K2J9H8G7F6D5S4",
+		balance: 890.25,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GDR8F4H2J6K7L9M3N5B8V1C2X3Z5A6S7D8F9G1",
+		balance: 5200.0,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GC9D2S5A7F1G3H6J8K2L4M9N7B5V3C1X8Z6Q4",
+		balance: 125.5,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GJ7K4L2M8N6B5V3C1X9Z7Q5W2E4R6T8Y1U3",
+		balance: 1750.8,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GA6S3D9F5G1H7J2K4L8M6N9B5V3C1X7Z4Q2",
+		balance: 450.0,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GF5D8S2A6F4G7H1J9K3L6M2N8B5V9C1X4Z7",
+		balance: 3200.5,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GH6J3K9L2M8N4B5V7C1X3Z5Q6W8E2R4T7Y1",
+		balance: 1680.25,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GK2L7M4N9B6V1C3X5Z8Q2W4E7R9T1Y3U6",
+		balance: 280.75,
+		currency: "USDC",
+	},
+	{
+		publicKey: "GN3M8B2V5C7X1Z4Q6W9E2R5T8Y1U3I6O4",
+		balance: 920.4,
+		currency: "USDC",
+	},
+];
+
+// Mock users: add new users with unique IDs and matching wallet info.
 export const mockUsers: User[] = [
   {
     id: "user-1",
@@ -122,6 +225,7 @@ export const mockUsers: User[] = [
   },
 ]
 
+// Mock entries: add new entries with a valid postId and userId.
 export const mockEntries: Entry[] = [
   {
     id: "1",
@@ -303,6 +407,7 @@ export const mockEntries: Entry[] = [
   },
 ]
 
+// Mock contributions for help requests.
 export const mockContributions: HelpContribution[] = [
   {
     id: "1",
@@ -399,6 +504,7 @@ export const mockContributions: HelpContribution[] = [
   },
 ]
 
+// Mock comments on posts.
 export const mockComments: Comment[] = [
   {
     id: "1",
@@ -447,6 +553,7 @@ export const mockComments: Comment[] = [
   },
 ]
 
+// Mock activity feed items.
 export const mockActivities: Activity[] = [
   {
     id: "1",
@@ -491,6 +598,7 @@ export const mockActivities: Activity[] = [
   },
 ]
 
+// Mock posts: add new posts with unique IDs and matching relationships.
 export const mockPosts: Post[] = [
   {
     id: "1",

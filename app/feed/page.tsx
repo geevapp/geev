@@ -1,7 +1,10 @@
-'use client'
+"use client";
 
-import type { Metadata } from 'next';
-import { AuthGuard } from '@/components/auth-guard';
+import { AuthNavbar } from "@/components/auth-navbar";
+import { useApp } from "@/contexts/app-context";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent } from "@/components/ui/card";
+import { PostCard, PostCardSkeleton } from "@/components/post-card";
 
 // export const metadata: Metadata = {
 //   title: 'Feed | Geev',
@@ -24,26 +27,25 @@ import { CheckCircle2, Gift, Heart, MessageCircle, Share2, Flame } from 'lucide-
  * Protected route - redirects to login if not authenticated.
  */
 export default function FeedPage() {
-  const { isLoading } = useAuth({ required: true })
-  const { user, posts, burnPost } = useApp()
+  const { user, posts, isHydrated } = useApp();
 
-  // Show loading state while checking auth
-  if (isLoading || !user) {
+  // Show loading state while hydrating user from session
+  if (!isHydrated || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#101828]">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#FF6900] border-t-transparent" />
       </div>
-    )
+    );
   }
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <AuthGuard>
@@ -68,8 +70,9 @@ export default function FeedPage() {
                   </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
           {/* Feed */}
           <div className="space-y-4">

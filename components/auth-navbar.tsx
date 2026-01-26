@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Moon,
-  Sun,
   Bell,
   Search,
   Plus,
@@ -24,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 /**
  * AuthNavbar Component
@@ -31,12 +30,6 @@ import {
  * Navigation bar for authenticated users.
  * Shows user info, quick actions, and navigation links.
  *
- * Features:
- * - User avatar with dropdown menu
- * - Theme toggle
- * - Notifications (placeholder)
- * - Create post button
- * - Logout functionality
  */
 export function AuthNavbar() {
   const router = useRouter();

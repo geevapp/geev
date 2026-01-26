@@ -68,6 +68,49 @@ export enum BadgeTier {
 }
 
 // =============================================================================
+// API RESPONSE INTERFACES
+// =============================================================================
+
+/**
+ * Leaderboard entry for API responses.
+ * Represents a user's ranking and statistics.
+ */
+export interface LeaderboardEntry {
+  /** User ID */
+  id: string;
+  /** User display name */
+  name: string;
+  /** User avatar URL */
+  avatar_url: string;
+  /** User experience points */
+  xp: number;
+  /** Number of posts created */
+  post_count: number;
+  /** Number of entries submitted */
+  entry_count: number;
+  /** Total contributions (posts + entries) */
+  total_contributions: number;
+  /** User badges */
+  badges: Badge[];
+}
+
+/**
+ * Leaderboard API response structure.
+ */
+export interface LeaderboardResponse {
+  /** Array of leaderboard entries */
+  leaderboard: LeaderboardEntry[];
+  /** Current page number */
+  page: number;
+  /** Number of items per page */
+  limit: number;
+  /** Time period filter applied */
+  period: 'all-time' | 'monthly' | 'weekly';
+  /** Total number of entries */
+  total: number;
+}
+
+// =============================================================================
 // USER INTERFACES
 // =============================================================================
 

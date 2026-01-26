@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -44,12 +45,13 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --font-inter: 'Inter', system-ui, sans-serif;
 }
 
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(1 0 0);
+  --background: #f8fafc;
   --foreground: oklch(0.145 0 0);
 
   --card: oklch(1 0 0);
@@ -78,11 +80,13 @@
   --ring: oklch(0.67 0.23 42); 
 
   
+  --color-bg: #f8fafc;
+  
 }
 
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: #0f172b;
   --foreground: oklch(0.985 0 0);
 
   --card: oklch(0.205 0 0);
@@ -109,6 +113,8 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.72 0.24 42);
+
+  --color-bg: #0f172b;
 }
 
 
@@ -118,5 +124,86 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* RESPONSIVE GRID SYSTEM - Mobile-first grid layouts */
+@layer components {
+  /* Base grid: 1 column on mobile */
+  .grid-responsive-1 {
+    @apply grid grid-cols-1;
+  }
+
+  /* Tablet and up: 2 columns */
+  @media (min-width: 768px) {
+    .grid-responsive-1 {
+      @apply md:grid-cols-2;
+    }
+  }
+
+  /* Desktop and up: 3 columns */
+  @media (min-width: 1280px) {
+    .grid-responsive-1 {
+      @apply xl:grid-cols-3;
+    }
+  }
+
+  /* 1-2 Column responsive layout */
+  .grid-responsive-2 {
+    @apply grid grid-cols-1 md:grid-cols-2;
+  }
+
+  /* Gap utilities for consistent spacing */
+  .gap-responsive {
+    @apply gap-4 md:gap-6 lg:gap-8;
+  }
+
+  /* Responsive padding helpers */
+  .px-responsive {
+    @apply px-4 sm:px-6 md:px-8 lg:px-10;
+  }
+
+  .py-responsive {
+    @apply py-6 md:py-8 lg:py-10;
+  }
+
+  .p-responsive {
+    @apply p-4 sm:p-6 md:p-8 lg:p-10;
+  }
+
+  /* Responsive heading styles */
+  .h1-responsive {
+    @apply text-3xl md:text-4xl lg:text-5xl font-bold leading-tight;
+  }
+
+  .h2-responsive {
+    @apply text-2xl md:text-3xl lg:text-4xl font-bold leading-snug;
+  }
+
+  .h3-responsive {
+    @apply text-xl md:text-2xl lg:text-3xl font-semibold leading-snug;
+  }
+
+  /* Body text responsive sizing */
+  .body-responsive {
+    @apply text-base md:text-lg leading-relaxed;
+  }
+
+  /* Small text responsive sizing */
+  .text-sm-responsive {
+    @apply text-sm md:text-base;
+  }
+
+  /* Visibility utilities for breakpoints */
+  .hidden-mobile {
+    @apply block md:hidden;
+  }
+
+  .hidden-tablet-up {
+    @apply hidden md:block;
+  }
+
+  .hidden-desktop {
+    @apply hidden xl:block;
   }
 }

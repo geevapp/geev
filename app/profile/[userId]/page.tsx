@@ -39,6 +39,14 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { userId } = await params;
+  return {
+    title: `Profile ${userId} | Geev`,
+    description: "View user profile",
+  };
 }
 
 /**
