@@ -289,3 +289,103 @@ Delete your own post
 * 404 – Post not found
 
 ##
+
+## Analytics
+
+### Event Tracking API
+
+- **Endpoint:** `POST /api/analytics/events`
+- **Purpose:** Track client and server events (page views, post lifecycle, interactions, errors).
+
+**Request Body**
+
+```json
+{
+  "eventType": "page_view",
+  "eventData": { "path": "/feed" },
+  "pageUrl": "https://app.example.com/feed"
+}
+```
+
+- `eventType` must be one of:
+  - `"page_view"`
+  - `"post_created"`
+  - `"entry_submitted"`
+  - `"like_added"`
+  - `"share_clicked"`
+  - `"error_occurred"`
+- `eventData` is optional JSON metadata (non-PII only).
+- `pageUrl` is optional; when omitted, the client helper populates it from `window.location.href`.
+
+**Headers**
+
+- `x-user-id` (optional) – the authenticated user ID for DAU/attribution. The default client helper will set this when a user is available.
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": { "tracked": true }
+}
+```
+
+Analytics failures never block product flows; on internal errors the endpoint returns `{"tracked": false}` but still responds with `success: true`.
+
+### Metrics API
+
+- **Endpoint:** `GET /api/analytics/metrics`
+- **Purpose:** Fetch high-level platform metrics over a time window.
+
+**Query Params**
+
+- `period` (optional):
+  - `"24h"` – last 24 hours
+  - `"7d"` – last 7 days (default)
+  - `"30d"` – last 30 days
+
+**Response**
+
+```json
+{
+  "success": true,
+  "data": {
+    "period": "7d",
+    "metrics": {
+      "active_users": 12,
+      "posts_created": 5,
+      "entries_submitted": 42,
+      "page_views": 380
+    }
+  }
+}
+```
+
+- `active_users` – distinct users with at least one tracked event in the period.
+- `posts_created` – posts created in the period.
+- `entries_submitted` – number of `entry_submitted` events in the period.
+- `page_views` – number of `page_view` events in the period.
+
+Results are cached in-memory for 5 minutes per `period` value to reduce load.
+
+### Client Tracking Helper
+
+A lightweight helper exists at `lib/analytics.ts`:
+
+```ts
+import { trackEvent } from "@/lib/analytics";
+
+await trackEvent("page_view", { path: "/feed" });
+await trackEvent("post_created", { postId: "post_123" }, { userId: "1" });
+```
+
+Signature:
+
+- `trackEvent(eventType: string, eventData?: Record<string, any>, options?: { userId?: string })`
+- No-ops on the server, silently swallows network errors on the client.
+
+Privacy guarantees:
+
+- No PII is added on the server; `eventData` should not include emails, wallet secrets, or other sensitive values.
+- Anonymous events are supported (no `x-user-id`).
+- Events are used for behavioral and performance insights, not for tracking individual identities beyond an opaque user ID.

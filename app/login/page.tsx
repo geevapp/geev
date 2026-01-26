@@ -1,6 +1,12 @@
 "use client";
-// REMOVED: metadata export - moved to layout.tsx (Server Component)
+import type { Metadata } from "next";
 
+// export const metadata: Metadata = {
+//   title: 'Login | Geev',
+//   description: 'Connect your wallet to get started',
+// };
+
+import { useAuth } from "@/hooks/use-auth";
 import { LoginForm } from "@/components/login-form";
 import { GuestNavbar } from "@/components/guest-navbar";
 
@@ -9,6 +15,20 @@ import { GuestNavbar } from "@/components/guest-navbar";
  * No auth checks needed - proxy handles redirects automatically.
  */
 export default function LoginPage() {
+  const { isLoading } = useAuth({
+    redirectIfAuthenticated: true,
+    redirectAuthenticatedTo: "/feed",
+  });
+
+  // Show loading state while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <GuestNavbar />

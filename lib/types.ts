@@ -557,6 +557,47 @@ export interface Activity {
 }
 
 // =============================================================================
+// DRAFT INTERFACES
+// =============================================================================
+
+/**
+ * Draft interface for incomplete posts saved locally.
+ * Allows users to save work in progress and resume later.
+ */
+export interface Draft {
+  /** Unique identifier for the draft */
+  id: string;
+  /** Type of post: giveaway or request */
+  type: 'giveaway' | 'request';
+  /** Post title */
+  title: string;
+  /** Post description */
+  description: string;
+  /** Post category */
+  category?: string;
+  /** Prize amount (for giveaways) */
+  prizeAmount?: number;
+  /** Currency type */
+  currency?: string;
+  /** Maximum number of winners (for giveaways) */
+  maxWinners?: number;
+  /** Selection method */
+  selectionMethod?: string;
+  /** Target amount (for requests) */
+  targetAmount?: number;
+  /** Entry requirements */
+  entryRequirements?: string[];
+  /** Whether proof is required */
+  proofRequired?: boolean;
+  /** Duration in days */
+  duration?: number;
+  /** Timestamp when draft was saved */
+  savedAt: string;
+  /** Timestamp when draft was last updated */
+  updatedAt: string;
+}
+
+// =============================================================================
 // APPLICATION STATE INTERFACES
 // =============================================================================
 
@@ -655,6 +696,8 @@ export interface AppContextType extends AppState {
   // ============ Utility Actions ============
   /** Clear current error state */
   clearError: () => void;
+  /** Set the current error state and optionally report analytics */
+  setError: (message: string | null, source?: string) => void;
   /** Set the loading state */
   setLoading: (loading: boolean) => void;
   /** Toggle between light and dark theme */

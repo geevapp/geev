@@ -8,6 +8,19 @@
 
 const now = new Date();
 
+// In-memory analytics events store for development analytics
+interface AnalyticsEventRecord {
+  id: string;
+  userId: string | null;
+  eventType: string;
+  eventData: any | null;
+  pageUrl: string | null;
+  userAgent: string | null;
+  createdAt: Date;
+}
+
+const analyticsEvents: AnalyticsEventRecord[] = [];
+
 const mockPosts = [
   {
     id: 'post_a1',
@@ -149,6 +162,68 @@ export const prisma = {
       ];
 
       return mockBadges;
+    },
+  },
+  analyticsEvent: {
+    create: async ({ data }: { data: Partial<AnalyticsEventRecord> }) => {
+      const record: AnalyticsEventRecord = {
+        id: `ae_${Math.random().toString(36).substr(2, 9)}`,
+        userId: (data.userId as string | null) ?? null,
+        eventType: String(data.eventType ?? "unknown"),
+        eventData: data.eventData ?? null,
+        pageUrl: (data.pageUrl as string | null) ?? null,
+        userAgent: (data.userAgent as string | null) ?? null,
+        createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(),
+      };
+      analyticsEvents.push(record);
+      return record;
+    },
+    findMany: async (options: any = {}) => {
+      const { where, select, distinct } = options;
+      let results = [...analyticsEvents];
+
+      if (where) {
+        if (where.createdAt?.gte instanceof Date) {
+          const from = where.createdAt.gte as Date;
+          results = results.filter((e) => e.createdAt >= from);
+        }
+        if (where.userId) {
+          if (where.userId.not === null) {
+            results = results.filter((e) => e.userId !== null);
+          } else if (typeof where.userId === "string") {
+            results = results.filter((e) => e.userId === where.userId);
+          }
+        }
+        if (where.eventType) {
+          if (typeof where.eventType === "string") {
+            results = results.filter((e) => e.eventType === where.eventType);
+          } else if (where.eventType.in) {
+            const allowed: string[] = where.eventType.in;
+            results = results.filter((e) => allowed.includes(e.eventType));
+          }
+        }
+      }
+
+      if (distinct && Array.isArray(distinct) && distinct.includes("userId")) {
+        const seen = new Set<string>();
+        results = results.filter((e) => {
+          if (!e.userId) return false;
+          if (seen.has(e.userId)) return false;
+          seen.add(e.userId);
+          return true;
+        });
+      }
+
+      if (select && select.userId) {
+        return results.map((e) => ({ userId: e.userId }));
+      }
+
+      return results;
+    },
+    count: async (options: any = {}) => {
+      const { where } = options;
+      const list = await (prisma as any).analyticsEvent.findMany({ where });
+      return list.length;
     },
   },
   post: {
