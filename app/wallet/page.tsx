@@ -1,27 +1,17 @@
-import { AuthGuard } from "@/components/auth-guard";
+import type { Metadata } from "next";
 
-import WalletFooter from "./components/footer";
-import WalletMain from "./components/wallet-main";
-import { MobileSidebarToggle } from "@/components/mobile-sidebar-toggle";
-import { AuthNavbar } from "@/components/auth-navbar";
+export const metadata: Metadata = {
+  title: "Wallet | Geev",
+  description: "Manage your wallet and tokens",
+};
 
 export default function WalletPage() {
   return (
-    <AuthGuard>
-    <div className="flex flex-col h-screen w-full">
-      <div className="flex items-center gap-3 px-4 lg:px-0">
-        <MobileSidebarToggle />
-        <div className="flex-1">
-          <AuthNavbar />
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
-        <WalletMain />
-      </div>
-
-      <WalletFooter />
+    <div className="container py-8">
+      <h1 className="text-3xl font-bold mb-6">Wallet</h1>
+      <p className="text-muted-foreground">
+        Wallet management will be implemented here
+      </p>
     </div>
-    </AuthGuard>
   );
 }

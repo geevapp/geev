@@ -1,16 +1,26 @@
-// REMOVED: metadata export - moved to layout.tsx (Server Component)
-'use client'
+"use client";
+import type { Metadata } from "next";
 
-import { useAuth } from '@/hooks/use-auth'
-import { LoginForm } from '@/components/login-form'
-import { GuestNavbar } from '@/components/guest-navbar'
+// export const metadata: Metadata = {
+//   title: 'Login | Geev',
+//   description: 'Connect your wallet to get started',
+// };
 
+import { useAuth } from "@/hooks/use-auth";
+import { LoginForm } from "@/components/login-form";
+import { GuestNavbar } from "@/components/guest-navbar";
+
+/**
+ * Displays the mock authentication form for selecting a test user.
+ * No auth checks needed - proxy handles redirects automatically.
+ */
 export default function LoginPage() {
   const { isLoading } = useAuth({
     redirectIfAuthenticated: true,
     redirectAuthenticatedTo: "/feed",
   });
 
+  // Show loading state while checking auth
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950">
