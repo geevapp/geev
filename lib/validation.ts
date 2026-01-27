@@ -71,3 +71,40 @@ export const validateDuration = (days: number | string): ValidationResult => {
   }
   return { isValid: true };
 };
+
+export const validateHelpType = (helpType: string): ValidationResult => {
+  const validTypes = ['material', 'service', 'advice', 'other'];
+  if (!helpType || !helpType.trim()) {
+    return { isValid: false, error: 'Help type is required' };
+  }
+  if (!validTypes.includes(helpType)) {
+    return { isValid: false, error: 'Please select a valid help type' };
+  }
+  return { isValid: true };
+};
+
+export const validateUrgency = (urgency: string): ValidationResult => {
+  const validUrgencies = ['low', 'medium', 'high', 'urgent'];
+  if (!urgency || !urgency.trim()) {
+    return { isValid: false, error: 'Urgency level is required' };
+  }
+  if (!validUrgencies.includes(urgency)) {
+    return { isValid: false, error: 'Please select a valid urgency level' };
+  }
+  return { isValid: true };
+};
+
+export const validateTargetAmount = (amount: number | string): ValidationResult => {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+
+  if (isNaN(numAmount)) {
+    return { isValid: false, error: 'Target amount must be a number' };
+  }
+  if (numAmount <= 0) {
+    return { isValid: false, error: 'Target amount must be greater than 0' };
+  }
+  if (numAmount > 1000000) {
+    return { isValid: false, error: 'Target amount cannot exceed 1,000,000' };
+  }
+  return { isValid: true };
+};

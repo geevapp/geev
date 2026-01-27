@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,10 +11,14 @@ import {
   Settings,
   User as UserIcon,
   CheckCircle2,
+  FileText,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useApp } from "@/contexts/app-context";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +28,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getDraftCount } from "@/lib/drafts";
+import { DraftsList } from "@/components/drafts-list";
 
 /**
  * AuthNavbar Component
@@ -34,10 +41,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 export function AuthNavbar() {
   const router = useRouter();
   const { user, theme, toggleTheme, logout, setShowCreateModal } = useApp();
-
-  if (!user) {
-    return null;
-  }
+  const [draftCount, setDraftCount] = useState(0);
+  const [showDraftsList, setShowDraftsList] = useState(false);
 
   useEffect(() => {
     // Load draft count
@@ -59,6 +64,10 @@ export function AuthNavbar() {
       window.removeEventListener('storage', handleStorageChange)
     }
   }, [])
+
+  if (!user) {
+    return null;
+  }
 
   const handleLogout = () => {
     logout();
