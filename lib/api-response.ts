@@ -12,12 +12,12 @@ export interface ApiResponse<T = any> {
 /**
  * Create a successful API response
  */
-export function apiSuccess<T>(data: T, message?: string): Response {
+export function apiSuccess<T>(data: T, message?: string, status: number = 200): Response {
   return Response.json({
     success: true,
     data,
     message,
-  } as ApiResponse<T>);
+  } as ApiResponse<T>, { status });
 }
 
 /**
