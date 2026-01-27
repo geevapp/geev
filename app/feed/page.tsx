@@ -28,7 +28,7 @@ function getInitials(name: string): string {
  * Feed Page
  *
  * Main feed for authenticated users showing giveaways and help requests.
- * Protected route - redirects to login if not authenticated.
+ * Protected route - redirects to login if not authenticated..
  */
 export default function FeedPage() {
   const { user, posts, isHydrated } = useApp();
