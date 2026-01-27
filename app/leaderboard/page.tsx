@@ -1,242 +1,431 @@
-import { Trophy, Medal, Award, Crown } from 'lucide-react';
-import type { Metadata } from 'next';
+import React, { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Trophy, 
+  Medal, 
+  Award, 
+  TrendingUp, 
+  Users, 
+  Heart, 
+  MessageSquare,
+  Home,
+  Activity,
+  BarChart3,
+  Settings,
+  Plus
+} from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Leaderboard | Geev',
-  description: 'Top contributors and community leaders',
-};
-
-// Mock data for demonstration
+// Mock data
 const mockUsers = [
   {
     id: '1',
-    name: 'Sarah Chen',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-    stats: { totalContributions: 247, xp: 2470 },
-    badges: [{ name: 'Top Contributor', color: 'gold' }]
+    name: 'Alex Chan',
+    username: '@alexchan',
+    avatar: '/avatars/alex.jpg',
+    badge: 'Verified',
+    stats: {
+      totalContributions: 0,
+      givenways: 2,
+      badges: 2
+    }
   },
   {
     id: '2',
-    name: 'Alex Rivera',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
-    stats: { totalContributions: 189, xp: 1890 },
-    badges: [{ name: 'Rising Star', color: 'silver' }]
+    name: 'Sarah Johnson',
+    username: '@sarahj',
+    avatar: '/avatars/sarah.jpg',
+    badge: null,
+    stats: {
+      totalContributions: 0,
+      givenways: 0,
+      badges: 2
+    }
   },
   {
     id: '3',
-    name: 'Jordan Lee',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jordan',
-    stats: { totalContributions: 156, xp: 1560 },
-    badges: [{ name: 'Dedicated', color: 'bronze' }]
+    name: 'Marcus Williams',
+    username: '@marcusw',
+    avatar: '/avatars/marcus.jpg',
+    badge: 'Verified',
+    stats: {
+      totalContributions: 0,
+      givenways: 0,
+      badges: 3
+    }
   },
   {
     id: '4',
-    name: 'Taylor Kim',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Taylor',
-    stats: { totalContributions: 134, xp: 1340 },
-    badges: [{ name: 'Active Member', color: 'blue' }]
-  },
-  {
-    id: '5',
-    name: 'Morgan Davis',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Morgan',
-    stats: { totalContributions: 98, xp: 980 },
-    badges: [{ name: 'Contributor', color: 'green' }]
-  },
-  {
-    id: '6',
-    name: 'Casey Wilson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Casey',
-    stats: { totalContributions: 87, xp: 870 },
-    badges: [{ name: 'Helper', color: 'purple' }]
-  },
-  {
-    id: '7',
-    name: 'Riley Martinez',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Riley',
-    stats: { totalContributions: 76, xp: 760 },
-    badges: [{ name: 'Enthusiast', color: 'indigo' }]
-  },
-  {
-    id: '8',
-    name: 'Jamie Anderson',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jamie',
-    stats: { totalContributions: 65, xp: 650 },
-    badges: [{ name: 'Member', color: 'gray' }]
+    name: 'Emma Rodriguez',
+    username: '@emmar',
+    avatar: '/avatars/emma.jpg',
+    badge: null,
+    stats: {
+      totalContributions: 0,
+      givenways: 0,
+      badges: 1
+    }
   }
 ];
 
-const currentUserId = '5'; // Morgan Davis is the current user
+const currentUser = {
+  name: 'Alex Chan',
+  username: '@alexchan',
+  avatar: '/avatars/alex.jpg',
+  stats: {
+    posts: 45,
+    followers: 1250,
+    badges: 3
+  },
+  walletBalance: 1500,
+  level: 5,
+  badgeCount: 3
+};
 
-function Avatar({ src, alt, className = '' }: { src: string; alt: string; className?: string }) {
-  return (
-    <div className={`rounded-full overflow-hidden bg-gray-200 ${className}`}>
-      <img src={src} alt={alt} className="w-full h-full object-cover" />
-    </div>
+type TimePeriod = 'week' | 'month' | 'alltime';
+type Category = 'topgivers' | 'giveaways' | 'requestors' | 'requests' | 'trending';
+
+export default function LeaderboardApp() {
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('alltime');
+  const [category, setCategory] = useState<Category>('topgivers');
+  const [users] = useState(mockUsers);
+
+  const rankedUsers = [...users].sort(
+    (a, b) => (b.stats?.totalContributions || 0) - (a.stats?.totalContributions || 0)
   );
-}
 
-function UserRankBadge({ badge }: { badge?: { name: string; color: string } }) {
-  if (!badge) return null;
-  
-  const colorClasses: Record<string, string> = {
-    gold: 'bg-yellow-500 text-yellow-900',
-    silver: 'bg-gray-300 text-gray-800',
-    bronze: 'bg-orange-600 text-white',
-    blue: 'bg-blue-500 text-white',
-    green: 'bg-green-500 text-white',
-    purple: 'bg-purple-500 text-white',
-    indigo: 'bg-indigo-500 text-white',
-    gray: 'bg-gray-400 text-white'
-  };
+  // Apply dark background to body
+  React.useEffect(() => {
+    document.body.style.backgroundColor = '#0d1425';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.documentElement.style.backgroundColor = '#0d1425';
+    
+    return () => {
+      document.body.style.backgroundColor = '';
+      document.documentElement.style.backgroundColor = '';
+    };
+  }, []);
 
   return (
-    <div className={`px-3 py-1 rounded-full text-xs font-semibold ${colorClasses[badge.color] || colorClasses.gray}`}>
-      {badge.name}
-    </div>
-  );
-}
+    <div className="flex h-screen bg-[#0d1425] text-white" style={{ minHeight: '100vh' }}>
+      {/* Sidebar */}
+      <aside className="w-64 bg-[#0a0f1e] border-r border-gray-800 flex flex-col">
+        {/* Logo */}
+        <div className="p-6 border-b border-gray-800 flex justify-end">
+          <img src="/logo-light.png" alt="Geev Logo" className="h-8" />
+        </div>
 
-function PodiumCard({ user, rank, isWinner = false }: { 
-  user?: typeof mockUsers[0]; 
-  rank: number; 
-  isWinner?: boolean 
-}) {
-  if (!user) return <div className="flex flex-col items-center opacity-0"></div>;
-  
-  const heights: Record<number, string> = { 1: 'h-48', 2: 'h-40', 3: 'h-32' };
-  const colors: Record<number, string> = { 
-    1: 'bg-gradient-to-b from-yellow-400 to-yellow-600', 
-    2: 'bg-gradient-to-b from-gray-300 to-gray-500', 
-    3: 'bg-gradient-to-b from-orange-500 to-orange-700' 
-  };
-  const icons: Record<number, JSX.Element> = { 
-    1: <Crown className="w-8 h-8 text-white" />, 
-    2: <Medal className="w-7 h-7 text-white" />, 
-    3: <Award className="w-6 h-6 text-white" /> 
-  };
-  const order: Record<number, string> = { 1: 'order-2', 2: 'order-1', 3: 'order-3' };
-
-  return (
-    <div className={`flex flex-col items-center ${order[rank]}`}>
-      <div className="relative mb-3">
-        <Avatar 
-          src={user.avatar} 
-          alt={user.name}
-          className={`${isWinner ? 'h-20 w-20' : 'h-16 w-16'} border-4 ${rank === 1 ? 'border-yellow-400' : rank === 2 ? 'border-gray-400' : 'border-orange-600'}`}
-        />
-        {isWinner && (
-          <div className="absolute -top-2 -right-2 bg-yellow-400 rounded-full p-1">
-            <Crown className="w-5 h-5 text-yellow-900" />
+        {/* User Profile Card */}
+        <div className="p-4 border-b border-gray-800">
+          <div className="bg-[#0d1425] rounded-lg p-4 border border-gray-800">
+            <div className="flex items-center gap-3 mb-3">
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
+                <AvatarFallback className="bg-gray-700">
+                  {currentUser.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">{currentUser.name}</p>
+                <p className="text-xs text-gray-400">{currentUser.username}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-orange-600 rounded-md font-medium">
+                  Level {currentUser.level}
+                </span>
+                <span className="px-2 py-1 bg-blue-600 rounded-md font-medium">
+                  {currentUser.badgeCount} Badges
+                </span>
+              </div>
+            </div>
+            <button className="w-full mt-3 px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-md text-sm font-medium transition-colors">
+              Wallet Balance
+            </button>
           </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4">
+          <div className="space-y-1">
+            <NavItem icon={<Home className="w-5 h-5" />} label="Feed" />
+            <NavItem icon={<Activity className="w-5 h-5" />} label="Activity" />
+            <NavItem icon={<Trophy className="w-5 h-5" />} label="Leaderboard" active />
+            <NavItem icon={<Settings className="w-5 h-5" />} label="Settings" />
+          </div>
+        </nav>
+
+        {/* Create Post Button */}
+        <div className="p-4 border-t border-gray-800">
+          <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg text-sm font-medium transition-colors">
+            <Plus className="w-5 h-5" />
+            Create Post
+          </button>
+        </div>
+
+        {/* User Stats */}
+        <div className="p-4 border-t border-gray-800">
+          <div className="text-xs text-gray-400 mb-2">YOUR STATS</div>
+          <div className="space-y-2">
+            <StatRow icon="📝" label="Posts" value={currentUser.stats.posts} />
+            <StatRow icon="👥" label="Followers" value={currentUser.stats.followers} />
+            <StatRow icon="🏆" label="Badges" value={currentUser.stats.badges} />
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Top Navbar */}
+        <header className="bg-[#0a0f1e] border-b border-gray-800 px-6 py-4 flex items-center justify-end sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <button className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-md text-sm font-medium transition-colors">
+              1,500 XP
+            </button>
+            <Avatar className="h-9 w-9 cursor-pointer">
+              <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
+              <AvatarFallback className="bg-gray-700">
+                {currentUser.name.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        </header>
+
+        {/* Leaderboard Content */}
+        <div className="container max-w-5xl mx-auto px-6 py-8">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <Trophy className="w-8 h-8 text-orange-500" />
+              <h1 className="text-3xl font-bold">Leaderboards</h1>
+            </div>
+            <p className="text-gray-400">Celebrate the most active members of our community</p>
+          </div>
+
+          {/* Time Period Filter */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setTimePeriod('week')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                timePeriod === 'week'
+                  ? 'bg-gray-700 text-white'
+                  : 'bg-[#0a0f1e] text-gray-400 hover:bg-gray-800'
+              }`}
+            >
+              This Week
+            </button>
+            <button
+              onClick={() => setTimePeriod('month')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                timePeriod === 'month'
+                  ? 'bg-gray-700 text-white'
+                  : 'bg-[#0a0f1e] text-gray-400 hover:bg-gray-800'
+              }`}
+            >
+              This Month
+            </button>
+            <button
+              onClick={() => setTimePeriod('alltime')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                timePeriod === 'alltime'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-[#0a0f1e] text-gray-400 hover:bg-gray-800'
+              }`}
+            >
+              All Time
+            </button>
+          </div>
+
+          {/* Category Tabs */}
+          <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+            <CategoryTab
+              icon={<Trophy className="w-4 h-4" />}
+              label="Top Givers"
+              active={category === 'topgivers'}
+              onClick={() => setCategory('topgivers')}
+            />
+            <CategoryTab
+              icon={<Medal className="w-4 h-4" />}
+              label="Giveaways"
+              active={category === 'giveaways'}
+              onClick={() => setCategory('giveaways')}
+            />
+            <CategoryTab
+              icon={<Heart className="w-4 h-4" />}
+              label="Requestors"
+              active={category === 'requestors'}
+              onClick={() => setCategory('requestors')}
+            />
+            <CategoryTab
+              icon={<MessageSquare className="w-4 h-4" />}
+              label="Requests"
+              active={category === 'requests'}
+              onClick={() => setCategory('requests')}
+            />
+            <CategoryTab
+              icon={<TrendingUp className="w-4 h-4" />}
+              label="Trending"
+              active={category === 'trending'}
+              onClick={() => setCategory('trending')}
+            />
+          </div>
+
+          {/* Top Givers Section */}
+          <div className="bg-[#0a0f1e] rounded-lg p-6 border border-gray-800">
+            <div className="flex items-center gap-2 mb-6">
+              <Trophy className="w-5 h-5 text-orange-500" />
+              <h2 className="text-xl font-semibold">Top Givers</h2>
+            </div>
+
+            {/* Ranked User List */}
+            <div className="space-y-3">
+              {rankedUsers.map((user, index) => (
+                <RankCard
+                  key={user.id}
+                  user={user}
+                  rank={index + 1}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function NavItem({ icon, label, active = false }: {
+  icon: React.ReactNode;
+  label: string;
+  active?: boolean;
+}) {
+  return (
+    <button
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+        active
+          ? 'bg-gray-800 text-white'
+          : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function StatRow({ icon, label, value }: {
+  icon: string;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center gap-2">
+        <span>{icon}</span>
+        <span className="text-gray-400">{label}</span>
+      </div>
+      <span className="font-semibold">{value}</span>
+    </div>
+  );
+}
+
+function CategoryTab({ icon, label, active, onClick }: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+        active
+          ? 'bg-gray-700 text-white'
+          : 'bg-transparent text-gray-400 hover:bg-gray-800'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function RankCard({ user, rank }: {
+  user: typeof mockUsers[0];
+  rank: number;
+}) {
+  const getRankIcon = () => {
+    switch (rank) {
+      case 1:
+        return <Trophy className="w-6 h-6 text-yellow-500" />;
+      case 2:
+        return <Medal className="w-6 h-6 text-gray-400" />;
+      case 3:
+        return <Award className="w-6 h-6 text-orange-700" />;
+      default:
+        return null;
+    }
+  };
+
+  const getRankBadgeColor = () => {
+    switch (rank) {
+      case 1:
+        return 'bg-yellow-500/20 text-yellow-500';
+      case 2:
+        return 'bg-gray-500/20 text-gray-400';
+      case 3:
+        return 'bg-orange-700/20 text-orange-600';
+      default:
+        return 'bg-gray-700/50 text-gray-400';
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-4 p-4 bg-[#0d1425] rounded-lg hover:bg-[#111a2e] transition-colors border border-gray-800">
+      {/* Rank */}
+      <div className="flex items-center justify-center w-12">
+        {rank <= 3 ? (
+          getRankIcon()
+        ) : (
+          <span className={`text-lg font-bold px-3 py-1 rounded-md ${getRankBadgeColor()}`}>
+            #{rank}
+          </span>
         )}
       </div>
-      <p className={`font-semibold text-center ${isWinner ? 'text-lg' : 'text-sm'}`}>{user.name}</p>
-      <p className="text-xs text-gray-600 mt-1">
-        {user.stats?.totalContributions || 0} contributions
-      </p>
-      <p className="text-xs text-gray-500">
-        {user.stats?.xp || 0} XP
-      </p>
-      <div
-        className={`${heights[rank]} w-full mt-4 rounded-t-lg flex flex-col items-center justify-center ${colors[rank]} shadow-lg transition-transform hover:scale-105`}
-      >
-        {icons[rank]}
-        <span className="text-5xl font-bold text-white mt-2">{rank}</span>
+
+      {/* Avatar */}
+      <Avatar className="h-12 w-12">
+        <AvatarImage src={user.avatar} alt={user.name} />
+        <AvatarFallback className="bg-gray-700">
+          {user.name.charAt(0)}
+        </AvatarFallback>
+      </Avatar>
+
+      {/* User Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-semibold text-white truncate">{user.name}</p>
+          {user.badge && (
+            <Badge className="bg-blue-600 text-white text-xs">
+              {user.badge}
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-gray-400">{user.username}</p>
       </div>
-    </div>
-  );
-}
 
-function RankCard({ user, rank, isCurrentUser }: { 
-  user: typeof mockUsers[0]; 
-  rank: number; 
-  isCurrentUser: boolean 
-}) {
-  return (
-    <div className={`bg-white rounded-lg p-4 shadow-sm transition-all hover:shadow-md ${isCurrentUser ? 'border-2 border-blue-500 bg-blue-50' : 'border border-gray-200'}`}>
-      <div className="flex items-center gap-4">
-        <span className="text-2xl font-bold text-gray-400 w-8 flex-shrink-0">{rank}</span>
-        <Avatar 
-          src={user.avatar} 
-          alt={user.name}
-          className="h-12 w-12 flex-shrink-0"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-semibold text-gray-900 truncate">{user.name}</p>
-            {isCurrentUser && (
-              <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full whitespace-nowrap">You</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 mt-1">
-            <p className="text-sm text-gray-600">
-              {user.stats?.totalContributions || 0} contributions
-            </p>
-            <p className="text-sm text-gray-500">
-              {user.stats?.xp || 0} XP
-            </p>
-          </div>
+      {/* Stats */}
+      <div className="flex items-center gap-6 text-sm">
+        <div className="text-center">
+          <p className="text-gray-400">Giveaways</p>
+          <p className="font-semibold text-orange-500">{user.stats.givenways}</p>
         </div>
-        <UserRankBadge badge={user.badges?.[0]} />
-      </div>
-    </div>
-  );
-}
-
-export default function LeaderboardPage() {
-  // Sort users by contribution count
-  const rankedUsers = [...mockUsers].sort(
-    (a, b) =>
-      (b.stats?.totalContributions || 0) - (a.stats?.totalContributions || 0)
-  );
-
-  const top3 = rankedUsers.slice(0, 3);
-  const rest = rankedUsers.slice(3);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
-      <div className="container max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Trophy className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-4xl font-bold text-gray-900">Leaderboard</h1>
-            <Trophy className="w-8 h-8 text-yellow-500" />
-          </div>
-          <p className="text-gray-600">Top contributors in our community</p>
-        </div>
-
-        {/* Top 3 Podium */}
-        <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 mb-8">
-          <div className="grid grid-cols-3 gap-2 md:gap-4">
-            {/* 2nd Place */}
-            <PodiumCard user={top3[1]} rank={2} />
-
-            {/* 1st Place - Taller */}
-            <PodiumCard user={top3[0]} rank={1} isWinner />
-
-            {/* 3rd Place */}
-            <PodiumCard user={top3[2]} rank={3} />
-          </div>
-        </div>
-
-        {/* Rest of Rankings */}
-        <div className="space-y-3">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4 px-2">All Rankings</h2>
-          {rest.map((user, index) => (
-            <RankCard
-              key={user.id}
-              user={user}
-              rank={index + 4}
-              isCurrentUser={user.id === currentUserId}
-            />
-          ))}
-        </div>
-
-        {/* Footer Stats */}
-        <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Total Contributors: {rankedUsers.length}</p>
+        <div className="text-center">
+          <p className="text-gray-400">Badges</p>
+          <p className="font-semibold text-blue-500">{user.stats.badges}</p>
         </div>
       </div>
     </div>
