@@ -6,6 +6,11 @@
       "dom.iterable",
       "esnext"
     ],
+     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "useDefineForClassFields": false,
+
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
