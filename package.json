@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "dotenv -e .env.test -- vitest",
+    "test:ui": "dotenv -e .env.test -- vitest --ui",
+    "test:coverage": "dotenv -e .env.test -- vitest --coverage",
+    "test:ci": "dotenv -e .env.test -- vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -66,13 +70,15 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
-    "@types/node": "^22",
+    "@types/node": "^22.19.7",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^11.0.0",
     "postcss": "^8.5",
     "prisma": "^6.19.2",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }

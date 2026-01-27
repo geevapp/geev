@@ -43,6 +43,7 @@ import { signIn, signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 
 import type React from "react";
+import { trackEvent } from "@/lib/analytics";
 
 /** LocalStorage key for persisting application state */
 const STORAGE_KEY = "geev_app_state";
@@ -593,6 +594,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         contributions: [],
       };
       dispatch({ type: "ADD_POST", payload: newPost });
+      trackEvent(
+        "post_created",
+        {
+          postId: newPost.id,
+          category: newPost.category,
+          type: newPost.type,
+        },
+        state.user ? { userId: state.user.id } : undefined,
+      );
     },
 
     addPost: (post: Post) => {
@@ -621,6 +631,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       dispatch({ type: "ADD_ENTRY", payload: newEntry });
       checkAndAwardBadges(state.user?.id || "", "entry");
+      trackEvent(
+        "entry_submitted",
+        {
+          entryId: newEntry.id,
+          postId: newEntry.postId,
+        },
+        state.user ? { userId: state.user.id } : undefined,
+      );
     },
 
     addEntry: (entry: Entry) => {
@@ -671,7 +689,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // ============ Interaction Actions ============
     toggleLike: (id: string) => {
+      const wasLiked = state.likes.has(id);
       dispatch({ type: "TOGGLE_LIKE", payload: id });
+      if (!wasLiked) {
+        trackEvent(
+          "like_added",
+          { targetId: id },
+          state.user ? { userId: state.user.id } : undefined,
+        );
+      }
     },
 
     toggleBurn: (id: string) => {
@@ -680,11 +706,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     incrementShare: (postId: string) => {
       dispatch({ type: "INCREMENT_SHARE", payload: postId });
+      trackEvent(
+        "share_clicked",
+        { postId },
+        state.user ? { userId: state.user.id } : undefined,
+      );
     },
 
     // ============ Utility Actions ============
     clearError: () => {
       dispatch({ type: "SET_ERROR", payload: null });
+    },
+
+    setError: (message: string | null, source: string = "app-context") => {
+      dispatch({ type: "SET_ERROR", payload: message });
+      if (message) {
+        const safeMessage = message.length > 200 ? message.slice(0, 200) + "…" : message;
+        trackEvent(
+          "error_occurred",
+          { message: safeMessage, source },
+          state.user ? { userId: state.user.id } : undefined,
+        );
+      }
     },
 
     setLoading: (loading: boolean) => {

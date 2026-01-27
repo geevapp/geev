@@ -1,4 +1,4 @@
-import { useAppContext } from "@/contexts/app-context";
+'use client';
 import {
   ArrowDownLeft,
   ArrowLeft,
