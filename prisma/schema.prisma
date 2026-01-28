@@ -20,11 +20,12 @@ model User {
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
-  posts         Post[]         @relation("PostCreator")
-  entries       Entry[]
-  comments      Comment[]
-  interactions  Interaction[]
-  badges        UserBadge[]
+  posts           Post[]           @relation("PostCreator")
+  entries         Entry[]
+  comments        Comment[]
+  interactions    Interaction[]
+  badges          UserBadge[]
+  analyticsEvents AnalyticsEvent[]
 
   @@map("users")
 }
