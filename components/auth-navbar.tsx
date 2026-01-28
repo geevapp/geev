@@ -27,7 +27,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { getDraftCount } from "@/lib/drafts";
 import { DraftsList } from "@/components/drafts-list";
 
