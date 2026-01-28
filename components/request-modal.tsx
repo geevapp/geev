@@ -848,15 +848,15 @@ export function RequestModal({ draftId }: RequestModalProps) {
                 <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent className="bg-[#0F1117] border-[#1E2939]">
-                <SelectItem value="education" className="text-white hover:bg-[#1E2939]">Education</SelectItem>
-                <SelectItem value="medical" className="text-white hover:bg-[#1E2939]">Medical</SelectItem>
-                <SelectItem value="technology" className="text-white hover:bg-[#1E2939]">Technology</SelectItem>
-                <SelectItem value="housing" className="text-white hover:bg-[#1E2939]">Housing</SelectItem>
-                <SelectItem value="food" className="text-white hover:bg-[#1E2939]">Food</SelectItem>
-                <SelectItem value="transportation" className="text-white hover:bg-[#1E2939]">Transportation</SelectItem>
-                <SelectItem value="career" className="text-white hover:bg-[#1E2939]">Career</SelectItem>
-                <SelectItem value="mental-health" className="text-white hover:bg-[#1E2939]">Mental Health</SelectItem>
-                <SelectItem value="other" className="text-white hover:bg-[#1E2939]">Other</SelectItem>
+                <SelectItem value="help-request" className="text-white hover:bg-[#1E2939]">Help request</SelectItem>
+                <SelectItem value="giveaway" className="text-white hover:bg-[#1E2939]">Giveaway</SelectItem>
+                <SelectItem value="skill-share" className="text-white hover:bg-[#1E2939]">Skill share</SelectItem>
+                
+                
+                
+                
+                
+                
               </SelectContent>
             </Select>
             {touched.category && errors.category && (
