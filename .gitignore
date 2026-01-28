@@ -9,6 +9,10 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+.pnpm
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
 
 # testing
 /coverage
@@ -39,3 +43,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/lib/generated/prisma

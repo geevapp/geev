@@ -68,6 +68,49 @@ export enum BadgeTier {
 }
 
 // =============================================================================
+// API RESPONSE INTERFACES
+// =============================================================================
+
+/**
+ * Leaderboard entry for API responses.
+ * Represents a user's ranking and statistics.
+ */
+export interface LeaderboardEntry {
+  /** User ID */
+  id: string;
+  /** User display name */
+  name: string;
+  /** User avatar URL */
+  avatar_url: string;
+  /** User experience points */
+  xp: number;
+  /** Number of posts created */
+  post_count: number;
+  /** Number of entries submitted */
+  entry_count: number;
+  /** Total contributions (posts + entries) */
+  total_contributions: number;
+  /** User badges */
+  badges: Badge[];
+}
+
+/**
+ * Leaderboard API response structure.
+ */
+export interface LeaderboardResponse {
+  /** Array of leaderboard entries */
+  leaderboard: LeaderboardEntry[];
+  /** Current page number */
+  page: number;
+  /** Number of items per page */
+  limit: number;
+  /** Time period filter applied */
+  period: 'all-time' | 'monthly' | 'weekly';
+  /** Total number of entries */
+  total: number;
+}
+
+// =============================================================================
 // USER INTERFACES
 // =============================================================================
 
@@ -514,6 +557,47 @@ export interface Activity {
 }
 
 // =============================================================================
+// DRAFT INTERFACES
+// =============================================================================
+
+/**
+ * Draft interface for incomplete posts saved locally.
+ * Allows users to save work in progress and resume later.
+ */
+export interface Draft {
+  /** Unique identifier for the draft */
+  id: string;
+  /** Type of post: giveaway or request */
+  type: 'giveaway' | 'request';
+  /** Post title */
+  title: string;
+  /** Post description */
+  description: string;
+  /** Post category */
+  category?: string;
+  /** Prize amount (for giveaways) */
+  prizeAmount?: number;
+  /** Currency type */
+  currency?: string;
+  /** Maximum number of winners (for giveaways) */
+  maxWinners?: number;
+  /** Selection method */
+  selectionMethod?: string;
+  /** Target amount (for requests) */
+  targetAmount?: number;
+  /** Entry requirements */
+  entryRequirements?: string[];
+  /** Whether proof is required */
+  proofRequired?: boolean;
+  /** Duration in days */
+  duration?: number;
+  /** Timestamp when draft was saved */
+  savedAt: string;
+  /** Timestamp when draft was last updated */
+  updatedAt: string;
+}
+
+// =============================================================================
 // APPLICATION STATE INTERFACES
 // =============================================================================
 
@@ -612,6 +696,8 @@ export interface AppContextType extends AppState {
   // ============ Utility Actions ============
   /** Clear current error state */
   clearError: () => void;
+  /** Set the current error state and optionally report analytics */
+  setError: (message: string | null, source?: string) => void;
   /** Set the loading state */
   setLoading: (loading: boolean) => void;
   /** Toggle between light and dark theme */

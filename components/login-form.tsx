@@ -1,13 +1,14 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { CheckCircle2, User as UserIcon, Shield, Sparkles } from 'lucide-react'
-import { useApp } from '@/contexts/app-context'
-import { mockAuthUsers, login } from '@/lib/mock-auth'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import type { User } from '@/lib/types'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, User as UserIcon, Shield, Sparkles } from "lucide-react";
+import { useApp } from "@/contexts/app-context";
+import { mockAuthUsers } from "@/lib/mock-auth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import type { User } from "@/lib/types";
+import { signIn } from "next-auth/react";
 
 /**
  * LoginForm Component
@@ -23,45 +24,39 @@ import type { User } from '@/lib/types'
  * - Redirects to /feed after successful login
  */
 export function LoginForm() {
-  const router = useRouter()
-  const { login: contextLogin } = useApp()
-  const [isLoading, setIsLoading] = useState(false)
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const router = useRouter();
+  const { login: contextLogin } = useApp();
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const handleLogin = async (user: User) => {
-    setIsLoading(true)
-    setSelectedUserId(user.id)
+    setIsLoading(true);
+    setSelectedUserId(user.id);
 
     try {
-      // Call mock auth login to persist to localStorage
-      const loggedInUser = login(user.id)
+      const result = await signIn("credentials", {
+        email: user.email,
+        redirect: false,
+      });
 
-      if (loggedInUser) {
-        // Update app context with logged in user
-        contextLogin(loggedInUser)
-
-        // Small delay for UX feedback
-        await new Promise((resolve) => setTimeout(resolve, 300))
-
-        // Redirect to feed
-        router.push('/feed')
+      if (result?.ok) {
+        router.push("/feed");
       }
     } catch (error) {
-      console.error('Login failed:', error)
+      console.error("Login failed:", error);
     } finally {
-      setIsLoading(false)
-      setSelectedUserId(null)
+      setIsLoading(false);
+      setSelectedUserId(null);
     }
-  }
-
+  };
   const getInitials = (name: string) => {
     return name
-      .split(' ')
+      .split(" ")
       .map((n) => n[0])
-      .join('')
+      .join("")
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto">
@@ -85,13 +80,13 @@ export function LoginForm() {
               text-left w-full
               ${
                 selectedUserId === user.id
-                  ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-700'
+                  ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30"
+                  : "border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-700"
               }
               ${
                 isLoading && selectedUserId !== user.id
-                  ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:shadow-md cursor-pointer'
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:shadow-md cursor-pointer"
               }
               bg-white dark:bg-gray-900
             `}
@@ -132,7 +127,9 @@ export function LoginForm() {
                     <UserIcon className="h-3 w-3" />
                     {user.followersCount.toLocaleString()}
                   </span>
-                  <span className={`flex items-center gap-1 ${user.rank.color}`}>
+                  <span
+                    className={`flex items-center gap-1 ${user.rank.color}`}
+                  >
                     <Sparkles className="h-3 w-3" />
                     {user.rank.title}
                   </span>
@@ -191,10 +188,11 @@ export function LoginForm() {
           This is a mock authentication system for development purposes.
           <br />
           <span className="text-xs">
-            Your selection will persist until you log out or clear browser storage.
+            Your selection will persist until you log out or clear browser
+            storage.
           </span>
         </p>
       </div>
     </div>
-  )
+  );
 }
