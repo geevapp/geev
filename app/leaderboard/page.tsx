@@ -20,6 +20,7 @@ function LeaderboardContent() {
           Leaderboard rankings will be implemented here
         </p>
       </div>
+      <span className="font-semibold">{value}</span>
     </div>
   );
 }
