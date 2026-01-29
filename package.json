@@ -12,6 +12,10 @@
     "test:coverage": "dotenv -e .env.test -- vitest --coverage",
     "test:ci": "dotenv -e .env.test -- vitest run"
   },
+   "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^6.19.2",
