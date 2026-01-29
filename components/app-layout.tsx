@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { ScrollRestoration } from '@/components/scroll-restoration';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { CreateModal } from '@/components/create-modal';
-import { GiveawayModal } from '@/components/giveaway-modal';
+import { GiveawayModal } from '@/components/create-giveaway-modal';
 import { RequestModal } from '@/components/request-modal';
 import { trackEvent } from '@/lib/analytics';
 import { useApp } from '@/contexts/app-context';

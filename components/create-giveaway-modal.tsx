@@ -296,7 +296,7 @@ export function GiveawayModal({ draftId }: GiveawayModalProps) {
           <DialogDescription>
             {currentDraftId
               ? 'Continue editing your draft'
-              : 'Share something with your community'}
+              : 'Set up your giveaway details and requirements'}
           </DialogDescription>
         </DialogHeader>
 
@@ -449,7 +449,7 @@ export function GiveawayModal({ draftId }: GiveawayModalProps) {
             <Input
               id="duration"
               type="number"
-              placeholder="7"
+              placeholder="e.g 7"
               value={duration}
               onChange={(e) => {
                 setDuration(e.target.value)
