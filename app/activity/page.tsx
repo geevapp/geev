@@ -1,6 +1,9 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Spinner } from "@/components/ui/spinner";
+import { MobileSidebarToggle } from "@/components/mobile-sidebar-toggle";
+import UserNavbar from "@/components/user-navbar";
+import ActivityMain from "@/app/activity/components/activity-main";
 
 export const metadata: Metadata = {
   title: "Activity | Geev",
@@ -8,12 +11,14 @@ export const metadata: Metadata = {
 };
 
 function ActivityContent() {
+  const isOpen = true; // Default value
+  
   return (
     <div className={`w-full h-screen flex flex-col ${isOpen ? "lg:ml-64" : "lg:ml-16"}`}>
       <MobileSidebarToggle />
       <UserNavbar />
       <div className="flex-1 overflow-y-auto">
-      <ActivityMain />
+        <ActivityMain />
       </div>
     </div>
   );

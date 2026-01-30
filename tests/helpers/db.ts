@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import type { User, Post } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 export async function createTestUser(overrides?: Partial<User>): Promise<User> {
   return await prisma.user.create({
@@ -27,6 +28,7 @@ export async function createTestPost(
       category: 'electronics',
       status: 'open',
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      media: Prisma.JsonNull as any,
       ...overrides,
     },
   });
