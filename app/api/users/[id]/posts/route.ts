@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { mockPosts } from '@/lib/mock-data';
+import { prisma } from '@/lib/prisma';
 import { apiSuccess, apiError } from '@/lib/api-response';
 
 export async function GET(
@@ -9,10 +9,41 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Filter posts by author ID
-    const userPosts = mockPosts.filter((post: any) => post.authorId === id);
+    // Try to fetch from database first
+    try {
+      // Verify user exists
+      const userExists = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true },
+      });
 
-    return apiSuccess(userPosts);
+      if (!userExists) {
+        return apiError('User not found', 404);
+      }
+
+      // Fetch user's posts
+      const userPosts = await prisma.post.findMany({
+        where: { creatorId: id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          entries: {
+            select: {
+              id: true,
+              userId: true,
+              content: true,
+              isWinner: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+      return apiSuccess(userPosts);
+
+    } catch (dbError) {
+      console.log('Database not available');
+      return apiError('Database not available', 500);
+    }
 
   } catch (error) {
     return apiError('Failed to fetch user posts', 500);

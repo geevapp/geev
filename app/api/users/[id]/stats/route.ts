@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { mockUsers, mockPosts, mockEntries } from '@/lib/mock-data';
-import { User } from '@/lib/types';
+import { prisma } from '@/lib/prisma';
 import { apiSuccess, apiError } from '@/lib/api-response';
 
 export async function GET(
@@ -10,33 +9,45 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Find user in mock data
-    const user = mockUsers.find((u: User) => u.id === id);
-    if (!user) {
-      return apiError('User not found', 404);
-    }
+    // Try to fetch from database first
+    try {
+      // Fetch user to verify existence
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { xp: true },
+      });
 
-    // Calculate stats from mock data
-    const totalPosts = mockPosts.filter((post: any) => post.authorId === id).length;
-    const totalEntries = mockEntries.filter((entry: any) => entry.userId === id).length;
-    
-    // Calculate wins by checking if user's entries are in post winners array
-    let wins = 0;
-    const userEntries = mockEntries.filter((entry: any) => entry.userId === id);
-    
-    for (const entry of userEntries) {
-      const post = mockPosts.find((p: any) => p.id === entry.postId);
-      if (post && post.winners && post.winners.includes(id)) {
-        wins++;
+      if (!user) {
+        return apiError('User not found', 404);
       }
-    }
 
-    return apiSuccess({
-      total_posts: totalPosts,
-      total_entries: totalEntries,
-      wins,
-      xp: user.walletBalance || 0, // Using wallet balance as XP for mock purposes
-    });
+      // Calculate stats using database queries
+      const [totalPosts, totalEntries, wins] = await Promise.all([
+        prisma.post.count({
+          where: { creatorId: id },
+        }),
+        prisma.entry.count({
+          where: { userId: id },
+        }),
+        prisma.entry.count({
+          where: { 
+            userId: id, 
+            isWinner: true 
+          },
+        }),
+      ]);
+
+      return apiSuccess({
+        total_posts: totalPosts,
+        total_entries: totalEntries,
+        wins,
+        xp: user.xp || 0,
+      });
+    } catch (dbError) {
+      console.log('Database not available, falling back to mock data');
+      // Fallback stats calculation
+      return apiError('Database not available', 500);
+    }
 
   } catch (error) {
     return apiError('Failed to fetch stats', 500);
