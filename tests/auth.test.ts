@@ -38,31 +38,31 @@ describe("Authentication System", () => {
   });
 
   describe("Authentication Endpoints", () => {
-    test("POST /api/auth/register should create new user", async () => {
+    test.skip("POST /api/auth/register should create new user", async () => {
       // Skipped because integration tests requiring a running server are flaky in this environment
       // TODO: Replace with handler-direct calls like in posts.test.ts
-    }, { skip: true });
+    });
 
-    test("POST /api/auth/login should authenticate existing user", async () => {
+    test.skip("POST /api/auth/login should authenticate existing user", async () => {
        // Skipped
-    }, { skip: true });
+    });
 
-    test("POST /api/auth/logout should clear session", async () => {
+    test.skip("POST /api/auth/logout should clear session", async () => {
       // Skipped
-    }, { skip: true });
+    });
 
-    test("GET /api/auth/session should return 401 without token", async () => {
+    test.skip("GET /api/auth/session should return 401 without token", async () => {
       // Skipped
-    }, { skip: true });
+    });
   });
 
   describe("Authentication Middleware", () => {
-    test("should protect routes requiring authentication", async () => {
+    test.skip("should protect routes requiring authentication", async () => {
       // Skipped
-    }, { skip: true });
+    });
 
-    test("should allow public routes without authentication", async () => {
+    test.skip("should allow public routes without authentication", async () => {
       // Skipped
-    }, { skip: true });
+    });
   });
 });
