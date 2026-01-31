@@ -30,7 +30,7 @@ const menu: MenuP[] = [
   {
     name: "Activity",
     icon: TrendingUp,
-    href: "#activity",
+    href: "/activity",
   },
   {
     name: "Leaderboard",

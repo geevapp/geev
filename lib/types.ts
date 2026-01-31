@@ -67,6 +67,36 @@ export enum BadgeTier {
   Diamond = 5,
 }
 
+/**
+ * Urgency level for help requests.
+ * Indicates how time-sensitive the request is.
+ */
+export enum Urgency {
+  /** General requests, flexible timeline */
+  Low = 'low',
+  /** Helpful soon, not critical */
+  Medium = 'medium',
+  /** Needed within days */
+  High = 'high',
+  /** Critical, immediate need */
+  Urgent = 'urgent',
+}
+
+/**
+ * Type of help being requested.
+ * Categorizes the kind of assistance needed.
+ */
+export enum HelpType {
+  /** Physical items needed */
+  Material = 'material',
+  /** Help with tasks/activities */
+  Service = 'service',
+  /** Guidance or information */
+  Advice = 'advice',
+  /** Other types of assistance */
+  Other = 'other',
+}
+
 // =============================================================================
 // API RESPONSE INTERFACES
 // =============================================================================
@@ -350,6 +380,10 @@ export interface Post {
   currentAmount?: number;
   /** Contributions for this help request */
   contributions?: HelpContribution[];
+  /** Urgency level of the help request */
+  urgency?: 'low' | 'medium' | 'high' | 'urgent';
+  /** Type of help being requested */
+  helpType?: 'material' | 'service' | 'advice' | 'other';
 }
 
 // =============================================================================
