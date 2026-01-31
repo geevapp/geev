@@ -45,13 +45,14 @@ export async function GET(request: NextRequest) {
     // Get user badges and calculate contributions
     const leaderboard = await Promise.all(
       users.map(async (user) => {
-        const badges = await prisma.badge.findMany({
-          where: {
-            userBadges: {
-              some: { userId: user.id },
-            },
-          },
-          orderBy: { tier: 'desc' },
+        const userBadges = await prisma.userBadge.findMany({
+          where: { userId: user.id },
+          include: { badge: true },
+        });
+        
+        const badges = userBadges.map(ub => ub.badge).sort((a, b) => {
+          const tierOrder = { bronze: 1, silver: 2, gold: 3, platinum: 4 };
+          return (tierOrder[b.tier as keyof typeof tierOrder] || 0) - (tierOrder[a.tier as keyof typeof tierOrder] || 0);
         });
 
         return {

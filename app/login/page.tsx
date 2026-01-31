@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 // };
 
 import { useAuth } from "@/hooks/use-auth";
-import { LoginForm } from "@/components/login-form";
+import { WalletLoginForm } from "@/components/wallet-login-form";
 import { GuestNavbar } from "@/components/guest-navbar";
 
 /**
@@ -44,20 +44,19 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <LoginForm />
+        <WalletLoginForm />
 
         <div className="mt-12 max-w-2xl mx-auto">
           <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <span className="text-2xl">🧪</span>
+              <span className="text-2xl">🔐</span>
               <div>
                 <h3 className="font-semibold text-orange-800 dark:text-orange-200">
-                  Development Mode
+                  Wallet Authentication
                 </h3>
                 <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
-                  This is a mock authentication system for testing purposes. In
-                  production, this will be replaced with secure wallet-based
-                  authentication.
+                  This is a wallet-based authentication system. In production, 
+                  integrate with actual wallet providers like MetaMask.
                 </p>
               </div>
             </div>

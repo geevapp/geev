@@ -93,7 +93,7 @@ async function testAnalyticsAPI() {
       body: JSON.stringify({
         eventType: evt.eventType,
         eventData: evt.eventData,
-        pageUrl: "http://localhost:3000" + (evt.eventData as any)?.path ?? "/",
+        pageUrl: "http://localhost:3000" + ((evt.eventData as any)?.path || "/"),
       }),
     });
     const res = await postEvent(req as any);

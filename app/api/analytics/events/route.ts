@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const { eventType, eventData, pageUrl } = body ?? {};
 
-    if (typeof eventType !== "string" || !VALID_EVENTS.includes(eventType)) {
+    if (typeof eventType !== "string" || !VALID_EVENTS.includes(eventType as any)) {
       return apiError("Invalid event type", 400);
     }
 
