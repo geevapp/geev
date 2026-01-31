@@ -25,6 +25,7 @@ model User {
   comments      Comment[]
   interactions  Interaction[]
   badges        UserBadge[]
+  analyticsEvents AnalyticsEvent[]
 
   @@map("users")
 }
