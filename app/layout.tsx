@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description: "Giving Made Global",
 };
 
+import { ErrorBoundary } from "@/components/error-boundary";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -29,7 +31,9 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <AppProvider>
-              <AppLayout>{children}</AppLayout>
+              <ErrorBoundary>
+                <AppLayout>{children}</AppLayout>
+              </ErrorBoundary>
               <Toaster />
             </AppProvider>
           </ThemeProvider>
