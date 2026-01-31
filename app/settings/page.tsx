@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { AuthGuard } from "@/components/auth-guard";
 import SettingsBio from "@/components/settings/settings-bio";

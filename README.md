@@ -2,6 +2,8 @@
 
 Geev is a decentralized social platform built on the Stellar blockchain that enables users to create giveaways, post help requests, and participate in community-driven mutual aid. It combines social networking features with Web3 wallet integration to facilitate transparent, trustless giving and receiving.
 
+[![Tests](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/geevapp)
+
 ## FRONTEND TECHNOLOGY STACK
 
 - **Framework**: Next.js 15 (App Router)
