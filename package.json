@@ -80,6 +80,7 @@
     "postcss": "^8.5",
     "prisma": "^6.19.2",
     "tailwindcss": "^4.1.9",
+    "tsx": "^4.21.0",
     "tw-animate-css": "1.3.3",
     "typescript": "^5",
     "vitest": "^4.0.18"
