@@ -7,11 +7,23 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Share2, Edit, Heart, Flame, MessageCircle, Gift, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Share2, Edit, Heart, Flame, MessageCircle, Gift, CheckCircle2, ArrowLeft, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { useState } from 'react';
 import { PostCategory } from '@/lib/types';
 
 interface PageProps {
@@ -114,6 +126,34 @@ export default function PostDetailPage({ params }: PageProps) {
     }
   };
 
+  const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const hasEntries = (post.entriesCount || post.entries?.length || 0) > 0;
+
+  const handleDeletePost = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete post');
+      }
+
+      toast.success('Post deleted');
+      // Close dialog handled by unmount/redirect, but good practice if redirect delays
+      setIsDeleteDialogOpen(false); 
+      router.push('/feed');
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Failed to delete post');
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Back button */}
@@ -160,6 +200,33 @@ export default function PostDetailPage({ params }: PageProps) {
                 Edit
               </Button>
             </Link>
+          )}
+
+          {isCreator && !hasEntries && (
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="flex-1 sm:flex-none">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Are you sure?</DialogTitle>
+                  <DialogDescription>
+                    This cannot be undone.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={handleDeletePost} disabled={isDeleting}>
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
           <Button
             variant="outline"
