@@ -18,6 +18,7 @@ interface AppLayoutProps {
 import { Navbar } from '@/components/navbar';
 import { DesktopSidebar } from '@/components/desktop-sidebar';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
+import { GuestBanner } from '@/components/guest-banner';
 
 export function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
@@ -38,6 +39,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <GuestBanner />
       <ScrollRestoration />
 
       <div className="flex">
