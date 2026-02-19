@@ -19,7 +19,7 @@ describe('Posts API', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       // Mock prisma.user.create
       prisma.user.create = vi.fn().mockResolvedValue(testUser);
       // Mock prisma.post.findMany and count
@@ -27,11 +27,11 @@ describe('Posts API', () => {
       prisma.post.count = vi.fn().mockResolvedValue(0);
       // Mock prisma.post.create
       prisma.post.create = vi.fn().mockImplementation((args: any) => Promise.resolve({
-         id: 'post_123',
-         ...args.data,
-         createdAt: new Date(),
-         updatedAt: new Date(),
-         creator: testUser
+        id: 'post_123',
+        ...args.data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        creator: testUser
       }));
     } else {
       testUser = await createTestUser();
@@ -51,16 +51,18 @@ describe('Posts API', () => {
 
     it('should return posts with pagination', async () => {
       if (process.env.MOCK_DB === 'true') {
-         prisma.post.findMany = vi.fn().mockResolvedValue([{
-            id: 'post_123',
-            title: 'Test Post',
-            creator: testUser
-         }]);
-         prisma.post.count = vi.fn().mockResolvedValue(1);
+        prisma.post.findMany = vi.fn().mockResolvedValue([{
+          id: 'post_123',
+          title: 'Test Post',
+          creator: testUser
+        }]);
+        prisma.post.count = vi.fn().mockResolvedValue(1);
       } else {
+        // Ensure test user exists before creating the post
+        const user = await createTestUser();
         await prisma.post.create({
           data: {
-            creatorId: testUser.id,
+            creatorId: user.id,
             type: 'giveaway',
             title: 'Test Post',
             description:
@@ -101,7 +103,7 @@ describe('Posts API', () => {
         body: postData,
         cookies: { session: 'mock-session-token' },
       });
-      
+
       // Mock getCurrentUser to return the test user created in beforeEach
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(testUser);
 
