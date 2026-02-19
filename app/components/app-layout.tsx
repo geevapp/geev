@@ -39,7 +39,6 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <GuestBanner />
       <ScrollRestoration />
 
       <div className="flex">
@@ -47,6 +46,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         <main className="flex-1 md:ml-64 min-h-[calc(100vh-4rem)] pb-16 md:pb-0">
           <Navbar />
+          <GuestBanner />
           <div className="max-w-7xl mx-auto w-full">
             {children}
           </div>

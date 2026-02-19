@@ -33,49 +33,40 @@ export function DesktopSidebar() {
   return (
     <aside className="hidden md:flex flex-col w-64 fixed left-0 top-1 h-screen border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 transition-all duration-300">
       {/* Profile Card */}
-      <div className="mb-6 p-[2px] rounded-3xl bg-linear-to-br from-blue-500 via-purple-500 to-orange-500">
-        <div className="bg-[#0f172a] rounded-[22px] p-5 flex flex-col gap-5">
-          {/* Header: Avatar & Info */}
-          <div className="flex items-center gap-4">
-            {user ? (
+      {/* Profile Card */}
+      {user ? (
+        <div className="mb-6 p-[2px] rounded-3xl bg-linear-to-br from-blue-500 via-purple-500 to-orange-500">
+          <div className="bg-[#0f172a] rounded-[22px] p-5 flex flex-col gap-5">
+            {/* Header: Avatar & Info */}
+            <div className="flex items-center gap-4">
               <Link href={`/profile/${user.username}`}>
                 <Avatar className="h-14 w-14 border-2 border-white/10 shadow-sm">
                   <AvatarImage src={user.avatar} alt={user.name} />
                   <AvatarFallback className='bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'>{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
               </Link>
-            ) : (
-              <Link href="/login">
-                <Avatar className="h-14 w-14 border-2 border-white/10 shadow-sm">
-                  <AvatarFallback className='bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'>GU</AvatarFallback>
-                </Avatar>
-              </Link>
-            )}
 
-            <div className="flex flex-col gap-1.5 min-w-0">
-              <div>
-                <h3 className="font-semibold text-white text-sm leading-5 truncate">
-                  {user ? user.name : "Guest User"}
-                </h3>
-                <p className="text-sm text-slate-400 font-medium truncate mt-1">
-                  {user ? `@${user.username}` : "@guest"}
-                </p>
-              </div>
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <div>
+                  <h3 className="font-semibold text-white text-sm leading-5 truncate">
+                    {user.name}
+                  </h3>
+                  <p className="text-sm text-slate-400 font-medium truncate mt-1">
+                    @{user.username}
+                  </p>
+                </div>
 
-              {/* Rank Badge */}
-              {user && (
+                {/* Rank Badge */}
                 <div className="inline-flex items-center gap-1.5 bg-[#7E2A0C] rounded-full px-3 py-1 w-fit">
                   <Trophy className="h-3 w-3 text-[#FFD6A7]" />
                   <span className="text-[10px] font-medium text-[#FFD6A7] tracking-wide whitespace-nowrap">
                     Level {user.rank.level} {user.rank.title}
                   </span>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
 
-          {/* Wallet Balance */}
-          {user && (
+            {/* Wallet Balance */}
             <div className="max-w-[190px] flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4">
               <span className="text-xs text-slate-400">
                 Wallet Balance
@@ -85,9 +76,34 @@ export function DesktopSidebar() {
                 <span>${user.walletBalance.toFixed(2)}</span>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Guest Profile Card */
+        <div className="mb-6 p-[2px] rounded-3xl bg-linear-to-br from-blue-500 via-purple-500 to-orange-500">
+          <div className="bg-[#0f172a] rounded-[22px] p-5 flex flex-col gap-5">
+            <div className="flex items-center gap-4">
+              <Link href="/login">
+                <Avatar className="h-14 w-14 border-2 border-white/10 shadow-sm">
+                  <AvatarFallback className='bg-slate-800 text-slate-300 font-medium'>GU</AvatarFallback>
+                </Avatar>
+              </Link>
+
+              <div className="flex flex-col gap-1.5 min-w-0">
+                <div>
+                  <h3 className="font-semibold text-white text-sm leading-5 truncate">
+                    Guest User
+                  </h3>
+                  <p className="text-sm text-slate-400 font-medium truncate mt-1">
+                    @guest
+                  </p>
+                </div>
+              </div>
+            </div>
+            {/* No Wallet or Stats for Guest */}
+          </div>
+        </div>
+      )}
 
       {/* Navigation Items */}
       <nav className="flex-1 flex flex-col gap-1 mb-6">
