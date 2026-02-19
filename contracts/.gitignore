@@ -1,0 +1,21 @@
+# Soroban specific
+target/
+Cargo.lock
+**/*.wasm
+wasm32-unknown-unknown/
+**/*.opt.wasm
+**/*.wat
+**/*.rlib
+**/*.rmeta
+**/*.dSYM/
+
+# Soroban CLI
+.soroban/
+.soroban-identity/
+**/test-*.log
+
+# Contract artifacts
+**/*-contract.wasm
+**/*-contract-*.wasm
+**/bindings/
+**/bindings-*/

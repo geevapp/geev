@@ -1,0 +1,10 @@
+packages:
+  - 'app'
+  - 'contracts'
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - 'esbuild'
+  - 'prisma'
+  - 'sharp'
