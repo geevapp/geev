@@ -10,6 +10,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: app
+
     services:
       postgres:
         image: postgres:15
@@ -67,7 +71,7 @@ jobs:
         uses: codecov/codecov-action@v3
         if: always()
         with:
-          files: ./coverage/coverage-final.json
+          files: ./app/coverage/coverage-final.json
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
