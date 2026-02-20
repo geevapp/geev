@@ -1,18 +1,19 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { ChevronDown, ChevronUp, LogOut, User as UserIcon } from 'lucide-react'
-import { useApp } from '@/contexts/app-context'
-import { mockAuthUsers, login, logout } from '@/lib/mock-auth'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ChevronDown, ChevronUp, LogOut, User as UserIcon } from 'lucide-react';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Button } from '@/components/ui/button'
+} from '@/components/ui/select';
+import { login, logout, mockAuthUsers } from '@/lib/mock-auth';
+
+import { Button } from '@/components/ui/button';
+import { useAppContext } from '@/contexts/app-context';
+import { useState } from 'react';
 
 /**
  * DevUserSwitcher Component
@@ -28,26 +29,26 @@ import { Button } from '@/components/ui/button'
  * - Shows current user info when collapsed
  */
 export function DevUserSwitcher() {
-  const { user, login: contextLogin, logout: contextLogout } = useApp()
-  const [isExpanded, setIsExpanded] = useState(false)
+  const { user, login: contextLogin, logout: contextLogout } = useAppContext();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Only render in development mode
   if (process.env.NODE_ENV !== 'development') {
-    return null
+    return null;
   }
 
   const handleUserSwitch = (userId: string) => {
     if (userId === 'logout') {
-      logout()
-      contextLogout()
-      return
+      logout();
+      contextLogout();
+      return;
     }
 
-    const selectedUser = login(userId)
+    const selectedUser = login(userId);
     if (selectedUser) {
-      contextLogin(selectedUser)
+      contextLogin(selectedUser);
     }
-  }
+  };
 
   const getInitials = (name: string) => {
     return name
@@ -55,8 +56,8 @@ export function DevUserSwitcher() {
       .map((n) => n[0])
       .join('')
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <div className="fixed hidden md:block bottom-4 right-4 z-50">
@@ -106,7 +107,9 @@ export function DevUserSwitcher() {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{user.name}</p>
-                  <p className="text-xs text-gray-400 truncate">@{user.username}</p>
+                  <p className="text-xs text-gray-400 truncate">
+                    @{user.username}
+                  </p>
                 </div>
               </div>
             )}
@@ -116,10 +119,7 @@ export function DevUserSwitcher() {
               <label className="text-xs text-gray-400 uppercase tracking-wider">
                 Switch User
               </label>
-              <Select
-                value={user?.id || ''}
-                onValueChange={handleUserSwitch}
-              >
+              <Select value={user?.id || ''} onValueChange={handleUserSwitch}>
                 <SelectTrigger className="w-full bg-gray-800 dark:bg-gray-700 border-gray-600 text-white">
                   <SelectValue placeholder="Select a user..." />
                 </SelectTrigger>
@@ -132,7 +132,10 @@ export function DevUserSwitcher() {
                     >
                       <div className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">
-                          <AvatarImage src={mockUser.avatar} alt={mockUser.name} />
+                          <AvatarImage
+                            src={mockUser.avatar}
+                            alt={mockUser.name}
+                          />
                           <AvatarFallback className="bg-orange-100 text-orange-700 text-[10px]">
                             {getInitials(mockUser.name)}
                           </AvatarFallback>
@@ -178,5 +181,5 @@ export function DevUserSwitcher() {
         )}
       </div>
     </div>
-  )
+  );
 }

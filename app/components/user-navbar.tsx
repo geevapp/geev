@@ -1,11 +1,11 @@
-import { Wallet } from "lucide-react";
-import Link from "next/link";
-import { ThemeToggle } from "./theme-toggle";
-import Image from "next/image";
-import { useApp } from "@/contexts/app-context";
+import Image from 'next/image';
+import Link from 'next/link';
+import { ThemeToggle } from './theme-toggle';
+import { Wallet } from 'lucide-react';
+import { useAppContext } from '@/contexts/app-context';
 
 export default function UserNavbar() {
-    const { user} = useApp();
+  const { user } = useAppContext();
   return (
     <nav className="flex justify-between px-8 py-3.5 border-b border-slate-200 dark:border-slate-800">
       <Link href="/feed" className="flex items-center gap-3">
@@ -26,14 +26,14 @@ export default function UserNavbar() {
         <ThemeToggle />
 
         <div className="w-9 h-9 rounded-full overflow-hidden">
-                    <Image
-                      src={"/wallet/alex.png"}
-                      alt={user?.name ?? ""}
-                      width={48}
-                      height={48}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+          <Image
+            src={'/wallet/alex.png'}
+            alt={user?.name ?? ''}
+            width={48}
+            height={48}
+            className="w-full h-full object-cover"
+          />
+        </div>
       </div>
     </nav>
   );

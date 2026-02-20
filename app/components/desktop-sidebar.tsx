@@ -1,17 +1,18 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Plus, Wallet, Trophy, Gift, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Gift, Plus, Trophy, Users, Wallet } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 import { navigationItems } from '@/lib/navigation-items';
-import { useApp } from '@/contexts/app-context';
+import { useAppContext } from '@/contexts/app-context';
+import { usePathname } from 'next/navigation';
 
 export function DesktopSidebar() {
   const pathname = usePathname();
-  const { user, setShowCreateModal } = useApp();
+  const { user, setShowCreateModal } = useAppContext();
 
   if (!user) return null;
 
@@ -21,8 +22,8 @@ export function DesktopSidebar() {
       .map((n) => n[0])
       .join('')
       .toUpperCase()
-      .slice(0, 2)
-  }
+      .slice(0, 2);
+  };
 
   return (
     <aside className="hidden md:flex flex-col w-64 fixed left-0 top-1 h-screen border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 transition-all duration-300">
@@ -34,7 +35,9 @@ export function DesktopSidebar() {
             <Link href={`/profile/${user.username}`}>
               <Avatar className="h-14 w-14 border-2 border-white/10 shadow-sm">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className='bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'>{getInitials(user.name)}</AvatarFallback>
+                <AvatarFallback className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                  {getInitials(user.name)}
+                </AvatarFallback>
               </Avatar>
             </Link>
 
@@ -60,9 +63,7 @@ export function DesktopSidebar() {
 
           {/* Wallet Balance */}
           <div className="max-w-[190px] flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4">
-            <span className="text-xs text-slate-400">
-              Wallet Balance
-            </span>
+            <span className="text-xs text-slate-400">Wallet Balance</span>
             <div className="flex items-center gap-2 bg-[#FF6900] text-white px-2 py-0.5 rounded-full text-xs font-medium shadow-sm">
               <Wallet className="h-4 w-4" />
               <span>${user.walletBalance.toFixed(2)}</span>
@@ -74,9 +75,10 @@ export function DesktopSidebar() {
       {/* Navigation Items */}
       <nav className="flex-1 flex flex-col gap-1 mb-6">
         {navigationItems.map((item) => {
-          const href = item.label === 'Profile' && user
-            ? `/profile/${user.username}`
-            : item.href;
+          const href =
+            item.label === 'Profile' && user
+              ? `/profile/${user.username}`
+              : item.href;
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
           return (
@@ -87,10 +89,16 @@ export function DesktopSidebar() {
                 'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
                 isActive
                   ? 'text-orange-600 dark:text-orange-500 font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-slate-200',
               )}
             >
-              <item.icon className={cn('h-5 w-5', isActive && 'fill-current text-orange-600 dark:text-orange-500')} />
+              <item.icon
+                className={cn(
+                  'h-5 w-5',
+                  isActive &&
+                    'fill-current text-orange-600 dark:text-orange-500',
+                )}
+              />
               <span>{item.label}</span>
             </Link>
           );
