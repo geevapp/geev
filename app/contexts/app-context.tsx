@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * @fileoverview Global Application Context for Geev
@@ -27,26 +27,25 @@ import type {
   Post,
   Reply,
   User,
-} from "@/lib/types";
+} from '@/lib/types';
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useReducer,
-  useCallback,
   useState,
-} from "react";
-import { mockPosts, mockUsers } from "@/lib/mock-data";
-import { getUserById } from "@/lib/mock-auth";
+} from 'react';
+import { mockPosts, mockUsers } from '@/lib/mock-data';
+import { signIn, signOut } from 'next-auth/react';
 
-import { signIn, signOut } from "next-auth/react";
-import { useSession } from "next-auth/react";
-
-import type React from "react";
-import { trackEvent } from "@/lib/analytics";
+import type React from 'react';
+import { getUserById } from '@/lib/mock-auth';
+import { trackEvent } from '@/lib/analytics';
+import { useSession } from 'next-auth/react';
 
 /** LocalStorage key for persisting application state */
-const STORAGE_KEY = "geev_app_state";
+const STORAGE_KEY = 'geev_app_state';
 
 /**
  * Initial application state
@@ -64,7 +63,7 @@ const initialState: AppState = {
   burns: new Set<string>(),
   isLoading: false,
   error: null,
-  theme: "light",
+  theme: 'light',
   showCreateModal: false,
   showGiveawayModal: false,
   showRequestModal: false,
@@ -74,36 +73,36 @@ const initialState: AppState = {
  * Union type of all possible actions for the app reducer
  */
 type AppAction =
-  | { type: "SET_USER"; payload: User | null }
-  | { type: "SET_POSTS"; payload: Post[] }
-  | { type: "SET_USERS"; payload: User[] }
-  | { type: "ADD_POST"; payload: Post }
-  | { type: "UPDATE_POST"; payload: { id: string; updates: Partial<Post> } }
-  | { type: "DELETE_POST"; payload: string }
-  | { type: "BURN_POST"; payload: string }
-  | { type: "BURN_REPLY"; payload: string }
-  | { type: "ADD_ENTRY"; payload: Entry }
-  | { type: "UPDATE_ENTRY"; payload: { id: string; updates: Partial<Entry> } }
-  | { type: "ADD_CONTRIBUTION"; payload: HelpContribution }
+  | { type: 'SET_USER'; payload: User | null }
+  | { type: 'SET_POSTS'; payload: Post[] }
+  | { type: 'SET_USERS'; payload: User[] }
+  | { type: 'ADD_POST'; payload: Post }
+  | { type: 'UPDATE_POST'; payload: { id: string; updates: Partial<Post> } }
+  | { type: 'DELETE_POST'; payload: string }
+  | { type: 'BURN_POST'; payload: string }
+  | { type: 'BURN_REPLY'; payload: string }
+  | { type: 'ADD_ENTRY'; payload: Entry }
+  | { type: 'UPDATE_ENTRY'; payload: { id: string; updates: Partial<Entry> } }
+  | { type: 'ADD_CONTRIBUTION'; payload: HelpContribution }
   | {
-      type: "ADD_REPLY";
+      type: 'ADD_REPLY';
       payload: {
         parentId: string;
-        parentType: "entry" | "contribution";
+        parentType: 'entry' | 'contribution';
         reply: Reply;
       };
     }
-  | { type: "SET_LOADING"; payload: boolean }
-  | { type: "SET_ERROR"; payload: string | null }
-  | { type: "TOGGLE_THEME" }
-  | { type: "AWARD_BADGE"; payload: { userId: string; badge: Badge } }
-  | { type: "SET_CREATE_MODAL"; payload: boolean }
-  | { type: "SET_GIVEAWAY_MODAL"; payload: boolean }
-  | { type: "SET_REQUEST_MODAL"; payload: boolean }
-  | { type: "TOGGLE_LIKE"; payload: string }
-  | { type: "TOGGLE_BURN"; payload: string }
-  | { type: "INCREMENT_SHARE"; payload: string }
-  | { type: "HYDRATE_STATE"; payload: Partial<AppState> };
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'TOGGLE_THEME' }
+  | { type: 'AWARD_BADGE'; payload: { userId: string; badge: Badge } }
+  | { type: 'SET_CREATE_MODAL'; payload: boolean }
+  | { type: 'SET_GIVEAWAY_MODAL'; payload: boolean }
+  | { type: 'SET_REQUEST_MODAL'; payload: boolean }
+  | { type: 'TOGGLE_LIKE'; payload: string }
+  | { type: 'TOGGLE_BURN'; payload: string }
+  | { type: 'INCREMENT_SHARE'; payload: string }
+  | { type: 'HYDRATE_STATE'; payload: Partial<AppState> };
 
 /**
  * Helper function to find and update replies recursively
@@ -133,22 +132,22 @@ function updateReplyBurnCount(
  */
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case "HYDRATE_STATE":
+    case 'HYDRATE_STATE':
       return { ...state, ...action.payload };
 
-    case "SET_USER":
+    case 'SET_USER':
       return { ...state, user: action.payload };
 
-    case "SET_POSTS":
+    case 'SET_POSTS':
       return { ...state, posts: action.payload };
 
-    case "SET_USERS":
+    case 'SET_USERS':
       return { ...state, users: action.payload };
 
-    case "ADD_POST":
+    case 'ADD_POST':
       return { ...state, posts: [action.payload, ...state.posts] };
 
-    case "UPDATE_POST":
+    case 'UPDATE_POST':
       return {
         ...state,
         posts: state.posts.map((post) =>
@@ -158,13 +157,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ),
       };
 
-    case "DELETE_POST":
+    case 'DELETE_POST':
       return {
         ...state,
         posts: state.posts.filter((post) => post.id !== action.payload),
       };
 
-    case "BURN_POST":
+    case 'BURN_POST':
       return {
         ...state,
         posts: state.posts.map((post) =>
@@ -174,10 +173,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ),
       };
 
-    case "ADD_ENTRY":
+    case 'ADD_ENTRY':
       return { ...state, entries: [...state.entries, action.payload] };
 
-    case "UPDATE_ENTRY":
+    case 'UPDATE_ENTRY':
       return {
         ...state,
         entries: state.entries.map((entry) =>
@@ -187,14 +186,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ),
       };
 
-    case "ADD_CONTRIBUTION":
+    case 'ADD_CONTRIBUTION':
       return {
         ...state,
         contributions: [...state.contributions, action.payload],
       };
 
-    case "ADD_REPLY":
-      if (action.payload.parentType === "entry") {
+    case 'ADD_REPLY':
+      if (action.payload.parentType === 'entry') {
         return {
           ...state,
           entries: state.entries.map((entry) =>
@@ -223,7 +222,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         };
       }
 
-    case "BURN_REPLY":
+    case 'BURN_REPLY':
       // Update burn count in entries' replies
       const updatedEntries = state.entries.map((entry) => ({
         ...entry,
@@ -242,16 +241,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         contributions: updatedContributions,
       };
 
-    case "SET_LOADING":
+    case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
 
-    case "SET_ERROR":
+    case 'SET_ERROR':
       return { ...state, error: action.payload };
 
-    case "TOGGLE_THEME":
-      return { ...state, theme: state.theme === "light" ? "dark" : "light" };
+    case 'TOGGLE_THEME':
+      return { ...state, theme: state.theme === 'light' ? 'dark' : 'light' };
 
-    case "AWARD_BADGE":
+    case 'AWARD_BADGE':
       return {
         ...state,
         user:
@@ -268,16 +267,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ),
       };
 
-    case "SET_CREATE_MODAL":
+    case 'SET_CREATE_MODAL':
       return { ...state, showCreateModal: action.payload };
 
-    case "SET_GIVEAWAY_MODAL":
+    case 'SET_GIVEAWAY_MODAL':
       return { ...state, showGiveawayModal: action.payload };
 
-    case "SET_REQUEST_MODAL":
+    case 'SET_REQUEST_MODAL':
       return { ...state, showRequestModal: action.payload };
 
-    case "TOGGLE_LIKE": {
+    case 'TOGGLE_LIKE': {
       const newLikes = new Set(state.likes);
       if (newLikes.has(action.payload)) {
         newLikes.delete(action.payload);
@@ -300,7 +299,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, likes: newLikes, posts: updatedPosts };
     }
 
-    case "TOGGLE_BURN": {
+    case 'TOGGLE_BURN': {
       const newBurns = new Set(state.burns);
       if (newBurns.has(action.payload)) {
         newBurns.delete(action.payload);
@@ -323,7 +322,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, burns: newBurns, posts: updatedPostsForBurn };
     }
 
-    case "INCREMENT_SHARE":
+    case 'INCREMENT_SHARE':
       return {
         ...state,
         posts: state.posts.map((post) =>
@@ -372,7 +371,7 @@ function deserializeState(stored: string): Partial<AppState> | null {
       burns: new Set<string>(parsed.burns || []),
     };
   } catch (error) {
-    console.error("Failed to deserialize app state:", error);
+    console.error('Failed to deserialize app state:', error);
     return null;
   }
 }
@@ -411,10 +410,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (session?.user?.id) {
       const fullUser = getUserById(session.user.id);
       if (fullUser) {
-        dispatch({ type: "SET_USER", payload: fullUser });
+        dispatch({ type: 'SET_USER', payload: fullUser });
       }
     } else {
-      dispatch({ type: "SET_USER", payload: null });
+      dispatch({ type: 'SET_USER', payload: null });
     }
   }, [session]);
 
@@ -425,16 +424,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedState) {
         const hydrated = deserializeState(savedState);
         if (hydrated) {
-          dispatch({ type: "HYDRATE_STATE", payload: hydrated });
+          dispatch({ type: 'HYDRATE_STATE', payload: hydrated });
         }
       }
     } catch (error) {
-      console.error("Failed to load state from localStorage:", error);
+      console.error('Failed to load state from localStorage:', error);
     }
 
     // Load mock data
-    dispatch({ type: "SET_USERS", payload: mockUsers });
-    dispatch({ type: "SET_POSTS", payload: mockPosts });
+    dispatch({ type: 'SET_USERS', payload: mockUsers });
+    dispatch({ type: 'SET_POSTS', payload: mockPosts });
 
     setIsHydrated(true);
   }, []);
@@ -450,16 +449,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Load saved theme on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     if (savedTheme && savedTheme !== state.theme) {
-      dispatch({ type: "TOGGLE_THEME" });
+      dispatch({ type: 'TOGGLE_THEME' });
     }
   }, []);
 
   // Apply theme class to document
   useEffect(() => {
-    localStorage.setItem("theme", state.theme);
-    document.documentElement.classList.toggle("dark", state.theme === "dark");
+    localStorage.setItem('theme', state.theme);
+    document.documentElement.classList.toggle('dark', state.theme === 'dark');
   }, [state.theme]);
 
   // Save state to localStorage on changes (debounced)
@@ -468,7 +467,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         localStorage.setItem(STORAGE_KEY, serializeState(state));
       } catch (error) {
-        console.error("Failed to save state to localStorage:", error);
+        console.error('Failed to save state to localStorage:', error);
       }
     }, 100); // Debounce by 100ms to avoid excessive writes
 
@@ -479,7 +478,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    * Checks and awards badges based on user activity
    */
   const checkAndAwardBadges = useCallback(
-    (userId: string, activityType: "entry" | "contribution") => {
+    (userId: string, activityType: 'entry' | 'contribution') => {
       const user = state.users.find((u) => u.id === userId);
       if (!user) return;
 
@@ -494,33 +493,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const availableBadges = [
         {
           min: 1,
-          name: "First Step",
-          icon: "👣",
-          color: "bg-gray-100 text-gray-800",
+          name: 'First Step',
+          icon: '👣',
+          color: 'bg-gray-100 text-gray-800',
         },
         {
           min: 5,
-          name: "Generous Giver",
-          icon: "🎁",
-          color: "bg-blue-100 text-blue-800",
+          name: 'Generous Giver',
+          icon: '🎁',
+          color: 'bg-blue-100 text-blue-800',
         },
         {
           min: 10,
-          name: "Community Hero",
-          icon: "🦸",
-          color: "bg-purple-100 text-purple-800",
+          name: 'Community Hero',
+          icon: '🦸',
+          color: 'bg-purple-100 text-purple-800',
         },
         {
           min: 25,
-          name: "Legendary Giver",
-          icon: "⭐",
-          color: "bg-yellow-100 text-yellow-800",
+          name: 'Legendary Giver',
+          icon: '⭐',
+          color: 'bg-yellow-100 text-yellow-800',
         },
         {
           min: 50,
-          name: "Giveaway Champion",
-          icon: "🏆",
-          color: "bg-orange-100 text-orange-800",
+          name: 'Giveaway Champion',
+          icon: '🏆',
+          color: 'bg-orange-100 text-orange-800',
         },
       ];
 
@@ -539,7 +538,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               earnedAt: new Date(),
             };
             dispatch({
-              type: "AWARD_BADGE",
+              type: 'AWARD_BADGE',
               payload: { userId, badge: newBadge },
             });
           }
@@ -558,21 +557,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // ============ User Actions ============
     login: async (user: User) => {
       // Call Auth.js signIn
-      await signIn("credentials", {
+      await signIn('credentials', {
         email: user.email,
         redirect: false,
       });
-      dispatch({ type: "SET_USER", payload: user });
+      dispatch({ type: 'SET_USER', payload: user });
     },
 
     logout: async () => {
       // Call Auth.js signOut
       await signOut({ redirect: false });
-      dispatch({ type: "SET_USER", payload: null });
+      dispatch({ type: 'SET_USER', payload: null });
     },
 
     setCurrentUser: (user: User | null) => {
-      dispatch({ type: "SET_USER", payload: user });
+      dispatch({ type: 'SET_USER', payload: user });
     },
     // Hydration state for SSR
     isHydrated,
@@ -593,9 +592,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         entries: [],
         contributions: [],
       };
-      dispatch({ type: "ADD_POST", payload: newPost });
+      dispatch({ type: 'ADD_POST', payload: newPost });
       trackEvent(
-        "post_created",
+        'post_created',
         {
           postId: newPost.id,
           category: newPost.category,
@@ -606,19 +605,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
 
     addPost: (post: Post) => {
-      dispatch({ type: "ADD_POST", payload: post });
+      dispatch({ type: 'ADD_POST', payload: post });
     },
 
     updatePost: (postId: string, updates: Partial<Post>) => {
-      dispatch({ type: "UPDATE_POST", payload: { id: postId, updates } });
+      dispatch({ type: 'UPDATE_POST', payload: { id: postId, updates } });
     },
 
     deletePost: (postId: string) => {
-      dispatch({ type: "DELETE_POST", payload: postId });
+      dispatch({ type: 'DELETE_POST', payload: postId });
     },
 
     burnPost: (postId: string) => {
-      dispatch({ type: "BURN_POST", payload: postId });
+      dispatch({ type: 'BURN_POST', payload: postId });
     },
 
     // ============ Entry Actions ============
@@ -629,10 +628,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         submittedAt: new Date(),
         user: state.user!,
       };
-      dispatch({ type: "ADD_ENTRY", payload: newEntry });
-      checkAndAwardBadges(state.user?.id || "", "entry");
+      dispatch({ type: 'ADD_ENTRY', payload: newEntry });
+      checkAndAwardBadges(state.user?.id || '', 'entry');
       trackEvent(
-        "entry_submitted",
+        'entry_submitted',
         {
           entryId: newEntry.id,
           postId: newEntry.postId,
@@ -642,11 +641,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
 
     addEntry: (entry: Entry) => {
-      dispatch({ type: "ADD_ENTRY", payload: entry });
+      dispatch({ type: 'ADD_ENTRY', payload: entry });
     },
 
     updateEntry: (id: string, updates: Partial<Entry>) => {
-      dispatch({ type: "UPDATE_ENTRY", payload: { id, updates } });
+      dispatch({ type: 'UPDATE_ENTRY', payload: { id, updates } });
     },
 
     // ============ Contribution Actions ============
@@ -657,13 +656,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         contributedAt: new Date(),
         user: state.user!,
       };
-      dispatch({ type: "ADD_CONTRIBUTION", payload: newContribution });
-      checkAndAwardBadges(state.user?.id || "", "contribution");
+      dispatch({ type: 'ADD_CONTRIBUTION', payload: newContribution });
+      checkAndAwardBadges(state.user?.id || '', 'contribution');
     },
 
     // ============ Reply Actions ============
     addReply: (
-      replyData: Omit<Reply, "id" | "createdAt" | "user" | "burnCount">,
+      replyData: Omit<Reply, 'id' | 'createdAt' | 'user' | 'burnCount'>,
     ) => {
       const reply: Reply = {
         ...replyData,
@@ -674,7 +673,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
 
       dispatch({
-        type: "ADD_REPLY",
+        type: 'ADD_REPLY',
         payload: {
           parentId: replyData.parentId,
           parentType: replyData.parentType,
@@ -684,16 +683,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
 
     burnReply: (replyId: string) => {
-      dispatch({ type: "BURN_REPLY", payload: replyId });
+      dispatch({ type: 'BURN_REPLY', payload: replyId });
     },
 
     // ============ Interaction Actions ============
     toggleLike: (id: string) => {
       const wasLiked = state.likes.has(id);
-      dispatch({ type: "TOGGLE_LIKE", payload: id });
+      dispatch({ type: 'TOGGLE_LIKE', payload: id });
       if (!wasLiked) {
         trackEvent(
-          "like_added",
+          'like_added',
           { targetId: id },
           state.user ? { userId: state.user.id } : undefined,
         );
@@ -701,13 +700,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
 
     toggleBurn: (id: string) => {
-      dispatch({ type: "TOGGLE_BURN", payload: id });
+      dispatch({ type: 'TOGGLE_BURN', payload: id });
     },
 
     incrementShare: (postId: string) => {
-      dispatch({ type: "INCREMENT_SHARE", payload: postId });
+      dispatch({ type: 'INCREMENT_SHARE', payload: postId });
       trackEvent(
-        "share_clicked",
+        'share_clicked',
         { postId },
         state.user ? { userId: state.user.id } : undefined,
       );
@@ -715,15 +714,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     // ============ Utility Actions ============
     clearError: () => {
-      dispatch({ type: "SET_ERROR", payload: null });
+      dispatch({ type: 'SET_ERROR', payload: null });
     },
 
-    setError: (message: string | null, source: string = "app-context") => {
-      dispatch({ type: "SET_ERROR", payload: message });
+    setError: (message: string | null, source: string = 'app-context') => {
+      dispatch({ type: 'SET_ERROR', payload: message });
       if (message) {
-        const safeMessage = message.length > 200 ? message.slice(0, 200) + "…" : message;
+        const safeMessage =
+          message.length > 200 ? message.slice(0, 200) + '…' : message;
         trackEvent(
-          "error_occurred",
+          'error_occurred',
           { message: safeMessage, source },
           state.user ? { userId: state.user.id } : undefined,
         );
@@ -731,23 +731,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
 
     setLoading: (loading: boolean) => {
-      dispatch({ type: "SET_LOADING", payload: loading });
+      dispatch({ type: 'SET_LOADING', payload: loading });
     },
 
     toggleTheme: () => {
-      dispatch({ type: "TOGGLE_THEME" });
+      dispatch({ type: 'TOGGLE_THEME' });
     },
 
     setShowCreateModal: (show: boolean) => {
-      dispatch({ type: "SET_CREATE_MODAL", payload: show });
+      dispatch({ type: 'SET_CREATE_MODAL', payload: show });
     },
 
     setShowGiveawayModal: (show: boolean) => {
-      dispatch({ type: "SET_GIVEAWAY_MODAL", payload: show });
+      dispatch({ type: 'SET_GIVEAWAY_MODAL', payload: show });
     },
 
     setShowRequestModal: (show: boolean) => {
-      dispatch({ type: "SET_REQUEST_MODAL", payload: show });
+      dispatch({ type: 'SET_REQUEST_MODAL', payload: show });
     },
   };
 
@@ -791,7 +791,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export function useAppContext(): AppContextType {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error("useAppContext must be used within an AppProvider");
+    throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;
 }
@@ -800,7 +800,7 @@ export function useAppContext(): AppContextType {
  * Legacy alias for useAppContext
  * @deprecated Use useAppContext instead for consistency with naming conventions
  */
-export function useApp(): AppContextType {
+export function useAp(): AppContextType {
   return useAppContext();
 }
 
