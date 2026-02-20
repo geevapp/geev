@@ -2,11 +2,11 @@
 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useApp } from '@/contexts/app-context';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { useAppContext } from '@/contexts/app-context';
 
 export function GuestNavbar() {
-  const { user } = useApp();
+  const { user } = useAppContext();
 
   return (
     <nav className="sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">

@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useApp } from '@/contexts/app-context'
+import { useAppContext } from '@/contexts/app-context';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 /**
  * useAuth Hook
@@ -28,10 +28,10 @@ import { useApp } from '@/contexts/app-context'
  * const { user, isAuthenticated, login, logout } = useAuth()
  */
 interface UseAuthOptions {
-  required?: boolean
-  redirectTo?: string
-  redirectIfAuthenticated?: boolean
-  redirectAuthenticatedTo?: string
+  required?: boolean;
+  redirectTo?: string;
+  redirectIfAuthenticated?: boolean;
+  redirectAuthenticatedTo?: string;
 }
 
 export function useAuth(options: UseAuthOptions = {}) {
@@ -40,29 +40,29 @@ export function useAuth(options: UseAuthOptions = {}) {
     redirectTo = '/login',
     redirectIfAuthenticated = false,
     redirectAuthenticatedTo = '/feed',
-  } = options
+  } = options;
 
-  const router = useRouter()
-  const { user, login, logout, isHydrated } = useApp()
+  const router = useRouter();
+  const { user, login, logout, isHydrated } = useAppContext();
 
-  const isAuthenticated = !!user
-  const isLoading = !isHydrated
+  const isAuthenticated = !!user;
+  const isLoading = !isHydrated;
 
   // Handle redirect for protected routes
   useEffect(() => {
     // Wait for hydration before checking auth
-    if (!isHydrated) return
+    if (!isHydrated) return;
 
     // Redirect unauthenticated users from protected routes
     if (required && !isAuthenticated) {
-      router.replace(redirectTo)
-      return
+      router.replace(redirectTo);
+      return;
     }
 
     // Redirect authenticated users away from auth pages (login, register)
     if (redirectIfAuthenticated && isAuthenticated) {
-      router.replace(redirectAuthenticatedTo)
-      return
+      router.replace(redirectAuthenticatedTo);
+      return;
     }
   }, [
     isHydrated,
@@ -72,7 +72,7 @@ export function useAuth(options: UseAuthOptions = {}) {
     redirectIfAuthenticated,
     redirectAuthenticatedTo,
     router,
-  ])
+  ]);
 
   return {
     user,
@@ -81,7 +81,7 @@ export function useAuth(options: UseAuthOptions = {}) {
     isHydrated,
     login,
     logout,
-  }
+  };
 }
 
 /**
@@ -95,10 +95,10 @@ export function useAuth(options: UseAuthOptions = {}) {
  */
 export function withAuth<P extends object>(
   WrappedComponent: React.ComponentType<P>,
-  options: UseAuthOptions = { required: true }
+  options: UseAuthOptions = { required: true },
 ) {
   return function AuthenticatedComponent(props: P) {
-    const { isLoading, isAuthenticated } = useAuth(options)
+    const { isLoading, isAuthenticated } = useAuth(options);
 
     // Show loading state while checking auth
     if (isLoading) {
@@ -106,15 +106,15 @@ export function withAuth<P extends object>(
         <div className="flex items-center justify-center min-h-screen">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-orange-500 border-t-transparent" />
         </div>
-      )
+      );
     }
 
     // If auth is required but user is not authenticated, useAuth will redirect
     // So we just need to not render the component
     if (options.required && !isAuthenticated) {
-      return null
+      return null;
     }
 
-    return <WrappedComponent {...props} />
-  }
+    return <WrappedComponent {...props} />;
+  };
 }

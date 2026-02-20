@@ -37,18 +37,18 @@ In development mode (`NODE_ENV=development`), use the floating DevUserSwitcher p
 
 ## Test Users
 
-| Username | Name | Rank | Verified | Description |
-|----------|------|------|----------|-------------|
-| `alexchen` | Alex Chen | Legend | Yes | Verified Legend - Active Giver with high stats |
-| `sarahj` | Sarah Johnson | Champion | Yes | Verified Champion - Active Giver, Designer |
-| `marcusw` | Marcus Williams | Legend | Yes | Tech Entrepreneur with all badges |
-| `emmar` | Emma Rodriguez | Helper | No | Student/Receiver with moderate activity |
-| `davidk` | David Kim | Contributor | Yes | Gaming content creator |
-| `oliviam` | Olivia Martinez | Newcomer | No | Brand new user, minimal activity |
-| `jamest` | James Thompson | Helper | No | Active Receiver, Musician |
-| `ninap` | Nina Patel | Contributor | Yes | Verified UI/UX Designer |
-| `tylerb` | Tyler Brooks | Newcomer | No | Fresh join, no wallet connected |
-| `anongiver` | Anonymous Giver | Champion | No | Anonymous philanthropist |
+| Username    | Name            | Rank        | Verified | Description                                    |
+| ----------- | --------------- | ----------- | -------- | ---------------------------------------------- |
+| `alexchen`  | Alex Chen       | Legend      | Yes      | Verified Legend - Active Giver with high stats |
+| `sarahj`    | Sarah Johnson   | Champion    | Yes      | Verified Champion - Active Giver, Designer     |
+| `marcusw`   | Marcus Williams | Legend      | Yes      | Tech Entrepreneur with all badges              |
+| `emmar`     | Emma Rodriguez  | Helper      | No       | Student/Receiver with moderate activity        |
+| `davidk`    | David Kim       | Contributor | Yes      | Gaming content creator                         |
+| `oliviam`   | Olivia Martinez | Newcomer    | No       | Brand new user, minimal activity               |
+| `jamest`    | James Thompson  | Helper      | No       | Active Receiver, Musician                      |
+| `ninap`     | Nina Patel      | Contributor | Yes      | Verified UI/UX Designer                        |
+| `tylerb`    | Tyler Brooks    | Newcomer    | No       | Fresh join, no wallet connected                |
+| `anongiver` | Anonymous Giver | Champion    | No       | Anonymous philanthropist                       |
 
 ### User Characteristics
 
@@ -70,8 +70,8 @@ import {
   getCurrentUser,
   isAuthenticated,
   mockAuthUsers,
-  getAllUsers
-} from '@/lib/mock-auth'
+  getAllUsers,
+} from '@/lib/mock-auth';
 ```
 
 ### Using the useAuth Hook
@@ -109,10 +109,10 @@ function AnyComponent() {
 ### Using the AppContext
 
 ```typescript
-import { useApp } from '@/contexts/app-context'
+import { useAppContext } from '@/contexts/app-context'
 
 function MyComponent() {
-  const { user, login, logout, isHydrated } = useApp()
+  const { user, login, logout, isHydrated } = useAppContext()
 
   // Wait for hydration before checking auth
   if (!isHydrated) return <Loading />
@@ -130,9 +130,9 @@ Located at: `components/login-form.tsx`
 A responsive grid of user cards for selecting a test user to log in.
 
 ```tsx
-import { LoginForm } from '@/components/login-form'
+import { LoginForm } from '@/components/login-form';
 
-<LoginForm />
+<LoginForm />;
 ```
 
 ### DevUserSwitcher
@@ -146,10 +146,10 @@ Floating panel for quick user switching in development mode.
 - Collapsible to minimize screen clutter
 
 ```tsx
-import { DevUserSwitcher } from '@/components/dev-user-switcher'
+import { DevUserSwitcher } from '@/components/dev-user-switcher';
 
 // Automatically included in AppLayout
-<DevUserSwitcher />
+<DevUserSwitcher />;
 ```
 
 ### AuthNavbar
@@ -159,9 +159,9 @@ Located at: `components/auth-navbar.tsx`
 Navigation bar for authenticated users showing user info and actions.
 
 ```tsx
-import { AuthNavbar } from '@/components/auth-navbar'
+import { AuthNavbar } from '@/components/auth-navbar';
 
-<AuthNavbar />
+<AuthNavbar />;
 ```
 
 ## Storage Format
@@ -180,11 +180,11 @@ Auth data is stored in `localStorage` under the key `geev_auth`:
 
 ```typescript
 // Via logout function
-import { logout } from '@/lib/mock-auth'
-logout()
+import { logout } from '@/lib/mock-auth';
+logout();
 
 // Or directly
-localStorage.removeItem('geev_auth')
+localStorage.removeItem('geev_auth');
 ```
 
 ## API Reference
@@ -194,9 +194,9 @@ localStorage.removeItem('geev_auth')
 Authenticates a user by their ID.
 
 ```typescript
-const user = login('user-1')
+const user = login('user-1');
 if (user) {
-  console.log('Logged in as:', user.name)
+  console.log('Logged in as:', user.name);
 }
 ```
 
@@ -205,7 +205,7 @@ if (user) {
 Authenticates a user by their username (case-insensitive).
 
 ```typescript
-const user = loginByUsername('alexchen')
+const user = loginByUsername('alexchen');
 ```
 
 ### `logout(): void`
@@ -213,7 +213,7 @@ const user = loginByUsername('alexchen')
 Logs out the current user and clears localStorage.
 
 ```typescript
-logout()
+logout();
 ```
 
 ### `getCurrentUser(): User | null`
@@ -221,9 +221,9 @@ logout()
 Gets the currently authenticated user from localStorage.
 
 ```typescript
-const user = getCurrentUser()
+const user = getCurrentUser();
 if (user) {
-  console.log('Current user:', user.name)
+  console.log('Current user:', user.name);
 }
 ```
 
@@ -242,7 +242,7 @@ if (isAuthenticated()) {
 Gets a user by their ID without logging in.
 
 ```typescript
-const user = getUserById('user-1')
+const user = getUserById('user-1');
 ```
 
 ### `getAllUsers(): User[]`
@@ -250,8 +250,8 @@ const user = getUserById('user-1')
 Gets all available mock users.
 
 ```typescript
-const users = getAllUsers()
-users.forEach(user => console.log(user.name))
+const users = getAllUsers();
+users.forEach((user) => console.log(user.name));
 ```
 
 ## Route Protection
@@ -260,7 +260,7 @@ users.forEach(user => console.log(user.name))
 
 ```typescript
 // Protect a page
-const { isLoading, user } = useAuth({ required: true })
+const { isLoading, user } = useAuth({ required: true });
 
 // Options:
 // - required: Redirect to login if not authenticated
@@ -284,19 +284,23 @@ export default withAuth(DashboardPage)
 ## Testing Different States
 
 ### Guest Mode
+
 1. Clear localStorage or call `logout()`
 2. Navigate to any protected route
 3. You should be redirected to `/login`
 
 ### New User
+
 1. Log in as `oliviam` or `tylerb`
 2. Test features with minimal badges/followers
 
 ### Verified User
+
 1. Log in as `alexchen`, `sarahj`, or `marcusw`
 2. Verify badge and verification checkmark display
 
 ### User Without Wallet
+
 1. Log in as `emmar`, `oliviam`, `jamest`, or `tylerb`
 2. Test wallet-related features gracefully handle missing wallet
 
@@ -329,6 +333,7 @@ When migrating to real authentication:
 ### User Data Mismatch
 
 If stored user ID doesn't match any mock user:
+
 - Mock auth will auto-logout and clear storage
 - This can happen if mock user data changes
 

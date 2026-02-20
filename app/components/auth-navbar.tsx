@@ -1,24 +1,18 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Bell,
-  Search,
-  Plus,
-  LogOut,
-  Settings,
-  User as UserIcon,
   CheckCircle2,
   FileText,
-  Sun,
+  LogOut,
   Moon,
-} from "lucide-react";
-import { useApp } from "@/contexts/app-context";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+  Plus,
+  Search,
+  Settings,
+  Sun,
+  User as UserIcon,
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,9 +20,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { getDraftCount } from "@/lib/drafts";
-import { DraftsList } from "@/components/drafts-list";
+} from '@/components/ui/dropdown-menu';
+import { useEffect, useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DraftsList } from '@/components/drafts-list';
+import Link from 'next/link';
+import { getDraftCount } from '@/lib/drafts';
+import { useAppContext } from '@/contexts/app-context';
+import { useRouter } from 'next/navigation';
 
 /**
  * AuthNavbar Component
@@ -39,30 +40,31 @@ import { DraftsList } from "@/components/drafts-list";
  */
 export function AuthNavbar() {
   const router = useRouter();
-  const { user, theme, toggleTheme, logout, setShowCreateModal } = useApp();
+  const { user, theme, toggleTheme, logout, setShowCreateModal } =
+    useAppContext();
   const [draftCount, setDraftCount] = useState(0);
   const [showDraftsList, setShowDraftsList] = useState(false);
 
   useEffect(() => {
     // Load draft count
-    setDraftCount(getDraftCount())
+    setDraftCount(getDraftCount());
 
     // Listen for draft changes
     const handleStorageChange = () => {
-      setDraftCount(getDraftCount())
-    }
+      setDraftCount(getDraftCount());
+    };
 
     // Listen to custom events for draft updates
-    window.addEventListener('draftSaved', handleStorageChange)
-    window.addEventListener('draftDeleted', handleStorageChange)
-    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('draftSaved', handleStorageChange);
+    window.addEventListener('draftDeleted', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
-      window.removeEventListener('draftSaved', handleStorageChange)
-      window.removeEventListener('draftDeleted', handleStorageChange)
-      window.removeEventListener('storage', handleStorageChange)
-    }
-  }, [])
+      window.removeEventListener('draftSaved', handleStorageChange);
+      window.removeEventListener('draftDeleted', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   if (!user) {
     return null;
@@ -70,14 +72,14 @@ export function AuthNavbar() {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    router.push('/');
   };
 
   const getInitials = (name: string) => {
     return name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
       .slice(0, 2);
   };
@@ -135,7 +137,11 @@ export function AuthNavbar() {
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative text-gray-700 dark:text-[#FAFAFA] hover:bg-gray-100 dark:hover:bg-[#1E2939]">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative text-gray-700 dark:text-[#FAFAFA] hover:bg-gray-100 dark:hover:bg-[#1E2939]"
+          >
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 w-2 h-2 bg-[#FF6900] rounded-full" />
           </Button>
@@ -147,7 +153,7 @@ export function AuthNavbar() {
             onClick={toggleTheme}
             className="w-9 h-9 rounded-xl text-gray-700 dark:text-[#FAFAFA] hover:bg-gray-100 dark:hover:bg-[#1E2939]"
           >
-            {theme === "dark" ? (
+            {theme === 'dark' ? (
               <Sun className="h-4 w-4" />
             ) : (
               <Moon className="h-4 w-4" />
@@ -169,7 +175,11 @@ export function AuthNavbar() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 dark:bg-[#101828] dark:border-[#1E2939]" align="end" forceMount>
+            <DropdownMenuContent
+              className="w-56 dark:bg-[#101828] dark:border-[#1E2939]"
+              align="end"
+              forceMount
+            >
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center gap-1.5">
@@ -189,13 +199,19 @@ export function AuthNavbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="dark:bg-[#1E2939]" />
-              <DropdownMenuItem asChild className="dark:text-[#F3F4F6] dark:focus:bg-[#1E2939]">
+              <DropdownMenuItem
+                asChild
+                className="dark:text-[#F3F4F6] dark:focus:bg-[#1E2939]"
+              >
                 <Link href={`/profile/${user.id}`} className="cursor-pointer">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild className="dark:text-[#F3F4F6] dark:focus:bg-[#1E2939]">
+              <DropdownMenuItem
+                asChild
+                className="dark:text-[#F3F4F6] dark:focus:bg-[#1E2939]"
+              >
                 <Link href="/settings" className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
                   Settings

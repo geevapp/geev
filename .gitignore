@@ -1,366 +1,50 @@
-# ====================================
-# DEPENDENCIES
-# ====================================
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-lerna-debug.log*
-
-# Package manager
-.pnpm-store/
-.npm/
-.yarn/
-.pnpm-lock.yaml
-npm-shrinkwrap.json
-package-lock.json
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.pnpm
 yarn.lock
-lerna.json
-lerna-debug.log
+package-lock.json
 pnpm-lock.yaml
-!pnpm-workspace.yaml
 
-# Rust
-**/target/
-**/Cargo.lock
-**/Cargo.lock.bk
+# testing
+/coverage
 
-# ====================================
-# BUILD OUTPUTS
-# ====================================
+# next.js
+/.next/
+/out/
 
-# JavaScript/TypeScript
-dist/
-build/
-out/
-.next/
-.nuxt/
-.cache/
-.parcel-cache/
-coverage/
-.nyc_output/
-*.tsbuildinfo
+# production
+/build
 
-# Rust build artifacts
-**/target/debug/
-**/target/release/
-**/target/wasm32-*/
-
-# Compiled binaries
-*.exe
-*.dll
-*.so
-*.dylib
-*.wasm
-
-# ====================================
-# ENVIRONMENT & SECRETS
-# ====================================
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.staging.local
-*.env
-!.env.example
-
-# Secrets
-**/secrets/
-**/service-account.json
-**/credentials.json
-*.pem
-*.key
-*.crt
-*.p12
-
-# ====================================
-# IDE AND EDITOR FILES
-# ====================================
-
-# VS Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.code-workspace
-
-# IntelliJ/WebStorm
-.idea/
-*.iml
-*.iws
-*.ipr
-out/
-.idea_modules/
-
-# Vim
-*.swp
-*.swo
-*~
-*.un~
-
-# Emacs
-*#
-.#*
-\#*#
-.*.swp
-.*.swo
-._*
-
-# Sublime Text
-*.sublime-*
-**/*.sublime-*
-
-# ====================================
-# OS GENERATED FILES
-# ====================================
-
-# macOS
+# misc
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-.AppleDouble
-.LSOverride
-Icon?
-._*
-*.DS_Store
+*.pem
 
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-*.cab
-*.msi
-*.msm
-*.msp
-*.lnk
-
-# Linux
-*~
-.directory
-*.kate-swp
-*.pid
-*.lock
-
-# ====================================
-# LOGS AND DATABASES
-# ====================================
-
-# Logs
-logs/
-*.log
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
 .pnpm-debug.log*
 
-# Databases
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-prisma/*.db
-prisma/*.db-journal
-*.rdb
-*.dump
+# env files (can opt-in for committing if needed)
+.env*
 
-# ====================================
-# TEST COVERAGE
-# ====================================
+# vercel
+.vercel
 
-coverage/
-.nyc_output/
-*.lcov
-*.lcov.info
-test-results/
-junit.xml
-test-reports/
-playwright-report/
-test-results/
+# typescript
+*.tsbuildinfo
+next-env.d.ts
 
-# ====================================
-# TEMPORARY FILES
-# ====================================
+/lib/generated/prisma
 
-*.tmp
-*.temp
-*.cache
-*.pid
-*.seed
-*.pid.lock
-tmp/
-temp/
-.cache/
-
-# ====================================
-# PACKAGE SPECIFIC
-# ====================================
-
-# Next.js
-.next/
-out/
-build/
-.nnext/
-
-# Remix
-.build/
-.cache/
-
-# Gatsby
-.cache/
-public/
-
-# Vue
-dist/
-dist-ssr/
-*.local
-
-# Angular
-dist/
-tmp/
-**/node_modules/
-**/.angular/
-
-# ====================================
-# DOCKER
-# ====================================
-
-*.pid
-docker-compose.override.yml
-docker-compose.prod.yml
-.docker/
-docker-data/
-*.pid
-
-# ====================================
-# PROJECT SPECIFIC
-# ====================================
-
-packages/contracts/target/
-packages/contracts/Cargo.lock
-packages/contracts/wasm/
-packages/contracts/*.wasm
-packages/api/dist/
-packages/api/build/
-packages/api/coverage/
-packages/app/dist/
-packages/app/build/
-packages/app/.next/
-packages/app/out/
-
-# ====================================
-# DEPLOYMENT
-# ====================================
-
-# Serverless
-.serverless/
-.webpack/
-*.serverless/
-
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-*.tfvars
-terraform.tfstate
-terraform.tfstate.backup
-terraform.tfvars
-crash.log
-
-# Kubernetes
-*.kubeconfig
-helm/charts/*.tgz
-
-# ====================================
-# CI/CD
-# ====================================
-
-# GitHub Actions
-.github/actions/**/node_modules/
-
-# GitLab CI
-**/artifacts/
-**/pipeline/
-**/reports/
-
-# Jenkins
-**/workspace/
+# rust
 **/target/
-
-# ====================================
-# MONOREPO SPECIFIC
-# ====================================
-
-# pnpm
-pnpm-lock.yaml
-!pnpm-workspace.yaml
-.pnpm-store/
-
-# Turborepo
-.turbo/
-**/.turbo/
-
-# Changesets
-.changeset/pre.json
-.changeset/pre.json
-.changeset/*.md
-!.changeset/README.md
-
-# Lerna
-lerna-debug.log
-**/lerna-debug.log
-
-# ====================================
-# DOCUMENTATION
-# ====================================
-
-# Generated docs
-docs/_build/
-docs/_site/
-docs/api/
-docs/generated/
-**/docs/generated/
-
-# Diagrams
-**/*.d.ts
-**/*.js.map
-**/*.d.ts.map
-
-# ====================================
-# BACKUP FILES
-# ====================================
-
-*.bak
-*.backup
-*.old
-*.orig
-*.rej
-*_old
-*_backup
-
-# ====================================
-# PROTECTED FILES (DO NOT IGNORE)
-# ====================================
-
-!.env.example
-!.gitkeep
-!.gitattributes
-!.editorconfig
-!.eslintrc.js
-!.prettierrc
-!.nvmrc
-!.node-version
-!.dockerignore
-!.helmignore

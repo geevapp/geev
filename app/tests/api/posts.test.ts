@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GET, POST } from '@/app/api/posts/route';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockRequest, parseResponse } from '../helpers/api';
+
 import { createTestUser } from '../helpers/db';
 import { prisma } from '@/lib/prisma';
 
@@ -65,6 +66,7 @@ describe('Posts API', () => {
             creatorId: user.id,
             type: 'giveaway',
             title: 'Test Post',
+            slug: 'test-post',
             description:
               'A test post description that is long enough to meet requirements.',
             category: 'electronics',
@@ -94,6 +96,7 @@ describe('Posts API', () => {
           'This is a test post description with enough characters to pass validation rules.',
         category: 'electronics',
         type: 'giveaway',
+        slug: 'new-test-post',
         winnerCount: 1,
         endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       };
