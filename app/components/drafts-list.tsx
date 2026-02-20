@@ -1,110 +1,111 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { getDrafts, deleteDraft } from '@/lib/drafts'
-import type { Draft } from '@/lib/types'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { useApp } from '@/contexts/app-context'
-import { Edit, Trash2, FileText, Gift, Heart } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { toast } from 'sonner'
+} from '@/components/ui/dialog';
+import { Edit, FileText, Gift, Heart, Trash2 } from 'lucide-react';
+import { deleteDraft, getDrafts } from '@/lib/drafts';
+import { useEffect, useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import type { Draft } from '@/lib/types';
+import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'sonner';
+import { useAppContext } from '@/contexts/app-context';
 
 interface DraftsListProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 /**
  * DraftsList Component
- * 
+ *
  * Displays a list of all saved drafts with options to edit or delete.
  */
 export function DraftsList({ open, onOpenChange }: DraftsListProps) {
-  const { setShowGiveawayModal, setShowRequestModal } = useApp()
-  const [drafts, setDrafts] = useState<Draft[]>([])
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { setShowGiveawayModal, setShowRequestModal } = useAppContext();
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const loadDrafts = () => {
-    setDrafts(getDrafts())
-  }
+    setDrafts(getDrafts());
+  };
 
   useEffect(() => {
     if (open) {
-      loadDrafts()
+      loadDrafts();
     }
-  }, [open])
+  }, [open]);
 
   // Listen for draft updates
   useEffect(() => {
     const handleDraftUpdate = () => {
-      loadDrafts()
-    }
+      loadDrafts();
+    };
 
-    window.addEventListener('draftSaved', handleDraftUpdate)
-    window.addEventListener('draftDeleted', handleDraftUpdate)
-    window.addEventListener('storage', handleDraftUpdate)
+    window.addEventListener('draftSaved', handleDraftUpdate);
+    window.addEventListener('draftDeleted', handleDraftUpdate);
+    window.addEventListener('storage', handleDraftUpdate);
 
     return () => {
-      window.removeEventListener('draftSaved', handleDraftUpdate)
-      window.removeEventListener('draftDeleted', handleDraftUpdate)
-      window.removeEventListener('storage', handleDraftUpdate)
-    }
-  }, [])
+      window.removeEventListener('draftSaved', handleDraftUpdate);
+      window.removeEventListener('draftDeleted', handleDraftUpdate);
+      window.removeEventListener('storage', handleDraftUpdate);
+    };
+  }, []);
 
   const handleEdit = (draft: Draft) => {
-    onOpenChange(false)
+    onOpenChange(false);
     if (draft.type === 'giveaway') {
-      setShowGiveawayModal(true)
+      setShowGiveawayModal(true);
       // We'll need to pass the draftId to the modal
       // For now, we'll use a custom event or context
       setTimeout(() => {
         window.dispatchEvent(
-          new CustomEvent('loadDraft', { detail: { draftId: draft.id } })
-        )
-      }, 100)
+          new CustomEvent('loadDraft', { detail: { draftId: draft.id } }),
+        );
+      }, 100);
     } else {
-      setShowRequestModal(true)
+      setShowRequestModal(true);
       setTimeout(() => {
         window.dispatchEvent(
-          new CustomEvent('loadDraft', { detail: { draftId: draft.id } })
-        )
-      }, 100)
+          new CustomEvent('loadDraft', { detail: { draftId: draft.id } }),
+        );
+      }, 100);
     }
-  }
+  };
 
   const handleDelete = async (draftId: string) => {
     if (!confirm('Are you sure you want to delete this draft?')) {
-      return
+      return;
     }
 
-    setDeletingId(draftId)
+    setDeletingId(draftId);
     try {
-      deleteDraft(draftId)
-      toast.success('Draft deleted')
-      loadDrafts()
+      deleteDraft(draftId);
+      toast.success('Draft deleted');
+      loadDrafts();
     } catch (error) {
-      toast.error('Failed to delete draft')
-      console.error(error)
+      toast.error('Failed to delete draft');
+      console.error(error);
     } finally {
-      setDeletingId(null)
+      setDeletingId(null);
     }
-  }
+  };
 
   const getTypeIcon = (type: Draft['type']) => {
     return type === 'giveaway' ? (
       <Gift className="h-4 w-4" />
     ) : (
       <Heart className="h-4 w-4" />
-    )
-  }
+    );
+  };
 
   const getTypeBadge = (type: Draft['type']) => {
     return type === 'giveaway' ? (
@@ -115,8 +116,8 @@ export function DraftsList({ open, onOpenChange }: DraftsListProps) {
       <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
         Request
       </Badge>
-    )
-  }
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,5 +203,5 @@ export function DraftsList({ open, onOpenChange }: DraftsListProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

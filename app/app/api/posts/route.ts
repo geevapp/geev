@@ -1,7 +1,8 @@
+import { apiError, apiSuccess } from '@/lib/api-response';
+
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { apiSuccess, apiError } from '@/lib/api-response';
 import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 const POST = async (request: NextRequest) => {
   try {
@@ -30,6 +31,7 @@ const POST = async (request: NextRequest) => {
         creatorId: user.id,
         type,
         title,
+        slug: body.slug || title.toLowerCase().replace(/\s+/g, '-').slice(0, 50),
         description,
         category,
         winnerCount,

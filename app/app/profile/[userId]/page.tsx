@@ -22,7 +22,7 @@ import type { Metadata } from 'next';
 import { PostCard } from '@/components/profile/post-card';
 import { RankBadge } from '@/components/profile/rank-badge';
 import { StatCard } from '@/components/profile/stat-card';
-import { useApp } from '@/contexts/app-context';
+import { useAppContext } from '@/contexts/app-context';
 
 interface PageProps {
   params: Promise<{ userId: string }>;
@@ -128,7 +128,7 @@ function UserNotFound() {
  */
 export default function ProfilePage({ params }: PageProps) {
   const { userId } = use(params);
-  const { user: currentUser, users, posts } = useApp();
+  const { user: currentUser, users, posts } = useAppContext();
 
   // Find the profile user
   const profileUser = useMemo(() => {

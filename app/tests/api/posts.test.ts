@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GET, POST } from '@/app/api/posts/route';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockRequest, parseResponse } from '../helpers/api';
+
 import { createTestUser } from '../helpers/db';
 import { prisma } from '@/lib/prisma';
 
@@ -19,7 +20,7 @@ describe('Posts API', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       // Mock prisma.user.create
       prisma.user.create = vi.fn().mockResolvedValue(testUser);
       // Mock prisma.post.findMany and count
@@ -27,11 +28,11 @@ describe('Posts API', () => {
       prisma.post.count = vi.fn().mockResolvedValue(0);
       // Mock prisma.post.create
       prisma.post.create = vi.fn().mockImplementation((args: any) => Promise.resolve({
-         id: 'post_123',
-         ...args.data,
-         createdAt: new Date(),
-         updatedAt: new Date(),
-         creator: testUser
+        id: 'post_123',
+        ...args.data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        creator: testUser
       }));
     } else {
       testUser = await createTestUser();
@@ -51,18 +52,19 @@ describe('Posts API', () => {
 
     it('should return posts with pagination', async () => {
       if (process.env.MOCK_DB === 'true') {
-         prisma.post.findMany = vi.fn().mockResolvedValue([{
-            id: 'post_123',
-            title: 'Test Post',
-            creator: testUser
-         }]);
-         prisma.post.count = vi.fn().mockResolvedValue(1);
+        prisma.post.findMany = vi.fn().mockResolvedValue([{
+          id: 'post_123',
+          title: 'Test Post',
+          creator: testUser
+        }]);
+        prisma.post.count = vi.fn().mockResolvedValue(1);
       } else {
         await prisma.post.create({
           data: {
             creatorId: testUser.id,
             type: 'giveaway',
             title: 'Test Post',
+            slug: 'test-post',
             description:
               'A test post description that is long enough to meet requirements.',
             category: 'electronics',
@@ -92,6 +94,7 @@ describe('Posts API', () => {
           'This is a test post description with enough characters to pass validation rules.',
         category: 'electronics',
         type: 'giveaway',
+        slug: 'new-test-post',
         winnerCount: 1,
         endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       };
@@ -101,7 +104,7 @@ describe('Posts API', () => {
         body: postData,
         cookies: { session: 'mock-session-token' },
       });
-      
+
       // Mock getCurrentUser to return the test user created in beforeEach
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(testUser);
 

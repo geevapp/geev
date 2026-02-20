@@ -1,34 +1,40 @@
-'use client'
+'use client';
 
-import { useApp } from '@/contexts/app-context'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Gift, Heart } from 'lucide-react'
+} from '@/components/ui/dialog';
+import { Gift, Heart } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { useAppContext } from '@/contexts/app-context';
 
 /**
  * CreateModal Component
- * 
+ *
  * Modal that allows users to choose between creating a giveaway or help request.
  * Opens the appropriate modal based on selection.
  */
 export function CreateModal() {
-  const { showCreateModal, setShowCreateModal, setShowGiveawayModal, setShowRequestModal } = useApp()
+  const {
+    showCreateModal,
+    setShowCreateModal,
+    setShowGiveawayModal,
+    setShowRequestModal,
+  } = useAppContext();
 
   const handleCreateGiveaway = () => {
-    setShowCreateModal(false)
-    setShowGiveawayModal(true)
-  }
+    setShowCreateModal(false);
+    setShowGiveawayModal(true);
+  };
 
   const handleCreateRequest = () => {
-    setShowCreateModal(false)
-    setShowRequestModal(true)
-  }
+    setShowCreateModal(false);
+    setShowRequestModal(true);
+  };
 
   return (
     <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
@@ -71,5 +77,5 @@ export function CreateModal() {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

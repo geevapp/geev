@@ -1,27 +1,28 @@
 'use client';
 
-import type React from 'react';
 import { useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
-import { ScrollRestoration } from '@/components/scroll-restoration';
-import { DevUserSwitcher } from '@/components/dev-user-switcher';
+
 import { CreateModal } from '@/components/create-modal';
+import { DesktopSidebar } from '@/components/desktop-sidebar';
+import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { GiveawayModal } from '@/components/create-giveaway-modal';
+import { MobileBottomNav } from '@/components/mobile-bottom-nav';
+import { Navbar } from '@/components/navbar';
+import type React from 'react';
 import { RequestModal } from '@/components/request-modal';
+import { ScrollRestoration } from '@/components/scroll-restoration';
+import { cn } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
-import { useApp } from '@/contexts/app-context';
+import { useAppContext } from '@/contexts/app-context';
+import { usePathname } from 'next/navigation';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-import { Navbar } from '@/components/navbar';
-import { DesktopSidebar } from '@/components/desktop-sidebar';
-import { MobileBottomNav } from '@/components/mobile-bottom-nav';
-
 export function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
-  const { user } = useApp();
+  const { user } = useAppContext();
   const lastPathRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -43,11 +44,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="flex">
         <DesktopSidebar />
 
-        <main className="flex-1 md:ml-64 min-h-[calc(100vh-4rem)] pb-16 md:pb-0">
+        <main
+          className={cn(
+            `flex-1 ${user ? 'md:ml-64' : ''} min-h-[calc(100vh-4rem)] pb-16 md:pb-0`,
+          )}
+        >
           <Navbar />
-          <div className="max-w-7xl mx-auto w-full">
-            {children}
-          </div>
+          <div className="max-w-7xl mx-auto w-full">{children}</div>
         </main>
       </div>
 
