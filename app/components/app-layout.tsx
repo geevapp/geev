@@ -6,6 +6,7 @@ import { CreateModal } from '@/components/create-modal';
 import { DesktopSidebar } from '@/components/desktop-sidebar';
 import { DevUserSwitcher } from '@/components/dev-user-switcher';
 import { GiveawayModal } from '@/components/create-giveaway-modal';
+import { GuestBanner } from '@/components/guest-banner';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import { Navbar } from '@/components/navbar';
 import type React from 'react';
@@ -50,7 +51,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           )}
         >
           <Navbar />
-          <div className="max-w-7xl mx-auto w-full">{children}</div>
+          <GuestBanner />
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
         </main>
       </div>
 

@@ -59,9 +59,11 @@ describe('Posts API', () => {
         }]);
         prisma.post.count = vi.fn().mockResolvedValue(1);
       } else {
+        // Ensure test user exists before creating the post
+        const user = await createTestUser();
         await prisma.post.create({
           data: {
-            creatorId: testUser.id,
+            creatorId: user.id,
             type: 'giveaway',
             title: 'Test Post',
             slug: 'test-post',
