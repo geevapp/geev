@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env, Symbol, token};
+use soroban_sdk::{contracttype, token, Address, Env, Symbol};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[contracttype]
@@ -97,4 +97,3 @@ pub fn enter_giveaway(env: Env, user: Address, giveaway_id: u64) {
     giveaway.participant_count += 1;
     env.storage().persistent().set(&giveaway_key, &giveaway);
 }
-
