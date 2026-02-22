@@ -1,15 +1,15 @@
 'use client';
 
+import { useAppContext } from '@/contexts/app-context';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useApp } from '@/contexts/app-context';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { user, isHydrated } = useApp();
+  const { user, isHydrated } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {

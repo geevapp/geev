@@ -1,14 +1,15 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { CheckCircle2, User as UserIcon, Shield, Sparkles } from "lucide-react";
-import { useApp } from "@/contexts/app-context";
-import { mockAuthUsers } from "@/lib/mock-auth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import type { User } from "@/lib/types";
-import { signIn } from "next-auth/react";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CheckCircle2, Shield, Sparkles, User as UserIcon } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
+import type { User } from '@/lib/types';
+import { mockAuthUsers } from '@/lib/mock-auth';
+import { signIn } from 'next-auth/react';
+import { useAppContext } from '@/contexts/app-context';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 /**
  * LoginForm Component
@@ -25,7 +26,7 @@ import { signIn } from "next-auth/react";
  */
 export function LoginForm() {
   const router = useRouter();
-  const { login: contextLogin } = useApp();
+  const { login: contextLogin } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
@@ -34,16 +35,16 @@ export function LoginForm() {
     setSelectedUserId(user.id);
 
     try {
-      const result = await signIn("credentials", {
+      const result = await signIn('credentials', {
         email: user.email,
         redirect: false,
       });
 
       if (result?.ok) {
-        router.push("/feed");
+        router.push('/feed');
       }
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error('Login failed:', error);
     } finally {
       setIsLoading(false);
       setSelectedUserId(null);
@@ -51,9 +52,9 @@ export function LoginForm() {
   };
   const getInitials = (name: string) => {
     return name
-      .split(" ")
+      .split(' ')
       .map((n) => n[0])
-      .join("")
+      .join('')
       .toUpperCase()
       .slice(0, 2);
   };
@@ -80,13 +81,13 @@ export function LoginForm() {
               text-left w-full
               ${
                 selectedUserId === user.id
-                  ? "border-orange-500 bg-orange-50 dark:bg-orange-950/30"
-                  : "border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-700"
+                  ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-700'
               }
               ${
                 isLoading && selectedUserId !== user.id
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:shadow-md cursor-pointer"
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:shadow-md cursor-pointer'
               }
               bg-white dark:bg-gray-900
             `}

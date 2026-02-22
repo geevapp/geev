@@ -1,20 +1,20 @@
-"use client";
-import { useApp } from "@/contexts/app-context";
-import { Crown, Wallet } from "lucide-react";
-import Image from "next/image";
+'use client';
 
+import { Crown, Wallet } from 'lucide-react';
 
+import Image from 'next/image';
+import { useAppContext } from '@/contexts/app-context';
 
 export default function ProfileCard() {
-  const { user, posts, burnPost } = useApp();
+  const { user, posts, burnPost } = useAppContext();
   return (
     <div className="p-px bg-linear-to-br from-[#2B7FFF] via-[#FF6900] to-[#F6339A] mx-4 rounded-[10px]">
       <div className="bg-white dark:bg-slate-900 py-10 rounded-[9px] z-10">
         <div className="flex ml-4 gap-3">
           <div className="w-12 h-12 rounded-full overflow-hidden">
             <Image
-              src={"/wallet/alex.png"}
-              alt={user?.name ?? ""}
+              src={'/wallet/alex.png'}
+              alt={user?.name ?? ''}
               width={48}
               height={48}
               className="w-full h-full object-cover"
