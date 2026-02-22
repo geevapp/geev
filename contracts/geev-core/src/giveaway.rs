@@ -25,6 +25,57 @@ pub enum DataKey {
     Giveaway(u64),
     Participant(u64, Address),
     GiveawayCount,
+    Admin,
+    Paused,
+}
+
+/// Helper function to check if contract is paused
+fn check_paused(env: &Env) {
+    let paused_key = DataKey::Paused;
+    let is_paused: bool = env.storage().instance().get(&paused_key).unwrap_or(false);
+
+    if is_paused {
+        panic!("ContractPaused");
+    }
+}
+
+/// Initialize the contract with an admin address
+/// Can only be called once
+pub fn initialize(env: Env, admin: Address) {
+    let admin_key = DataKey::Admin;
+
+    // Prevent re-initialization
+    if env.storage().instance().has(&admin_key) {
+        panic!("AlreadyInitialized");
+    }
+
+    // Store the admin address
+    env.storage().instance().set(&admin_key, &admin);
+
+    // Initialize paused state to false
+    let paused_key = DataKey::Paused;
+    env.storage().instance().set(&paused_key, &false);
+}
+
+/// Set the paused state (admin only)
+pub fn set_paused(env: Env, admin: Address, paused: bool) {
+    // Verify caller is the stored admin
+    admin.require_auth();
+
+    let admin_key = DataKey::Admin;
+    let stored_admin: Address = env
+        .storage()
+        .instance()
+        .get(&admin_key)
+        .unwrap_or_else(|| panic!("NotInitialized"));
+
+    if admin != stored_admin {
+        panic!("Unauthorized");
+    }
+
+    // Update paused state
+    let paused_key = DataKey::Paused;
+    env.storage().instance().set(&paused_key, &paused);
 }
 
 pub fn create_giveaway(
@@ -34,6 +85,9 @@ pub fn create_giveaway(
     amount: i128,
     end_time: u64,
 ) -> u64 {
+    // Check if contract is paused
+    check_paused(&env);
+
     creator.require_auth();
 
     // Initialize the Token Client using the provided token address
@@ -73,6 +127,9 @@ pub fn create_giveaway(
 }
 
 pub fn enter_giveaway(env: Env, user: Address, giveaway_id: u64) {
+    // Check if contract is paused
+    check_paused(&env);
+
     user.require_auth();
 
     let giveaway_key = DataKey::Giveaway(giveaway_id);
