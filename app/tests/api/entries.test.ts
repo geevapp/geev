@@ -9,6 +9,9 @@ describe('Entry API Endpoints', () => {
   let user1: any, user2: any, user3: any, post: any, requestPost: any;
 
   beforeEach(async () => {
+    // Reset all mocks before each test
+    vi.clearAllMocks();
+
     if (process.env.MOCK_DB === 'true') {
       // Mock test data
       user1 = {
@@ -77,41 +80,39 @@ describe('Entry API Endpoints', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-
-      // Reset all mocks
-      vi.clearAllMocks();
     } else {
       // Clean up database
       await prisma.entry.deleteMany();
       await prisma.post.deleteMany();
       await prisma.user.deleteMany();
 
-      // Create test data
+      // Create test data with unique wallet addresses using timestamp
+      const timestamp = Date.now();
       user1 = await createTestUser({
         name: 'User One',
-        walletAddress: 'GUSER1WALLET',
+        walletAddress: `GUSER1WALLET${timestamp}`,
       });
 
       user2 = await createTestUser({
         name: 'User Two',
-        walletAddress: 'GUSER2WALLET',
+        walletAddress: `GUSER2WALLET${timestamp}`,
       });
 
       user3 = await createTestUser({
         name: 'User Three',
-        walletAddress: 'GUSER3WALLET',
+        walletAddress: `GUSER3WALLET${timestamp}`,
       });
 
       post = await createTestPost(user1.id, {
         title: 'Test Giveaway',
-        slug: 'test-giveaway',
+        slug: `test-giveaway-${timestamp}`,
         status: 'open',
       });
 
       requestPost = await createTestPost(user1.id, {
         type: 'request',
         title: 'Request Post',
-        slug: 'request-post',
+        slug: `request-post-${timestamp}`,
       });
     }
   });
@@ -516,9 +517,10 @@ describe('Entry API Endpoints', () => {
         prisma.entry.findMany = vi.fn().mockResolvedValue(mockEntries);
         prisma.entry.count = vi.fn().mockResolvedValue(5);
       } else {
-        for (let i = 0; i < 5; i++) {
+        // Create 5 users with unique wallet addresses (starting from 10 to avoid collision)
+        for (let i = 10; i < 15; i++) {
           const user = await createTestUser({
-            walletAddress: `GUSER${i}WALLET`,
+            walletAddress: `GUSER${i}WALLET${Date.now()}`,
           });
           await createTestEntry(user.id, post.id);
         }
