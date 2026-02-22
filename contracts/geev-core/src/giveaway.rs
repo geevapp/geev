@@ -5,6 +5,8 @@ use soroban_sdk::{contracttype, Address, Env, Symbol, token};
 pub enum GiveawayStatus {
     Active,
     Ended,
+    Claimable,
+    Completed,
 }
 
 #[derive(Clone)]
@@ -17,6 +19,7 @@ pub struct Giveaway {
     pub amount: i128,
     pub end_time: u64,
     pub participant_count: u32,
+    pub winner: Option<Address>,
 }
 
 #[derive(Clone)]
@@ -57,6 +60,7 @@ pub fn create_giveaway(
         amount,
         end_time,
         participant_count: 0,
+        winner: None,
     };
 
     // Save struct to Persistent Storage under key: Giveaway(id)
@@ -98,3 +102,42 @@ pub fn enter_giveaway(env: Env, user: Address, giveaway_id: u64) {
     env.storage().persistent().set(&giveaway_key, &giveaway);
 }
 
+pub fn distribute_prize(env: Env, giveaway_id: u64) {
+    // Load the giveaway
+    let giveaway_key = DataKey::Giveaway(giveaway_id);
+    let mut giveaway: Giveaway = env
+        .storage()
+        .persistent()
+        .get(&giveaway_key)
+        .unwrap_or_else(|| panic!("Giveaway Not Found"));
+
+    // Validate that the giveaway is in Claimable status
+    if giveaway.status != GiveawayStatus::Claimable {
+        panic!("Giveaway Not Claimable");
+    }
+
+    // Extract winner address
+    let winner = giveaway.winner.clone().unwrap_or_else(|| panic!("No Winner Selected"));
+
+    // Initialize the Token Client
+    let token_client = token::Client::new(&env, &giveaway.token);
+
+    // Transfer tokens from contract to winner
+    token_client.transfer(
+        &env.current_contract_address(),
+        &winner,
+        &giveaway.amount,
+    );
+
+    // Update status to Completed
+    giveaway.status = GiveawayStatus::Completed;
+
+    // Save updated struct to storage
+    env.storage().persistent().set(&giveaway_key, &giveaway);
+
+    // Emit PrizeClaimed event
+    env.events().publish(
+        (Symbol::new(&env, "PrizeClaimed"), giveaway_id, winner),
+        giveaway.amount,
+    );
+}
