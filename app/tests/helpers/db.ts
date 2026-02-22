@@ -18,11 +18,15 @@ export async function createTestPost(
   userId: string,
   overrides?: Partial<Post>,
 ): Promise<Post> {
+  const title = overrides?.title || 'Test Giveaway Post';
+  const slug = overrides?.slug || title.toLowerCase().replace(/\s+/g, '-');
+
   return await prisma.post.create({
     data: {
       creatorId: userId,
       type: 'giveaway',
-      title: 'Test Giveaway Post',
+      title,
+      slug,
       description:
         'This is a test description for a giveaway post. It needs to be at least 50 characters long.',
       category: 'electronics',
