@@ -16,19 +16,8 @@ impl GiveawayContract {
     ) -> u64 {
         creator.require_auth();
 
-<<<<<<< HEAD
-#[derive(Clone)]
-#[contracttype]
-pub enum DataKey {
-    Giveaway(u64),
-    Participant(u64, Address),
-    GiveawayCount,
-    Admin,
-}
-=======
         let token_client = token::Client::new(&env, &token);
         token_client.transfer(&creator, &env.current_contract_address(), &amount);
->>>>>>> 4c08c5aca9f1992ca9c4c9249a88699547b1dc5f
 
         let giveaway_id = Self::generate_id(&env);
         let end_time = env.ledger().timestamp() + duration_seconds;
@@ -52,14 +41,6 @@ pub enum DataKey {
         giveaway_id
     }
 
-<<<<<<< HEAD
-    let participant_key = DataKey::Participant(giveaway_id, user.clone());
-    if env.storage().persistent().has(&participant_key) {
-        panic!("Double Entry");
-    }
-
-    env.storage().persistent().set(&participant_key, &true);
-=======
     pub fn enter_giveaway(env: Env, participant: Address, giveaway_id: u64) {
         participant.require_auth();
 
@@ -98,7 +79,6 @@ pub enum DataKey {
             .persistent()
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
->>>>>>> 4c08c5aca9f1992ca9c4c9249a88699547b1dc5f
 
         if giveaway.status != GiveawayStatus::Active {
             panic_with_error!(&env, Error::InvalidStatus);
@@ -138,5 +118,13 @@ pub enum DataKey {
             .instance()
             .set(&DataKey::GiveawayCounter, &counter);
         counter
+    }
+
+    pub fn set_admin(env: Env, admin: Address) {
+        crate::admin::set_admin(env, admin);
+    }
+
+    pub fn admin_withdraw(env: Env, token: Address, amount: i128, to: Address) {
+        crate::admin::admin_withdraw(env, token, amount, to);
     }
 }

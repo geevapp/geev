@@ -43,4 +43,5 @@ pub enum DataKey {
     Giveaway(u64),
     ParticipantIndex(u64, u32),
     HasEntered(u64, Address),
+    Admin,
 }
