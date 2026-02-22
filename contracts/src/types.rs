@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env};
+use soroban_sdk::{contracterror, contracttype, Address, String};
 
 // Status enum for giveaway state
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -62,17 +62,12 @@ pub struct EntryKey(pub u64);
 #[contracttype]
 pub struct ParticipantIndexKey(pub u64, pub u32); 
 
-// Counter for generating unique IDs
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[contracttype]
-pub struct CounterKey;
-
-// Constants
-pub const GIVEAWAY_COUNTER: CounterKey = CounterKey;
+// Constants for storage keys
+pub const GIVEAWAY_COUNTER: &str = "COUNTER";
 
 // Error types
+#[contracterror]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
-#[contracttype]
 pub enum Error {
     GiveawayNotFound = 1,
     GiveawayStillActive = 2,

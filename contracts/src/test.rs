@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::Address as _, Address, Env};
+use soroban_sdk::{testutils::{Address as _, Ledger}, Address, Env, String};
 
 use crate::{
     types::{GiveawayStatus, SelectionMethod},
@@ -15,9 +15,9 @@ fn test_create_giveaway() {
     let giveaway_id = GiveawayContract::create_giveaway(
         env.clone(),
         creator.clone(),
-        "Test Giveaway".to_string(),
-        "This is a test giveaway".to_string(),
-        "general".to_string(),
+        String::from_str(&env, "Test Giveaway"),
+        String::from_str(&env, "This is a test giveaway"),
+        String::from_str(&env, "general"),
         SelectionMethod::Random,
         1,
         86400, // 1 day
@@ -25,9 +25,9 @@ fn test_create_giveaway() {
     
     assert_eq!(giveaway_id, 1);
     
-    let giveaway = GiveawayContract::get_giveaway(env, giveaway_id).unwrap();
+    let giveaway = GiveawayContract::get_giveaway(env.clone(), giveaway_id).unwrap();
     assert_eq!(giveaway.creator, creator);
-    assert_eq!(giveaway.title, "Test Giveaway");
+    assert_eq!(giveaway.title, String::from_str(&env, "Test Giveaway"));
     assert_eq!(giveaway.status, GiveawayStatus::Active);
     assert_eq!(giveaway.participant_count, 0);
     assert_eq!(giveaway.winner, None);
@@ -43,9 +43,9 @@ fn test_add_participant() {
     let giveaway_id = GiveawayContract::create_giveaway(
         env.clone(),
         creator.clone(),
-        "Test Giveaway".to_string(),
-        "This is a test giveaway".to_string(),
-        "general".to_string(),
+        String::from_str(&env, "Test Giveaway"),
+        String::from_str(&env, "This is a test giveaway"),
+        String::from_str(&env, "general"),
         SelectionMethod::Random,
         1,
         86400, // 1 day
@@ -56,7 +56,7 @@ fn test_add_participant() {
         env.clone(),
         giveaway_id,
         participant.clone(),
-        "Test entry".to_string(),
+        String::from_str(&env, "Test entry"),
     );
     
     assert_eq!(entry_id, 2); // 1 for giveaway, 2 for entry
@@ -81,9 +81,9 @@ fn test_pick_winner_success() {
     let giveaway_id = GiveawayContract::create_giveaway(
         env.clone(),
         creator.clone(),
-        "Test Giveaway".to_string(),
-        "This is a test giveaway".to_string(),
-        "general".to_string(),
+        String::from_str(&env, "Test Giveaway"),
+        String::from_str(&env, "This is a test giveaway"),
+        String::from_str(&env, "general"),
         SelectionMethod::Random,
         1,
         1000, // 1000 seconds
@@ -94,24 +94,24 @@ fn test_pick_winner_success() {
         env.clone(),
         giveaway_id,
         participant1.clone(),
-        "Entry 1".to_string(),
+        String::from_str(&env, "Entry 1"),
     );
     GiveawayContract::add_participant(
         env.clone(),
         giveaway_id,
         participant2.clone(),
-        "Entry 2".to_string(),
+        String::from_str(&env, "Entry 2"),
     );
     GiveawayContract::add_participant(
         env.clone(),
         giveaway_id,
         participant3.clone(),
-        "Entry 3".to_string(),
+        String::from_str(&env, "Entry 3"),
     );
     
     // Advance time beyond end_time
     env.ledger().with_mut(|li| {
-        li.timestamp = li.timestamp + 2000; // Advance time beyond 1000 seconds
+        li.timestamp += 2000;
     });
     
     // Pick winner
@@ -139,9 +139,9 @@ fn test_pick_winner_still_active() {
     let giveaway_id = GiveawayContract::create_giveaway(
         env.clone(),
         creator.clone(),
-        "Test Giveaway".to_string(),
-        "This is a test giveaway".to_string(),
-        "general".to_string(),
+        String::from_str(&env, "Test Giveaway"),
+        String::from_str(&env, "This is a test giveaway"),
+        String::from_str(&env, "general"),
         SelectionMethod::Random,
         1,
         86400, // 1 day
@@ -152,7 +152,7 @@ fn test_pick_winner_still_active() {
         env.clone(),
         giveaway_id,
         participant.clone(),
-        "Test entry".to_string(),
+        String::from_str(&env, "Test entry"),
     );
     
     // Try to pick winner before end_time (should panic)
@@ -170,9 +170,9 @@ fn test_pick_winner_not_active() {
     let giveaway_id = GiveawayContract::create_giveaway(
         env.clone(),
         creator.clone(),
-        "Test Giveaway".to_string(),
-        "This is a test giveaway".to_string(),
-        "general".to_string(),
+        String::from_str(&env, "Test Giveaway"),
+        String::from_str(&env, "This is a test giveaway"),
+        String::from_str(&env, "general"),
         SelectionMethod::Random,
         1,
         1000,
@@ -183,12 +183,12 @@ fn test_pick_winner_not_active() {
         env.clone(),
         giveaway_id,
         participant.clone(),
-        "Test entry".to_string(),
+        String::from_str(&env, "Test entry"),
     );
     
     // Advance time
     env.ledger().with_mut(|li| {
-        li.timestamp = li.timestamp + 2000;
+        li.timestamp += 2000;
     });
     
     // Pick winner first time
@@ -208,9 +208,9 @@ fn test_pick_winner_no_participants() {
     let giveaway_id = GiveawayContract::create_giveaway(
         env.clone(),
         creator.clone(),
-        "Test Giveaway".to_string(),
-        "This is a test giveaway".to_string(),
-        "general".to_string(),
+        String::from_str(&env, "Test Giveaway"),
+        String::from_str(&env, "This is a test giveaway"),
+        String::from_str(&env, "general"),
         SelectionMethod::Random,
         1,
         1000,
@@ -218,7 +218,7 @@ fn test_pick_winner_no_participants() {
     
     // Advance time
     env.ledger().with_mut(|li| {
-        li.timestamp = li.timestamp + 2000;
+        li.timestamp += 2000;
     });
     
     // Try to pick winner with no participants (should panic)
@@ -235,9 +235,9 @@ fn test_claim_prize() {
     let giveaway_id = GiveawayContract::create_giveaway(
         env.clone(),
         creator.clone(),
-        "Test Giveaway".to_string(),
-        "This is a test giveaway".to_string(),
-        "general".to_string(),
+        String::from_str(&env, "Test Giveaway"),
+        String::from_str(&env, "This is a test giveaway"),
+        String::from_str(&env, "general"),
         SelectionMethod::Random,
         1,
         1000,
@@ -248,12 +248,12 @@ fn test_claim_prize() {
         env.clone(),
         giveaway_id,
         participant.clone(),
-        "Test entry".to_string(),
+        String::from_str(&env, "Test entry"),
     );
     
     // Advance time
     env.ledger().with_mut(|li| {
-        li.timestamp = li.timestamp + 2000;
+        li.timestamp += 2000;
     });
     
     // Pick winner
@@ -281,9 +281,9 @@ fn test_claim_prize_wrong_claimer() {
     let giveaway_id = GiveawayContract::create_giveaway(
         env.clone(),
         creator.clone(),
-        "Test Giveaway".to_string(),
-        "This is a test giveaway".to_string(),
-        "general".to_string(),
+        String::from_str(&env, "Test Giveaway"),
+        String::from_str(&env, "This is a test giveaway"),
+        String::from_str(&env, "general"),
         SelectionMethod::Random,
         1,
         1000,
@@ -294,12 +294,12 @@ fn test_claim_prize_wrong_claimer() {
         env.clone(),
         giveaway_id,
         participant.clone(),
-        "Test entry".to_string(),
+        String::from_str(&env, "Test entry"),
     );
     
     // Advance time
     env.ledger().with_mut(|li| {
-        li.timestamp = li.timestamp + 2000;
+        li.timestamp += 2000;
     });
     
     // Pick winner
