@@ -12,6 +12,9 @@ pub enum Error {
     InvalidIndex = 6,
     NotCreator = 7,
     AlreadyEntered = 8,
+    HelpRequestNotFound = 9,
+    HelpRequestAlreadyFullyFunded = 10,
+    InvalidDonationAmount = 11,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -36,6 +39,25 @@ pub struct Giveaway {
     pub winner: Option<Address>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[contracttype]
+pub enum HelpRequestStatus {
+    Open = 0,
+    FullyFunded = 1,
+    Closed = 2,
+}
+
+#[derive(Clone)]
+#[contracttype]
+pub struct HelpRequest {
+    pub id: u64,
+    pub creator: Address,
+    pub token: Address,
+    pub goal: i128,
+    pub raised_amount: i128,
+    pub status: HelpRequestStatus,
+}
+
 #[derive(Clone)]
 #[contracttype]
 pub enum DataKey {
@@ -43,4 +65,6 @@ pub enum DataKey {
     Giveaway(u64),
     ParticipantIndex(u64, u32),
     HasEntered(u64, Address),
+    HelpRequestCounter,
+    HelpRequest(u64),
 }

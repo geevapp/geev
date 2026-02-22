@@ -1,4 +1,6 @@
 use crate::giveaway::{GiveawayContract, GiveawayContractClient};
+use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
+use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token, Address, Env, String,
@@ -155,4 +157,227 @@ fn test_pick_winner_early_fails() {
     contract_client.enter_giveaway(&user, &id);
 
     contract_client.pick_winner(&id);
+}
+
+#[test]
+fn test_donation_flow() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_client = token::Client::new(&env, &mock_token);
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let donor1 = Address::generate(&env);
+    let donor2 = Address::generate(&env);
+
+    token_admin_client.mint(&donor1, &1000);
+    token_admin_client.mint(&donor2, &1000);
+
+    let request_id: u64 = 1;
+    let goal = 1000;
+    let donation1 = 300;
+    let donation2 = 700;
+
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: mock_token.clone(),
+            goal,
+            raised_amount: 0,
+            status: HelpRequestStatus::Open,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    assert_eq!(token_client.balance(&donor1), 1000);
+    assert_eq!(token_client.balance(&contract_id), 0);
+
+    contract_client.donate(&donor1, &request_id, &donation1);
+
+    assert_eq!(token_client.balance(&donor1), 700);
+    assert_eq!(token_client.balance(&contract_id), 300);
+
+    contract_client.donate(&donor2, &request_id, &donation2);
+
+    assert_eq!(token_client.balance(&donor2), 300);
+    assert_eq!(token_client.balance(&contract_id), 1000);
+
+    env.as_contract(&contract_id, || {
+        let request: HelpRequest = env
+            .storage()
+            .persistent()
+            .get(&DataKey::HelpRequest(request_id))
+            .unwrap();
+        assert_eq!(request.raised_amount, goal);
+        assert_eq!(request.status, HelpRequestStatus::FullyFunded);
+    });
+}
+
+#[test]
+fn test_donation_reaches_goal() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let donor = Address::generate(&env);
+
+    token_admin_client.mint(&donor, &2000);
+
+    let request_id: u64 = 2;
+    let goal = 500;
+    let donation = 500;
+
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: mock_token.clone(),
+            goal,
+            raised_amount: 0,
+            status: HelpRequestStatus::Open,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    contract_client.donate(&donor, &request_id, &donation);
+
+    env.as_contract(&contract_id, || {
+        let request: HelpRequest = env
+            .storage()
+            .persistent()
+            .get(&DataKey::HelpRequest(request_id))
+            .unwrap();
+        assert_eq!(request.raised_amount, goal);
+        assert_eq!(request.status, HelpRequestStatus::FullyFunded);
+    });
+}
+
+#[test]
+#[should_panic]
+fn test_donation_to_nonexistent_request_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let donor = Address::generate(&env);
+    token_admin_client.mint(&donor, &1000);
+
+    let nonexistent_request_id: u64 = 999;
+
+    contract_client.donate(&donor, &nonexistent_request_id, &100);
+}
+
+#[test]
+#[should_panic]
+fn test_donation_to_fully_funded_request_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let donor = Address::generate(&env);
+
+    token_admin_client.mint(&donor, &1000);
+
+    let request_id: u64 = 3;
+    let goal = 500;
+
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: mock_token.clone(),
+            goal,
+            raised_amount: goal,
+            status: HelpRequestStatus::FullyFunded,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    contract_client.donate(&donor, &request_id, &100);
+}
+
+#[test]
+#[should_panic]
+fn test_donation_with_invalid_amount_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let donor = Address::generate(&env);
+
+    token_admin_client.mint(&donor, &1000);
+
+    let request_id: u64 = 4;
+    let goal = 500;
+
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: mock_token.clone(),
+            goal,
+            raised_amount: 0,
+            status: HelpRequestStatus::Open,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    contract_client.donate(&donor, &request_id, &0);
 }
