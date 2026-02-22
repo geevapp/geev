@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { User, Post } from '@prisma/client';
+import type { User, Post, Entry } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
 export async function createTestUser(overrides?: Partial<User>): Promise<User> {
@@ -29,6 +29,21 @@ export async function createTestPost(
       status: 'open',
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       media: Prisma.JsonNull as any,
+      ...overrides,
+    },
+  });
+}
+
+export async function createTestEntry(
+  postId: string,
+  userId: string,
+  overrides?: Partial<Entry>,
+): Promise<Entry> {
+  return await prisma.entry.create({
+    data: {
+      postId,
+      userId,
+      content: 'This is a test entry with enough content to pass validation.',
       ...overrides,
     },
   });
