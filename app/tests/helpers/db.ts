@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { User, Post } from '@prisma/client';
+import type { User, Post, Entry } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 
 export async function createTestUser(overrides?: Partial<User>): Promise<User> {
@@ -18,17 +18,37 @@ export async function createTestPost(
   userId: string,
   overrides?: Partial<Post>,
 ): Promise<Post> {
+  const title = overrides?.title || 'Test Giveaway Post';
+  const slug = overrides?.slug || title.toLowerCase().replace(/\s+/g, '-');
+
   return await prisma.post.create({
     data: {
       creatorId: userId,
       type: 'giveaway',
-      title: 'Test Giveaway Post',
+      title,
+      slug,
       description:
         'This is a test description for a giveaway post. It needs to be at least 50 characters long.',
       category: 'electronics',
       status: 'open',
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       media: Prisma.JsonNull as any,
+      ...overrides,
+    },
+  });
+}
+
+export async function createTestEntry(
+  userId: string,
+  postId: string,
+  overrides?: Partial<Entry>,
+): Promise<Entry> {
+  return await prisma.entry.create({
+    data: {
+      userId,
+      postId,
+      content: 'This is a test entry content for a giveaway post.',
+      proofUrl: null,
       ...overrides,
     },
   });
