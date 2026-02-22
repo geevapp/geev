@@ -1,5 +1,13 @@
-mod giveaway;
-mod mutual_aid;
+#![no_std]
 
-pub use giveaway::{create_giveaway, enter_giveaway, DataKey, Giveaway, GiveawayStatus};
-pub use mutual_aid::{donate, HelpRequest, HelpRequestStatus};
+pub mod giveaway;
+pub mod mutual_aid;
+pub mod types;
+
+#[cfg(test)]
+mod test;
+
+pub use crate::giveaway::GiveawayContract;
+pub use crate::giveaway::GiveawayContractClient;
+pub use crate::mutual_aid::MutualAidContract;
+pub use crate::mutual_aid::MutualAidContractClient;
