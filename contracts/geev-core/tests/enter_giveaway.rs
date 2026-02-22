@@ -1,5 +1,8 @@
-use soroban_sdk::{testutils::{Address as AddressTest, Ledger}, Address, Env};
-use geev_core::{enter_giveaway, DataKey, Giveaway};
+use geev_core::{enter_giveaway, DataKey, Giveaway, GiveawayStatus};
+use soroban_sdk::{
+    testutils::{Address as AddressTest, Ledger},
+    Address, Env,
+};
 
 #[test]
 fn enter_once_before_end_increments_participant_count() {
@@ -13,12 +16,20 @@ fn enter_once_before_end_increments_participant_count() {
     env.as_contract(&contract_id, || {
         let key = DataKey::Giveaway(giveaway_id);
 
+        let creator = <Address as AddressTest>::generate(&env);
+        let token = <Address as AddressTest>::generate(&env);
+
         let giveaway = Giveaway {
+            id: giveaway_id,
+            status: GiveawayStatus::Active,
+            creator,
+            token,
+            amount: 1000,
             end_time: 20,
             participant_count: 0,
         };
 
-        env.storage().instance().set(&key, &giveaway);
+        env.storage().persistent().set(&key, &giveaway);
 
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
     });
@@ -37,12 +48,20 @@ fn reject_entry_after_end_time() {
     env.as_contract(&contract_id, || {
         let key = DataKey::Giveaway(giveaway_id);
 
+        let creator = <Address as AddressTest>::generate(&env);
+        let token = <Address as AddressTest>::generate(&env);
+
         let giveaway = Giveaway {
+            id: giveaway_id,
+            status: GiveawayStatus::Active,
+            creator,
+            token,
+            amount: 1000,
             end_time: 5, // already ended relative to timestamp 10
             participant_count: 0,
         };
 
-        env.storage().instance().set(&key, &giveaway);
+        env.storage().persistent().set(&key, &giveaway);
 
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
     });
@@ -61,12 +80,20 @@ fn reject_duplicate_entries() {
     env.as_contract(&contract_id, || {
         let key = DataKey::Giveaway(giveaway_id);
 
+        let creator = <Address as AddressTest>::generate(&env);
+        let token = <Address as AddressTest>::generate(&env);
+
         let giveaway = Giveaway {
+            id: giveaway_id,
+            status: GiveawayStatus::Active,
+            creator,
+            token,
+            amount: 1000,
             end_time: 20,
             participant_count: 0,
         };
 
-        env.storage().instance().set(&key, &giveaway);
+        env.storage().persistent().set(&key, &giveaway);
 
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
 
