@@ -25,6 +25,7 @@ pub enum DataKey {
     Giveaway(u64),
     Participant(u64, Address),
     GiveawayCount,
+    Admin,
 }
 
 pub fn create_giveaway(
@@ -88,11 +89,11 @@ pub fn enter_giveaway(env: Env, user: Address, giveaway_id: u64) {
     }
 
     let participant_key = DataKey::Participant(giveaway_id, user.clone());
-    if env.storage().instance().has(&participant_key) {
+    if env.storage().persistent().has(&participant_key) {
         panic!("Double Entry");
     }
 
-    env.storage().instance().set(&participant_key, &true);
+    env.storage().persistent().set(&participant_key, &true);
 
     giveaway.participant_count += 1;
     env.storage().persistent().set(&giveaway_key, &giveaway);

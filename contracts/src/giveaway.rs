@@ -1,13 +1,14 @@
-use soroban_sdk::{contract, contractimpl, panic_with_error, Address, Env};
+use soroban_sdk::{contract, contractimpl, panic_with_error, Address, Env, String};
 
 use crate::types::{
     Entry, Error, Giveaway, GiveawayKey, GiveawayStatus, ParticipantIndexKey, SelectionMethod,
 };
 
 // Storage instance for accessing contract storage
+#[contract]
 pub struct GiveawayContract;
 
-#[contract]
+#[contractimpl]
 impl GiveawayContract {
     // Pick a winner for a giveaway using random selection
     // This function can only be called after the giveaway end_time
@@ -17,6 +18,7 @@ impl GiveawayContract {
         let giveaway_key = GiveawayKey(giveaway_id);
         let mut giveaway: Giveaway = env
             .storage()
+            .instance()
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
@@ -46,6 +48,7 @@ impl GiveawayContract {
         let participant_key = ParticipantIndexKey(giveaway_id, winner_index);
         let winner_address: Address = env
             .storage()
+            .instance()
             .get(&participant_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::InvalidIndex));
 
@@ -55,6 +58,7 @@ impl GiveawayContract {
 
         // Save updated Giveaway struct to storage
         env.storage()
+            .instance()
             .set(&giveaway_key, &giveaway);
 
         // Update the winner's entry record
@@ -115,6 +119,7 @@ impl GiveawayContract {
         let giveaway_key = GiveawayKey(giveaway_id);
         let mut giveaway: Giveaway = env
             .storage()
+            .instance()
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
@@ -149,11 +154,13 @@ impl GiveawayContract {
         let participant_index = giveaway.participant_count;
         let participant_key = ParticipantIndexKey(giveaway_id, participant_index);
         env.storage()
+            .instance()
             .set(&participant_key, &participant);
 
         // Update giveaway participant count
         giveaway.participant_count += 1;
         env.storage()
+            .instance()
             .set(&giveaway_key, &giveaway);
 
         entry_id
@@ -176,18 +183,16 @@ impl GiveawayContract {
     }
 
     // Mark entry as winner
-    fn mark_entry_as_winner(env: &Env, giveaway_id: u64, winner_address: Address) {
+    fn mark_entry_as_winner(_env: &Env, _giveaway_id: u64, _winner_address: Address) {
         // In a more complete implementation, you'd search entries for this address
         // and mark the corresponding entry as winner
         // For this MVP, we're just updating the giveaway itself
-        let _ = giveaway_id;
-        let _ = winner_address;
         // Implementation would find the entry and update is_winner = true
     }
 
     // Generate unique ID using counter
     fn generate_id(env: &Env) -> u64 {
-        let key = crate::types::GIVEAWAY_COUNTER;
+        let key = soroban_sdk::symbol_short!("counter");
         let mut counter: u64 = env.storage().instance().get(&key).unwrap_or(0);
         counter += 1;
         env.storage().instance().set(&key, &counter);
@@ -201,6 +206,7 @@ impl GiveawayContract {
         let giveaway_key = GiveawayKey(giveaway_id);
         let mut giveaway: Giveaway = env
             .storage()
+            .instance()
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
@@ -217,6 +223,7 @@ impl GiveawayContract {
         // Mark as completed
         giveaway.status = GiveawayStatus::Completed;
         env.storage()
+            .instance()
             .set(&giveaway_key, &giveaway);
 
         true
