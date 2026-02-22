@@ -150,6 +150,7 @@ fn test_enter_giveaway_fails_when_paused() {
             amount: 100,
             end_time: 200,
             participant_count: 0,
+            winner: None,
         };
         env.storage().persistent().set(&giveaway_key, &giveaway);
 
@@ -187,6 +188,7 @@ fn test_can_enter_giveaway_when_not_paused() {
             amount: 100,
             end_time: 200,
             participant_count: 0,
+            winner: None,
         };
         env.storage().persistent().set(&giveaway_key, &giveaway);
 
@@ -226,6 +228,7 @@ fn test_can_enter_giveaway_after_unpause() {
             amount: 100,
             end_time: 200,
             participant_count: 0,
+            winner: None,
         };
         env.storage().persistent().set(&giveaway_key, &giveaway);
 

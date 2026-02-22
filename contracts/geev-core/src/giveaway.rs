@@ -1,8 +1,8 @@
 use soroban_sdk::{contracttype, Address, Env, Symbol, token};
 
-/// Initialize the contract with an admin address
+/// Initialize the contract with an admin address and fee settings
 /// Can only be called once
-pub fn initialize(env: Env, admin: Address) {
+pub fn initialize(env: Env, admin: Address, fee_basis_points: u32) {
     // Check if already initialized
     let admin_key = DataKey::Admin;
     if env.storage().instance().has(&admin_key) {
@@ -16,10 +16,14 @@ pub fn initialize(env: Env, admin: Address) {
     let paused_key = DataKey::Paused;
     env.storage().instance().set(&paused_key, &false);
 
+    // Store fee basis points (e.g., 100 = 1%)
+    let fee_key = DataKey::FeeBasisPoints;
+    env.storage().instance().set(&fee_key, &fee_basis_points);
+
     // Emit initialization event
     env.events().publish(
         (Symbol::new(&env, "ContractInitialized"),),
-        admin,
+        (admin, fee_basis_points),
     );
 }
 
@@ -28,6 +32,8 @@ pub fn initialize(env: Env, admin: Address) {
 pub enum GiveawayStatus {
     Active,
     Ended,
+    Claimable,
+    Completed,
 }
 
 #[derive(Clone)]
@@ -40,6 +46,7 @@ pub struct Giveaway {
     pub amount: i128,
     pub end_time: u64,
     pub participant_count: u32,
+    pub winner: Option<Address>,
 }
 
 #[derive(Clone)]
@@ -50,6 +57,7 @@ pub enum DataKey {
     GiveawayCount,
     Admin,
     Paused,
+    FeeBasisPoints,
 }
 
 pub fn create_giveaway(
@@ -83,6 +91,7 @@ pub fn create_giveaway(
         amount,
         end_time,
         participant_count: 0,
+        winner: None,
     };
 
     // Save struct to Persistent Storage under key: Giveaway(id)
@@ -123,6 +132,44 @@ pub fn enter_giveaway(env: Env, user: Address, giveaway_id: u64) {
 
     giveaway.participant_count += 1;
     env.storage().persistent().set(&giveaway_key, &giveaway);
+}
+
+/// Distribute prize to the winner
+/// Transfer escrowed tokens from contract to winner and finalize giveaway
+pub fn distribute_prize(env: Env, giveaway_id: u64) {
+    // Load the Giveaway struct
+    let giveaway_key = DataKey::Giveaway(giveaway_id);
+    let mut giveaway: Giveaway = env
+        .storage()
+        .persistent()
+        .get(&giveaway_key)
+        .unwrap_or_else(|| panic!("Giveaway Not Found"));
+
+    // Ensure status is Claimable
+    if giveaway.status != GiveawayStatus::Claimable {
+        panic!("Giveaway Not Claimable");
+    }
+
+    // Get winner address
+    let winner = giveaway.winner.clone().unwrap_or_else(|| panic!("No Winner Set"));
+
+    // Initialize Token Client using the token from giveaway
+    let token_client = token::Client::new(&env, &giveaway.token);
+
+    // Transfer amount from contract to winner
+    token_client.transfer(&env.current_contract_address(), &winner, &giveaway.amount);
+
+    // Update status to Completed
+    giveaway.status = GiveawayStatus::Completed;
+
+    // Save updated Giveaway struct
+    env.storage().persistent().set(&giveaway_key, &giveaway);
+
+    // Emit PrizeClaimed event
+    env.events().publish(
+        (Symbol::new(&env, "PrizeClaimed"),),
+        (giveaway_id, winner, giveaway.amount),
+    );
 }
 
 /// Check if the contract is paused

@@ -28,6 +28,7 @@ fn enter_once_before_end_increments_participant_count() {
             amount: 100,
             end_time: 20,
             participant_count: 0,
+            winner: None,
         };
 
         env.storage().persistent().set(&key, &giveaway);
@@ -64,6 +65,7 @@ fn reject_entry_after_end_time() {
             amount: 100,
             end_time: 5, // already ended relative to timestamp 10
             participant_count: 0,
+            winner: None,
         };
 
         env.storage().persistent().set(&key, &giveaway);
@@ -100,6 +102,7 @@ fn reject_duplicate_entries() {
             amount: 100,
             end_time: 20,
             participant_count: 0,
+            winner: None,
         };
 
         env.storage().persistent().set(&key, &giveaway);
