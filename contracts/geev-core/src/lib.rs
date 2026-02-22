@@ -1,5 +1,10 @@
 #![no_std]
 
-mod giveaway;
+pub mod giveaway;
+pub mod types;
 
-pub use giveaway::{create_giveaway, enter_giveaway, DataKey, Giveaway};
+#[cfg(test)]
+mod test;
+
+pub use crate::giveaway::GiveawayContract;
+pub use crate::giveaway::GiveawayContractClient;

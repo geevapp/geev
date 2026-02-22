@@ -1,50 +1,122 @@
-use soroban_sdk::{contracttype, Address, Env};
+use crate::types::{DataKey, Error, Giveaway, GiveawayStatus};
+use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, String};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[contracttype]
-pub struct Giveaway {
-    pub end_time: u64,
-    pub participant_count: u32,
-}
+#[contract]
+pub struct GiveawayContract;
 
-#[derive(Clone)]
-#[contracttype]
-pub enum DataKey {
-    Giveaway(u64),
-    Participant(u64, Address),
-}
+#[contractimpl]
+impl GiveawayContract {
+    pub fn create_giveaway(
+        env: Env,
+        creator: Address,
+        token: Address,
+        amount: i128,
+        title: String,
+        duration_seconds: u64,
+    ) -> u64 {
+        creator.require_auth();
 
-pub fn create_giveaway(env: &Env, giveaway_id: u64, end_time: u64) {
-    let key = DataKey::Giveaway(giveaway_id);
-    let giveaway = Giveaway {
-        end_time,
-        participant_count: 0,
-    };
-    env.storage().persistent().set(&key, &giveaway);
-}
+        let token_client = token::Client::new(&env, &token);
+        token_client.transfer(&creator, &env.current_contract_address(), &amount);
 
-pub fn enter_giveaway(env: Env, user: Address, giveaway_id: u64) {
-    user.require_auth();
+        let giveaway_id = Self::generate_id(&env);
+        let end_time = env.ledger().timestamp() + duration_seconds;
 
-    let giveaway_key = DataKey::Giveaway(giveaway_id);
-    let mut giveaway: Giveaway = env
-        .storage()
-        .persistent()
-        .get(&giveaway_key)
-        .unwrap_or_else(|| panic!("Giveaway Not Found"));
+        let giveaway = Giveaway {
+            id: giveaway_id,
+            creator,
+            token,
+            amount,
+            title,
+            participant_count: 0,
+            end_time,
+            status: GiveawayStatus::Active,
+            winner: None,
+        };
 
-    let now = env.ledger().timestamp();
-    if now > giveaway.end_time {
-        panic!("Giveaway Ended");
+        env.storage()
+            .persistent()
+            .set(&DataKey::Giveaway(giveaway_id), &giveaway);
+
+        giveaway_id
     }
 
-    let participant_key = DataKey::Participant(giveaway_id, user.clone());
-    if env.storage().persistent().has(&participant_key) {
-        panic!("Double Entry");
+    pub fn enter_giveaway(env: Env, participant: Address, giveaway_id: u64) {
+        participant.require_auth();
+
+        let giveaway_key = DataKey::Giveaway(giveaway_id);
+        let mut giveaway: Giveaway = env
+            .storage()
+            .persistent()
+            .get(&giveaway_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+
+        if giveaway.status != GiveawayStatus::Active {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+        if env.ledger().timestamp() > giveaway.end_time {
+            panic_with_error!(&env, Error::GiveawayEnded);
+        }
+
+        let has_entered_key = DataKey::HasEntered(giveaway_id, participant.clone());
+        if env.storage().persistent().has(&has_entered_key) {
+            panic_with_error!(&env, Error::AlreadyEntered);
+        }
+
+        env.storage().persistent().set(&has_entered_key, &true);
+
+        let index_key = DataKey::ParticipantIndex(giveaway_id, giveaway.participant_count);
+        env.storage().persistent().set(&index_key, &participant);
+
+        giveaway.participant_count += 1;
+        env.storage().persistent().set(&giveaway_key, &giveaway);
     }
 
-    env.storage().persistent().set(&participant_key, &true);
+    pub fn pick_winner(env: Env, giveaway_id: u64) -> Address {
+        let giveaway_key = DataKey::Giveaway(giveaway_id);
+        let mut giveaway: Giveaway = env
+            .storage()
+            .persistent()
+            .get(&giveaway_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
-    giveaway.participant_count += 1;
-    env.storage().persistent().set(&giveaway_key, &giveaway);
+        if giveaway.status != GiveawayStatus::Active {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+        if env.ledger().timestamp() <= giveaway.end_time {
+            panic_with_error!(&env, Error::GiveawayStillActive);
+        }
+        if giveaway.participant_count == 0 {
+            panic_with_error!(&env, Error::NoParticipants);
+        }
+
+        let random_seed = env.prng().gen::<u64>();
+        let winner_index = (random_seed % giveaway.participant_count as u64) as u32;
+
+        let participant_key = DataKey::ParticipantIndex(giveaway_id, winner_index);
+        let winner_address: Address = env
+            .storage()
+            .persistent()
+            .get(&participant_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::InvalidIndex));
+
+        giveaway.winner = Some(winner_address.clone());
+        giveaway.status = GiveawayStatus::Claimable;
+        env.storage().persistent().set(&giveaway_key, &giveaway);
+
+        winner_address
+    }
+
+    fn generate_id(env: &Env) -> u64 {
+        let mut counter: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::GiveawayCounter)
+            .unwrap_or(0);
+        counter += 1;
+        env.storage()
+            .instance()
+            .set(&DataKey::GiveawayCounter, &counter);
+        counter
+    }
 }
