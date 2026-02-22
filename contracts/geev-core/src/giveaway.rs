@@ -1,5 +1,7 @@
 use soroban_sdk::{contracttype, Address, Env, Symbol, token};
 
+use crate::storage::DataKey;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[contracttype]
 pub enum GiveawayStatus {
@@ -17,14 +19,6 @@ pub struct Giveaway {
     pub amount: i128,
     pub end_time: u64,
     pub participant_count: u32,
-}
-
-#[derive(Clone)]
-#[contracttype]
-pub enum DataKey {
-    Giveaway(u64),
-    Participant(u64, Address),
-    GiveawayCount,
 }
 
 pub fn create_giveaway(
