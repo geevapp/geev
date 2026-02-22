@@ -1,15 +1,21 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useApp } from "@/contexts/app-context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Copy, Key, Mail, User, Wallet } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { signIn, signOut, useSession } from 'next-auth/react';
 
-import { Wallet, Key, Mail, User, Copy } from "lucide-react";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useAppContext } from '@/contexts/app-context';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 /**
  * Wallet-based login and registration form
@@ -17,25 +23,28 @@ import { signIn, signOut, useSession } from "next-auth/react";
 export function WalletLoginForm() {
   const router = useRouter();
   // Simple toast simulation
-  const showToast = (message: string, type: "success" | "error" = "success") => {
+  const showToast = (
+    message: string,
+    type: 'success' | 'error' = 'success',
+  ) => {
     console.log(`[${type}] ${message}`);
     // In a real app, you would use a proper toast library
   };
-  const { login: contextLogin } = useApp();
+  const { login: contextLogin } = useAppContext();
   const { data: session, status } = useSession();
-  
-  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [isLoading, setIsLoading] = useState(false);
-  const [walletAddress, setWalletAddress] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [signature, setSignature] = useState("");
-  const [message, setMessage] = useState("");
+  const [walletAddress, setWalletAddress] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [signature, setSignature] = useState('');
+  const [message, setMessage] = useState('');
 
   // Generate a mock signature for demo purposes
   const generateMockSignature = () => {
     // In a real app, this would come from the wallet provider
-    const mockSignature = "0x" + Math.random().toString(36).substring(2, 30);
+    const mockSignature = '0x' + Math.random().toString(36).substring(2, 30);
     setSignature(mockSignature);
     return mockSignature;
   };
@@ -50,15 +59,15 @@ export function WalletLoginForm() {
 
   const handleLogin = async () => {
     if (!walletAddress || !signature || !message) {
-      showToast("Please fill in all required fields", "error");
+      showToast('Please fill in all required fields', 'error');
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
       // Try NextAuth login first
-      const result = await signIn("credentials", {
+      const result = await signIn('credentials', {
         walletAddress,
         signature,
         message,
@@ -66,15 +75,15 @@ export function WalletLoginForm() {
       });
 
       if (result?.ok) {
-        showToast("Successfully logged in!", "success");
-        router.push("/feed");
+        showToast('Successfully logged in!', 'success');
+        router.push('/feed');
         return;
       }
 
       // Fallback to custom API endpoint
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress,
           signature,
@@ -87,14 +96,14 @@ export function WalletLoginForm() {
       if (response.ok) {
         // Update app context with user data
         contextLogin(data.user);
-        showToast("Successfully logged in!", "success");
-        router.push("/feed");
+        showToast('Successfully logged in!', 'success');
+        router.push('/feed');
       } else {
-        showToast(data.error || "Login failed", "error");
+        showToast(data.error || 'Login failed', 'error');
       }
     } catch (error) {
-      console.error("Login error:", error);
-      showToast("Login failed. Please try again.", "error");
+      console.error('Login error:', error);
+      showToast('Login failed. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -102,16 +111,16 @@ export function WalletLoginForm() {
 
   const handleRegister = async () => {
     if (!walletAddress || !username || !signature || !message) {
-      showToast("Please fill in all required fields", "error");
+      showToast('Please fill in all required fields', 'error');
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           walletAddress,
           signature,
@@ -126,14 +135,14 @@ export function WalletLoginForm() {
       if (response.ok) {
         // Update app context with user data
         contextLogin(data.user);
-        showToast("Account created successfully!", "success");
-        router.push("/feed");
+        showToast('Account created successfully!', 'success');
+        router.push('/feed');
       } else {
-        showToast(data.error || "Registration failed", "error");
+        showToast(data.error || 'Registration failed', 'error');
       }
     } catch (error) {
-      console.error("Registration error:", error);
-      showToast("Registration failed. Please try again.", "error");
+      console.error('Registration error:', error);
+      showToast('Registration failed. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -142,40 +151,35 @@ export function WalletLoginForm() {
   const handleLogout = async () => {
     try {
       await signOut({ redirect: false });
-      
+
       // Also call custom logout endpoint
-      await fetch("/api/auth/logout", { method: "POST" });
-      
-      showToast("Successfully logged out!", "success");
-      router.push("/login");
+      await fetch('/api/auth/logout', { method: 'POST' });
+
+      showToast('Successfully logged out!', 'success');
+      router.push('/login');
     } catch (error) {
-      console.error("Logout error:", error);
-      showToast("Logout failed", "error");
+      console.error('Logout error:', error);
+      showToast('Logout failed', 'error');
     }
   };
 
   // If user is already logged in
-  if (status === "authenticated" || session) {
+  if (status === 'authenticated' || session) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
-          <CardTitle className="text-2xl text-center">Already Logged In</CardTitle>
+          <CardTitle className="text-2xl text-center">
+            Already Logged In
+          </CardTitle>
           <CardDescription className="text-center">
             You are currently logged in
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button 
-            onClick={() => router.push("/feed")} 
-            className="w-full"
-          >
+          <Button onClick={() => router.push('/feed')} className="w-full">
             Go to Feed
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleLogout}
-            className="w-full"
-          >
+          <Button variant="outline" onClick={handleLogout} className="w-full">
             Logout
           </Button>
         </CardContent>
@@ -192,12 +196,15 @@ export function WalletLoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as 'login' | 'register')}
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="login" className="space-y-4 mt-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Wallet Address</label>
@@ -221,8 +228,8 @@ export function WalletLoginForm() {
                   onChange={(e) => setSignature(e.target.value)}
                   className="flex-1"
                 />
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={generateMockSignature}
                 >
@@ -240,9 +247,9 @@ export function WalletLoginForm() {
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Message to sign..."
                 />
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   size="sm"
                   className="absolute top-2 right-2"
                   onClick={generateSignMessage}
@@ -252,12 +259,12 @@ export function WalletLoginForm() {
               </div>
             </div>
 
-            <Button 
-              onClick={handleLogin} 
+            <Button
+              onClick={handleLogin}
               disabled={isLoading}
               className="w-full"
             >
-              {isLoading ? "Logging in..." : "Login"}
+              {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </TabsContent>
 
@@ -311,8 +318,8 @@ export function WalletLoginForm() {
                   onChange={(e) => setSignature(e.target.value)}
                   className="flex-1"
                 />
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={generateMockSignature}
                 >
@@ -330,9 +337,9 @@ export function WalletLoginForm() {
                   className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   placeholder="Message to sign..."
                 />
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   size="sm"
                   className="absolute top-2 right-2"
                   onClick={generateSignMessage}
@@ -342,20 +349,21 @@ export function WalletLoginForm() {
               </div>
             </div>
 
-            <Button 
-              onClick={handleRegister} 
+            <Button
+              onClick={handleRegister}
               disabled={isLoading}
               className="w-full"
             >
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? 'Creating account...' : 'Create Account'}
             </Button>
           </TabsContent>
         </Tabs>
 
         <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
           <p className="text-sm text-orange-700 dark:text-orange-300">
-            <strong>Note:</strong> This is a demo implementation. In production, 
-            you would integrate with actual wallet providers like MetaMask or WalletConnect.
+            <strong>Note:</strong> This is a demo implementation. In production,
+            you would integrate with actual wallet providers like MetaMask or
+            WalletConnect.
           </p>
         </div>
       </CardContent>
