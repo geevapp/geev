@@ -1,4 +1,4 @@
-use geev_core::{enter_giveaway, DataKey, Giveaway};
+use geev_core::{create_giveaway, enter_giveaway};
 use soroban_sdk::{
     contract, contractimpl,
     testutils::{Address as AddressTest, Ledger},
@@ -24,15 +24,7 @@ fn enter_once_before_end_increments_participant_count() {
     let contract_id = env.register(TestContract, ());
 
     env.as_contract(&contract_id, || {
-        let key = DataKey::Giveaway(giveaway_id);
-
-        let giveaway = Giveaway {
-            end_time: 20,
-            participant_count: 0,
-        };
-
-        env.storage().persistent().set(&key, &giveaway);
-
+        create_giveaway(&env, giveaway_id, 20);
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
     });
 }
@@ -49,15 +41,7 @@ fn reject_entry_after_end_time() {
     let contract_id = env.register(TestContract, ());
 
     env.as_contract(&contract_id, || {
-        let key = DataKey::Giveaway(giveaway_id);
-
-        let giveaway = Giveaway {
-            end_time: 5, // already ended relative to timestamp 10
-            participant_count: 0,
-        };
-
-        env.storage().persistent().set(&key, &giveaway);
-
+        create_giveaway(&env, giveaway_id, 5);
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
     });
 }
@@ -74,15 +58,7 @@ fn reject_duplicate_entries() {
     let contract_id = env.register(TestContract, ());
 
     env.as_contract(&contract_id, || {
-        let key = DataKey::Giveaway(giveaway_id);
-
-        let giveaway = Giveaway {
-            end_time: 20,
-            participant_count: 0,
-        };
-
-        env.storage().persistent().set(&key, &giveaway);
-
+        create_giveaway(&env, giveaway_id, 20);
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
 
         // second attempt should fail due to duplicate entry
