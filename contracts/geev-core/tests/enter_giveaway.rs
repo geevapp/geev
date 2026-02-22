@@ -1,14 +1,27 @@
-use soroban_sdk::{testutils::{Address as AddressTest, Ledger}, Address, Env};
 use geev_core::{enter_giveaway, DataKey, Giveaway};
+use soroban_sdk::{
+    contract, contractimpl,
+    testutils::{Address as AddressTest, Ledger},
+    Address, Env,
+};
+
+#[contract]
+pub struct TestContract;
+
+#[contractimpl]
+impl TestContract {
+    pub fn dummy(_env: Env) {}
+}
 
 #[test]
 fn enter_once_before_end_increments_participant_count() {
     let env = Env::default();
+    env.mock_all_auths();
     env.ledger().set_timestamp(10);
     let user = <Address as AddressTest>::generate(&env);
 
     let giveaway_id: u64 = 1;
-    let contract_id = <Address as AddressTest>::generate(&env);
+    let contract_id = env.register(TestContract, ());
 
     env.as_contract(&contract_id, || {
         let key = DataKey::Giveaway(giveaway_id);
@@ -18,7 +31,7 @@ fn enter_once_before_end_increments_participant_count() {
             participant_count: 0,
         };
 
-        env.storage().instance().set(&key, &giveaway);
+        env.storage().persistent().set(&key, &giveaway);
 
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
     });
@@ -28,11 +41,12 @@ fn enter_once_before_end_increments_participant_count() {
 #[should_panic]
 fn reject_entry_after_end_time() {
     let env = Env::default();
+    env.mock_all_auths();
     env.ledger().set_timestamp(10);
     let user = <Address as AddressTest>::generate(&env);
 
     let giveaway_id: u64 = 2;
-    let contract_id = <Address as AddressTest>::generate(&env);
+    let contract_id = env.register(TestContract, ());
 
     env.as_contract(&contract_id, || {
         let key = DataKey::Giveaway(giveaway_id);
@@ -42,7 +56,7 @@ fn reject_entry_after_end_time() {
             participant_count: 0,
         };
 
-        env.storage().instance().set(&key, &giveaway);
+        env.storage().persistent().set(&key, &giveaway);
 
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
     });
@@ -52,11 +66,12 @@ fn reject_entry_after_end_time() {
 #[should_panic]
 fn reject_duplicate_entries() {
     let env = Env::default();
+    env.mock_all_auths();
     env.ledger().set_timestamp(10);
     let user = <Address as AddressTest>::generate(&env);
 
     let giveaway_id: u64 = 3;
-    let contract_id = <Address as AddressTest>::generate(&env);
+    let contract_id = env.register(TestContract, ());
 
     env.as_contract(&contract_id, || {
         let key = DataKey::Giveaway(giveaway_id);
@@ -66,7 +81,7 @@ fn reject_duplicate_entries() {
             participant_count: 0,
         };
 
-        env.storage().instance().set(&key, &giveaway);
+        env.storage().persistent().set(&key, &giveaway);
 
         enter_giveaway(env.clone(), user.clone(), giveaway_id);
 
