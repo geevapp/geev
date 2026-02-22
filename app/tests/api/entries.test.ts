@@ -116,27 +116,25 @@ describe('Entry API Endpoints', () => {
 
   describe('POST /api/posts/[id]/entries', () => {
     it('should create an entry successfully', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        const mockEntry = {
-          id: 'entry_1',
-          postId: post.id,
-          userId: user2.id,
-          content: 'This is my entry for the giveaway!',
-          proofUrl: 'https://example.com/proof.jpg',
-          isWinner: false,
-          createdAt: new Date(),
-          user: {
-            id: user2.id,
-            name: user2.name,
-            walletAddress: user2.walletAddress,
-            avatarUrl: user2.avatarUrl,
-          },
-        };
+      const mockEntry = {
+        id: 'entry_1',
+        postId: post.id,
+        userId: user2.id,
+        content: 'This is my entry for the giveaway!',
+        proofUrl: 'https://example.com/proof.jpg',
+        isWinner: false,
+        createdAt: new Date(),
+        user: {
+          id: user2.id,
+          name: user2.name,
+          walletAddress: user2.walletAddress,
+          avatarUrl: user2.avatarUrl,
+        },
+      };
 
-        prisma.post.findUnique = vi.fn().mockResolvedValue(post);
-        prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
-        prisma.entry.create = vi.fn().mockResolvedValue(mockEntry);
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
+      prisma.entry.create = vi.fn().mockResolvedValue(mockEntry);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
@@ -164,27 +162,25 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should create an entry without proofUrl', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        const mockEntry = {
-          id: 'entry_2',
-          postId: post.id,
-          userId: user2.id,
-          content: 'Entry without proof URL',
-          proofUrl: null,
-          isWinner: false,
-          createdAt: new Date(),
-          user: {
-            id: user2.id,
-            name: user2.name,
-            walletAddress: user2.walletAddress,
-            avatarUrl: user2.avatarUrl,
-          },
-        };
+      const mockEntry = {
+        id: 'entry_2',
+        postId: post.id,
+        userId: user2.id,
+        content: 'Entry without proof URL',
+        proofUrl: null,
+        isWinner: false,
+        createdAt: new Date(),
+        user: {
+          id: user2.id,
+          name: user2.name,
+          walletAddress: user2.walletAddress,
+          avatarUrl: user2.avatarUrl,
+        },
+      };
 
-        prisma.post.findUnique = vi.fn().mockResolvedValue(post);
-        prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
-        prisma.entry.create = vi.fn().mockResolvedValue(mockEntry);
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
+      prisma.entry.create = vi.fn().mockResolvedValue(mockEntry);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
@@ -289,22 +285,18 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should reject duplicate entries from the same user', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        const existingEntry = {
-          id: 'entry_existing',
-          postId: post.id,
-          userId: user2.id,
-          content: 'Existing entry',
-          proofUrl: null,
-          isWinner: false,
-          createdAt: new Date(),
-        };
+      const existingEntry = {
+        id: 'entry_existing',
+        postId: post.id,
+        userId: user2.id,
+        content: 'Existing entry',
+        proofUrl: null,
+        isWinner: false,
+        createdAt: new Date(),
+      };
 
-        prisma.post.findUnique = vi.fn().mockResolvedValue(post);
-        prisma.entry.findUnique = vi.fn().mockResolvedValue(existingEntry);
-      } else {
-        await createTestEntry(user2.id, post.id);
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(existingEntry);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
@@ -327,9 +319,7 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should reject entries to non-existent posts', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        prisma.post.findUnique = vi.fn().mockResolvedValue(null);
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(null);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
@@ -354,14 +344,7 @@ describe('Entry API Endpoints', () => {
     it('should reject entries to closed posts', async () => {
       const closedPost = { ...post, status: 'closed' };
 
-      if (process.env.MOCK_DB === 'true') {
-        prisma.post.findUnique = vi.fn().mockResolvedValue(closedPost);
-      } else {
-        await prisma.post.update({
-          where: { id: post.id },
-          data: { status: 'closed' },
-        });
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(closedPost);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
@@ -384,10 +367,8 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should reject creator from entering their own post', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        prisma.post.findUnique = vi.fn().mockResolvedValue(post);
-        prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user1);
 
@@ -410,9 +391,7 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should reject entries to non-giveaway posts', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        prisma.post.findUnique = vi.fn().mockResolvedValue(requestPost);
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(requestPost);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
@@ -470,18 +449,9 @@ describe('Entry API Endpoints', () => {
         },
       ];
 
-      if (process.env.MOCK_DB === 'true') {
-        prisma.post.findUnique = vi.fn().mockResolvedValue(post);
-        prisma.entry.findMany = vi.fn().mockResolvedValue(mockEntries);
-        prisma.entry.count = vi.fn().mockResolvedValue(2);
-      } else {
-        await createTestEntry(user2.id, post.id, {
-          content: 'First entry',
-        });
-        await createTestEntry(user3.id, post.id, {
-          content: 'Second entry',
-        });
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findMany = vi.fn().mockResolvedValue(mockEntries);
+      prisma.entry.count = vi.fn().mockResolvedValue(2);
 
       const request = createMockRequest(`http://localhost:3000/api/posts/${post.id}/entries`);
 
@@ -504,25 +474,14 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should support custom pagination', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        const mockEntries = [
-          { id: 'entry_3', postId: post.id, userId: 'user_3', content: 'Entry 3', proofUrl: null, isWinner: false, createdAt: new Date(), user: user3 },
-          { id: 'entry_4', postId: post.id, userId: 'user_4', content: 'Entry 4', proofUrl: null, isWinner: false, createdAt: new Date(), user: user3 },
-        ];
+      const mockEntries = [
+        { id: 'entry_3', postId: post.id, userId: 'user_3', content: 'Entry 3', proofUrl: null, isWinner: false, createdAt: new Date(), user: user3 },
+        { id: 'entry_4', postId: post.id, userId: 'user_4', content: 'Entry 4', proofUrl: null, isWinner: false, createdAt: new Date(), user: user3 },
+      ];
 
-        prisma.post.findUnique = vi.fn().mockResolvedValue(post);
-        prisma.entry.findMany = vi.fn().mockResolvedValue(mockEntries);
-        prisma.entry.count = vi.fn().mockResolvedValue(5);
-      } else {
-        // Create 5 users with unique wallet addresses for pagination test
-        const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
-        for (let i = 0; i < 5; i++) {
-          const user = await createTestUser({
-            walletAddress: `GPAGUSER${i}_${uniqueId}`,
-          });
-          await createTestEntry(user.id, post.id);
-        }
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findMany = vi.fn().mockResolvedValue(mockEntries);
+      prisma.entry.count = vi.fn().mockResolvedValue(5);
 
       const request = createMockRequest(
         `http://localhost:3000/api/posts/${post.id}/entries?page=2&limit=2`,
@@ -575,9 +534,7 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should return 404 for non-existent post', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        prisma.post.findUnique = vi.fn().mockResolvedValue(null);
-      }
+      prisma.post.findUnique = vi.fn().mockResolvedValue(null);
 
       const request = createMockRequest(
         `http://localhost:3000/api/posts/non-existent-id/entries`,
@@ -596,27 +553,20 @@ describe('Entry API Endpoints', () => {
 
   describe('DELETE /api/entries/[id]', () => {
     it('should delete own entry successfully', async () => {
-      let entryId: string;
+      const entryId = 'entry_to_delete';
+      const mockEntry = {
+        id: entryId,
+        postId: post.id,
+        userId: user2.id,
+        content: 'Entry to delete',
+        proofUrl: null,
+        isWinner: false,
+        createdAt: new Date(),
+        post: { status: 'open' },
+      };
 
-      if (process.env.MOCK_DB === 'true') {
-        entryId = 'entry_to_delete';
-        const mockEntry = {
-          id: entryId,
-          postId: post.id,
-          userId: user2.id,
-          content: 'Entry to delete',
-          proofUrl: null,
-          isWinner: false,
-          createdAt: new Date(),
-          post: { status: 'open' },
-        };
-
-        prisma.entry.findUnique = vi.fn().mockResolvedValue(mockEntry);
-        prisma.entry.delete = vi.fn().mockResolvedValue(mockEntry);
-      } else {
-        const entry = await createTestEntry(user2.id, post.id);
-        entryId = entry.id;
-      }
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(mockEntry);
+      prisma.entry.delete = vi.fn().mockResolvedValue(mockEntry);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
@@ -654,9 +604,7 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should reject deleting non-existent entry', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
-      }
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
@@ -676,26 +624,19 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should reject deleting another user\'s entry', async () => {
-      let entryId: string;
+      const entryId = 'entry_other_user';
+      const mockEntry = {
+        id: entryId,
+        postId: post.id,
+        userId: user2.id,
+        content: 'Other user entry',
+        proofUrl: null,
+        isWinner: false,
+        createdAt: new Date(),
+        post: { status: 'open' },
+      };
 
-      if (process.env.MOCK_DB === 'true') {
-        entryId = 'entry_other_user';
-        const mockEntry = {
-          id: entryId,
-          postId: post.id,
-          userId: user2.id,
-          content: 'Other user entry',
-          proofUrl: null,
-          isWinner: false,
-          createdAt: new Date(),
-          post: { status: 'open' },
-        };
-
-        prisma.entry.findUnique = vi.fn().mockResolvedValue(mockEntry);
-      } else {
-        const entry = await createTestEntry(user2.id, post.id);
-        entryId = entry.id;
-      }
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(mockEntry);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user1);
 
@@ -715,31 +656,19 @@ describe('Entry API Endpoints', () => {
     });
 
     it('should reject deleting entry from closed post', async () => {
-      let entryId: string;
+      const entryId = 'entry_closed_post';
+      const mockEntry = {
+        id: entryId,
+        postId: post.id,
+        userId: user2.id,
+        content: 'Entry in closed post',
+        proofUrl: null,
+        isWinner: false,
+        createdAt: new Date(),
+        post: { status: 'closed' },
+      };
 
-      if (process.env.MOCK_DB === 'true') {
-        entryId = 'entry_closed_post';
-        const mockEntry = {
-          id: entryId,
-          postId: post.id,
-          userId: user2.id,
-          content: 'Entry in closed post',
-          proofUrl: null,
-          isWinner: false,
-          createdAt: new Date(),
-          post: { status: 'closed' },
-        };
-
-        prisma.entry.findUnique = vi.fn().mockResolvedValue(mockEntry);
-      } else {
-        const entry = await createTestEntry(user2.id, post.id);
-        entryId = entry.id;
-
-        await prisma.post.update({
-          where: { id: post.id },
-          data: { status: 'closed' },
-        });
-      }
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(mockEntry);
 
       vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
 
