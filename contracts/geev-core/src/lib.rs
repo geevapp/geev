@@ -1,4 +1,5 @@
+#![no_std]
+
 mod giveaway;
 
-pub use giveaway::{enter_giveaway, DataKey, Giveaway};
-
+pub use giveaway::{create_giveaway, enter_giveaway, DataKey, Giveaway};
