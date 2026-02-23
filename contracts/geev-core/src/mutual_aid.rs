@@ -28,7 +28,12 @@ impl MutualAidContract {
 
         token_client.transfer(&donor, &env.current_contract_address(), &amount);
 
-        let new_raised = request.raised_amount + amount;
+        // ✅ Explicit overflow check
+        let new_raised = request
+            .raised_amount
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+
         request.raised_amount = new_raised;
 
         if new_raised >= request.goal {

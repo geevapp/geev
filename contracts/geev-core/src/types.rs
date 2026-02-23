@@ -15,6 +15,8 @@ pub enum Error {
     HelpRequestNotFound = 9,
     HelpRequestAlreadyFullyFunded = 10,
     InvalidDonationAmount = 11,
+    AlreadyInitialized = 12,
+    ArithmeticOverflow = 13, // Added this to resolve the Clippy/Compile error
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -67,4 +69,6 @@ pub enum DataKey {
     HasEntered(u64, Address),
     HelpRequestCounter,
     HelpRequest(u64),
+    Admin,
+    Fee,
 }
