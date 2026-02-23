@@ -107,6 +107,22 @@ impl GiveawayContract {
         winner_address
     }
 
+    pub fn init(env: Env, admin: Address, fee_bps: u32) {
+        let admin_key = DataKey::Admin;
+
+        // Check if already initialized
+        if env.storage().instance().has(&admin_key) {
+            panic_with_error!(&env, Error::AlreadyInitialized);
+        }
+
+        // Store admin address
+        env.storage().instance().set(&admin_key, &admin);
+
+        // Store fee basis points
+        let fee_key = DataKey::Fee;
+        env.storage().instance().set(&fee_key, &fee_bps);
+    }
+
     fn generate_id(env: &Env) -> u64 {
         let mut counter: u64 = env
             .storage()

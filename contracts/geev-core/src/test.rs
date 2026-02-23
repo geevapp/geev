@@ -247,3 +247,41 @@ fn test_set_admin_twice_fails() {
     // Try to set admin again - should panic
     contract_client.set_admin(&admin2);
 }
+
+#[test]
+fn test_init_contract() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GiveawayContract, ());
+    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let fee_bps: u32 = 100;
+
+    contract_client.init(&admin, &fee_bps);
+
+    env.as_contract(&contract_id, || {
+        let stored_admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        let stored_fee: u32 = env.storage().instance().get(&DataKey::Fee).unwrap();
+
+        assert_eq!(stored_admin, admin);
+        assert_eq!(stored_fee, fee_bps);
+    });
+}
+
+#[test]
+#[should_panic]
+fn test_init_twice_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GiveawayContract, ());
+    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let fee_bps: u32 = 100;
+
+    contract_client.init(&admin, &fee_bps);
+    contract_client.init(&admin, &fee_bps);
+}
