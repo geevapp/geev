@@ -419,3 +419,55 @@ fn test_init_twice_fails() {
     contract_client.init(&admin, &fee_bps);
     contract_client.init(&admin, &fee_bps);
 }
+
+#[test]
+fn test_refund_flow() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_client = token::Client::new(&env, &mock_token);
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let donor = Address::generate(&env);
+
+    token_admin_client.mint(&donor, &1000);
+
+    let request_id: u64 = 10;
+    let goal = 1000;
+    let donation = 500;
+
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: mock_token.clone(),
+            goal,
+            raised_amount: 0,
+            status: HelpRequestStatus::Open,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    contract_client.donate(&donor, &request_id, &donation);
+
+    assert_eq!(token_client.balance(&donor), 500);
+    assert_eq!(token_client.balance(&contract_id), 500);
+
+    contract_client.cancel_request(&creator, &request_id);
+
+    contract_client.claim_refund(&donor, &request_id);
+
+    assert_eq!(token_client.balance(&donor), 1000);
+    assert_eq!(token_client.balance(&contract_id), 0);
+}
