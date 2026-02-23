@@ -13,6 +13,9 @@ pub enum Error {
     NotCreator = 7,
     AlreadyEntered = 8,
     AlreadyInitialized = 9,
+    HelpRequestNotFound = 10,
+    HelpRequestAlreadyFullyFunded = 11,
+    InvalidDonationAmount = 12,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -46,4 +49,28 @@ pub enum DataKey {
     HasEntered(u64, Address),
     Admin,
     Fee,
+    HelpRequest(u64),
+    HelpRequestCounter,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+#[contracttype]
+pub enum HelpRequestStatus {
+    Active = 0,
+    FullyFunded = 1,
+    Withdrawn = 2,
+}
+
+#[derive(Clone)]
+#[contracttype]
+pub struct HelpRequest {
+    pub id: u64,
+    pub creator: Address,
+    pub token: Address,
+    pub goal: i128,
+    pub raised_amount: i128,
+    pub title: String,
+    pub description: String,
+    pub status: HelpRequestStatus,
+    pub created_at: u64,
 }
