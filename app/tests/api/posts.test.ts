@@ -9,6 +9,9 @@ describe('Posts API', () => {
   let testUser: any;
 
   beforeEach(async () => {
+    // Reset all mocks before each test
+    vi.clearAllMocks();
+
     // Mock user creation for unit tests where DB is not available
     if (process.env.MOCK_DB === 'true') {
       testUser = {
@@ -41,6 +44,9 @@ describe('Posts API', () => {
 
   describe('GET /api/posts', () => {
     it('should return empty array when no posts exist', async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
       const request = createMockRequest('http://localhost:3000/api/posts');
       const response = await GET(request);
       const { status, data } = await parseResponse(response);
@@ -51,29 +57,12 @@ describe('Posts API', () => {
     });
 
     it('should return posts with pagination', async () => {
-      if (process.env.MOCK_DB === 'true') {
-        prisma.post.findMany = vi.fn().mockResolvedValue([{
-          id: 'post_123',
-          title: 'Test Post',
-          creator: testUser
-        }]);
-        prisma.post.count = vi.fn().mockResolvedValue(1);
-      } else {
-        // Ensure test user exists before creating the post
-        const user = await createTestUser();
-        await prisma.post.create({
-          data: {
-            creatorId: user.id,
-            type: 'giveaway',
-            title: 'Test Post',
-            slug: 'test-post',
-            description:
-              'A test post description that is long enough to meet requirements.',
-            category: 'electronics',
-            endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          },
-        });
-      }
+      prisma.post.findMany = vi.fn().mockResolvedValue([{
+        id: 'post_123',
+        title: 'Test Post',
+        creator: testUser
+      }]);
+      prisma.post.count = vi.fn().mockResolvedValue(1);
 
       const request = createMockRequest(
         'http://localhost:3000/api/posts?page=1&limit=10',
@@ -100,6 +89,18 @@ describe('Posts API', () => {
         winnerCount: 1,
         endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       };
+
+      const mockCreatedPost = {
+        id: 'post_new_123',
+        ...postData,
+        endsAt: new Date(postData.endsAt),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        creator: testUser,
+        creatorId: testUser.id,
+      };
+
+      prisma.post.create = vi.fn().mockResolvedValue(mockCreatedPost);
 
       const request = createMockRequest('http://localhost:3000/api/posts', {
         method: 'POST',
