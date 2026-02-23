@@ -8,7 +8,7 @@ pub struct AdminContract;
 impl AdminContract {
     /// Emergency withdraw function - callable only by Admin
     /// Allows rescuing funds in case of critical bugs, exploits, or migration needs
-    /// 
+    ///
     /// # Arguments
     /// * `env` - The contract environment
     /// * `token` - The token address to withdraw
