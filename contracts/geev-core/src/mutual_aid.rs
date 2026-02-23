@@ -64,7 +64,8 @@ impl MutualAidContract {
             panic_with_error!(&env, Error::NotCreator);
         }
 
-        if request.status == HelpRequestStatus::Closed || request.status == HelpRequestStatus::FullyFunded
+        if request.status == HelpRequestStatus::Closed
+            || request.status == HelpRequestStatus::FullyFunded
         {
             panic_with_error!(&env, Error::InvalidStatus);
         }
