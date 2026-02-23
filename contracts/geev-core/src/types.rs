@@ -12,6 +12,7 @@ pub enum Error {
     InvalidIndex = 6,
     NotCreator = 7,
     AlreadyEntered = 8,
+    AlreadyInitialized = 9,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -44,4 +45,5 @@ pub enum DataKey {
     ParticipantIndex(u64, u32),
     HasEntered(u64, Address),
     Admin,
+    Fee,
 }

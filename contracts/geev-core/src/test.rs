@@ -1,4 +1,6 @@
 use crate::giveaway::{GiveawayContract, GiveawayContractClient};
+#[allow(unused_imports)]
+use crate::types::DataKey;
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token, Address, Env, String,
