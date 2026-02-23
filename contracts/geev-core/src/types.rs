@@ -16,6 +16,7 @@ pub enum Error {
     HelpRequestAlreadyFullyFunded = 10,
     InvalidDonationAmount = 11,
     AlreadyInitialized = 12,
+    ArithmeticOverflow = 13, // Added this to resolve the Clippy/Compile error
 }
 
 #[derive(Clone, PartialEq, Eq)]
