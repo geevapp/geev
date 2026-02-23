@@ -12,106 +12,73 @@ describe('Entry API Endpoints', () => {
     // Reset all mocks before each test
     vi.clearAllMocks();
 
-    if (process.env.MOCK_DB === 'true') {
-      // Mock test data
-      user1 = {
-        id: 'user_1',
-        walletAddress: 'GUSER1WALLET',
-        name: 'User One',
-        bio: 'Test bio',
-        xp: 0,
-        avatarUrl: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    // Always use mock data objects - no database calls in beforeEach
+    user1 = {
+      id: 'user_1',
+      walletAddress: 'GUSER1WALLET',
+      name: 'User One',
+      bio: 'Test bio',
+      xp: 0,
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-      user2 = {
-        id: 'user_2',
-        walletAddress: 'GUSER2WALLET',
-        name: 'User Two',
-        bio: 'Test bio',
-        xp: 0,
-        avatarUrl: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    user2 = {
+      id: 'user_2',
+      walletAddress: 'GUSER2WALLET',
+      name: 'User Two',
+      bio: 'Test bio',
+      xp: 0,
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-      user3 = {
-        id: 'user_3',
-        walletAddress: 'GUSER3WALLET',
-        name: 'User Three',
-        bio: 'Test bio',
-        xp: 0,
-        avatarUrl: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    user3 = {
+      id: 'user_3',
+      walletAddress: 'GUSER3WALLET',
+      name: 'User Three',
+      bio: 'Test bio',
+      xp: 0,
+      avatarUrl: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-      post = {
-        id: 'post_1',
-        creatorId: user1.id,
-        type: 'giveaway',
-        slug: 'test-giveaway',
-        title: 'Test Giveaway',
-        description: 'Test description for giveaway post',
-        category: 'electronics',
-        status: 'open',
-        selectionMethod: 'random',
-        winnerCount: 1,
-        media: null,
-        endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    post = {
+      id: 'post_1',
+      creatorId: user1.id,
+      type: 'giveaway',
+      slug: 'test-giveaway',
+      title: 'Test Giveaway',
+      description: 'Test description for giveaway post',
+      category: 'electronics',
+      status: 'open',
+      selectionMethod: 'random',
+      winnerCount: 1,
+      media: null,
+      endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-      requestPost = {
-        id: 'post_2',
-        creatorId: user1.id,
-        type: 'request',
-        slug: 'request-post',
-        title: 'Request Post',
-        description: 'Test description for request post',
-        category: 'services',
-        status: 'open',
-        selectionMethod: 'random',
-        winnerCount: 1,
-        media: null,
-        endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    } else {
-      // Create test data with unique identifiers to avoid conflicts with parallel tests
-      // Use timestamp + random string for maximum uniqueness
-      const uniqueId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
-
-      user1 = await createTestUser({
-        name: 'User One',
-        walletAddress: `GUSER1_${uniqueId}`,
-      });
-
-      user2 = await createTestUser({
-        name: 'User Two',
-        walletAddress: `GUSER2_${uniqueId}`,
-      });
-
-      user3 = await createTestUser({
-        name: 'User Three',
-        walletAddress: `GUSER3_${uniqueId}`,
-      });
-
-      post = await createTestPost(user1.id, {
-        title: 'Test Giveaway',
-        slug: `test-giveaway-${uniqueId}`,
-        status: 'open',
-      });
-
-      requestPost = await createTestPost(user1.id, {
-        type: 'request',
-        title: 'Request Post',
-        slug: `request-post-${uniqueId}`,
-      });
-    }
+    requestPost = {
+      id: 'post_2',
+      creatorId: user1.id,
+      type: 'request',
+      slug: 'request-post',
+      title: 'Request Post',
+      description: 'Test description for request post',
+      category: 'services',
+      status: 'open',
+      selectionMethod: 'random',
+      winnerCount: 1,
+      media: null,
+      endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
   });
 
   describe('POST /api/posts/[id]/entries', () => {
