@@ -1,4 +1,5 @@
 use crate::types::{DataKey, Error, Giveaway, GiveawayStatus};
+use crate::utils::with_reentrancy_guard;
 use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, String};
 
 #[contract]
@@ -108,27 +109,29 @@ impl GiveawayContract {
     }
 
     pub fn distribute_prize(env: Env, giveaway_id: u64) {
-        let giveaway_key = DataKey::Giveaway(giveaway_id);
-        let mut giveaway: Giveaway = env
-            .storage()
-            .persistent()
-            .get(&giveaway_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+        with_reentrancy_guard(&env, || {
+            let giveaway_key = DataKey::Giveaway(giveaway_id);
+            let mut giveaway: Giveaway = env
+                .storage()
+                .persistent()
+                .get(&giveaway_key)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
-        if giveaway.status != GiveawayStatus::Claimable {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
+            if giveaway.status != GiveawayStatus::Claimable {
+                panic_with_error!(&env, Error::InvalidStatus);
+            }
 
-        let winner = giveaway
-            .winner
-            .clone()
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NoParticipants));
+            let winner = giveaway
+                .winner
+                .clone()
+                .unwrap_or_else(|| panic_with_error!(&env, Error::NoParticipants));
 
-        let token_client = token::Client::new(&env, &giveaway.token);
-        token_client.transfer(&env.current_contract_address(), &winner, &giveaway.amount);
+            let token_client = token::Client::new(&env, &giveaway.token);
+            token_client.transfer(&env.current_contract_address(), &winner, &giveaway.amount);
 
-        giveaway.status = GiveawayStatus::Completed;
-        env.storage().persistent().set(&giveaway_key, &giveaway);
+            giveaway.status = GiveawayStatus::Completed;
+            env.storage().persistent().set(&giveaway_key, &giveaway);
+        })
     }
 
     pub fn init(env: Env, admin: Address, fee_bps: u32) {

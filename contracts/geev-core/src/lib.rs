@@ -3,6 +3,7 @@
 pub mod giveaway;
 pub mod mutual_aid;
 pub mod types;
+pub mod utils;
 
 #[cfg(test)]
 mod test;

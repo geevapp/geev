@@ -1,4 +1,5 @@
 use crate::types::{DataKey, Error, HelpRequest, HelpRequestStatus};
+use crate::utils::with_reentrancy_guard;
 use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, Symbol};
 
 #[contract]
@@ -46,5 +47,27 @@ impl MutualAidContract {
             (Symbol::new(&env, "DonationReceived"), request_id, donor),
             (amount,),
         );
+    }
+
+    pub fn withdraw_aid(env: Env, request_id: u64, recipient: Address) {
+        with_reentrancy_guard(&env, || {
+            let request_key = DataKey::HelpRequest(request_id);
+            let mut request: HelpRequest = env
+                .storage()
+                .persistent()
+                .get(&request_key)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
+
+            // ... your existing withdrawal logic ...
+
+            let token_client = token::Client::new(&env, &request.token);
+            token_client.transfer(
+                &env.current_contract_address(),
+                &recipient,
+                &request.raised_amount,
+            );
+
+            // ... status update ...
+        })
     }
 }
