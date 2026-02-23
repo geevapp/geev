@@ -1,6 +1,13 @@
 #![no_std]
 
-mod giveaway;
+pub mod giveaway;
+pub mod mutual_aid;
+pub mod types;
 
-pub use giveaway::{distribute_prize, enter_giveaway, DataKey, Giveaway};
+#[cfg(test)]
+mod test;
 
+pub use crate::giveaway::GiveawayContract;
+pub use crate::giveaway::GiveawayContractClient;
+pub use crate::mutual_aid::MutualAidContract;
+pub use crate::mutual_aid::MutualAidContractClient;
