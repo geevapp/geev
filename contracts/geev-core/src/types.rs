@@ -17,6 +17,7 @@ pub enum Error {
     InvalidDonationAmount = 11,
     AlreadyInitialized = 12,
     ArithmeticOverflow = 13, // Added this to resolve the Clippy/Compile error
+    NotAdmin = 14,
 }
 
 #[derive(Clone, PartialEq, Eq)]
