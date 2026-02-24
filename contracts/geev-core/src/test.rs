@@ -1,3 +1,4 @@
+use crate::admin::{AdminContract, AdminContractClient};
 use crate::giveaway::{GiveawayContract, GiveawayContractClient};
 use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
 use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
@@ -383,6 +384,53 @@ fn test_donation_with_invalid_amount_fails() {
 }
 
 #[test]
+fn test_distribute_prize() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GiveawayContract, ());
+    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_client = token::Client::new(&env, &mock_token);
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let winner = Address::generate(&env);
+
+    token_admin_client.mint(&creator, &1000);
+
+    let giveaway_id = contract_client.create_giveaway(
+        &creator,
+        &mock_token,
+        &500,
+        &String::from_str(&env, "Prize Test"),
+        &60,
+    );
+
+    contract_client.enter_giveaway(&winner, &giveaway_id);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += 100;
+    });
+
+    let picked_winner = contract_client.pick_winner(&giveaway_id);
+    assert_eq!(picked_winner, winner);
+
+    assert_eq!(token_client.balance(&winner), 0);
+    assert_eq!(token_client.balance(&contract_id), 500);
+
+    contract_client.distribute_prize(&giveaway_id);
+
+    assert_eq!(token_client.balance(&winner), 500);
+    assert_eq!(token_client.balance(&contract_id), 0);
+}
+
+#[test]
 fn test_init_contract() {
     let env = Env::default();
     env.mock_all_auths();
@@ -402,6 +450,36 @@ fn test_init_contract() {
         assert_eq!(stored_admin, admin);
         assert_eq!(stored_fee, fee_bps);
     });
+}
+
+#[test]
+#[should_panic]
+fn test_distribute_prize_wrong_status_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GiveawayContract, ());
+    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    token_admin_client.mint(&creator, &1000);
+
+    let giveaway_id = contract_client.create_giveaway(
+        &creator,
+        &mock_token,
+        &500,
+        &String::from_str(&env, "Prize Test"),
+        &60,
+    );
+
+    contract_client.distribute_prize(&giveaway_id);
 }
 
 #[test]
@@ -470,4 +548,86 @@ fn test_refund_flow() {
 
     assert_eq!(token_client.balance(&donor), 1000);
     assert_eq!(token_client.balance(&contract_id), 0);
+    let admin = Address::generate(&env);
+    let safe_address = Address::generate(&env);
+
+    // Initialize contract with admin
+    env.as_contract(&contract_id, || {
+        env.storage().instance().set(&DataKey::Admin, &admin);
+    });
+
+    // Mint tokens to contract
+    token_admin_client.mint(&contract_id, &1000);
+
+    assert_eq!(token_client.balance(&contract_id), 1000);
+    assert_eq!(token_client.balance(&safe_address), 0);
+
+    // Admin withdraws funds
+    contract_client.admin_withdraw(&mock_token, &500, &safe_address);
+
+    assert_eq!(token_client.balance(&contract_id), 500);
+    assert_eq!(token_client.balance(&safe_address), 500);
+}
+
+#[test]
+#[should_panic]
+fn test_admin_withdraw_fails_non_admin() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(AdminContract, ());
+    let contract_client = AdminContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let safe_address = Address::generate(&env);
+
+    // DO NOT initialize contract with admin - this should cause panic
+
+    // Mint tokens to contract
+    token_admin_client.mint(&contract_id, &1000);
+
+    // Try to withdraw without admin being initialized - should panic
+    contract_client.admin_withdraw(&mock_token, &500, &safe_address);
+}
+
+#[test]
+fn test_admin_withdraw_full_balance() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(AdminContract, ());
+    let contract_client = AdminContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_client = token::Client::new(&env, &mock_token);
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let admin = Address::generate(&env);
+    let safe_address = Address::generate(&env);
+
+    // Initialize contract with admin
+    env.as_contract(&contract_id, || {
+        env.storage().instance().set(&DataKey::Admin, &admin);
+    });
+
+    // Mint tokens to contract
+    token_admin_client.mint(&contract_id, &5000);
+
+    assert_eq!(token_client.balance(&contract_id), 5000);
+
+    // Admin withdraws full balance
+    contract_client.admin_withdraw(&mock_token, &5000, &safe_address);
+
+    assert_eq!(token_client.balance(&contract_id), 0);
+    assert_eq!(token_client.balance(&safe_address), 5000);
 }
