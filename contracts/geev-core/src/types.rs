@@ -48,6 +48,7 @@ pub enum HelpRequestStatus {
     Open = 0,
     FullyFunded = 1,
     Closed = 2,
+    Cancelled = 3,
 }
 
 #[derive(Clone)]
@@ -70,6 +71,7 @@ pub enum DataKey {
     HasEntered(u64, Address),
     HelpRequestCounter,
     HelpRequest(u64),
+    Donation(u64, Address),
     Admin,
     Fee,
 }
