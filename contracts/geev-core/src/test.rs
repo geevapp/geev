@@ -1,5 +1,5 @@
-use crate::{GeevContract, GeevContractClient};
 use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
+use crate::{GeevContract, GeevContractClient};
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token, Address, Env, String,
