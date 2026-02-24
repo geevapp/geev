@@ -18,8 +18,8 @@ pub enum Error {
     AlreadyInitialized = 12,
     ArithmeticOverflow = 13, // Added this to resolve the Clippy/Compile error
     NotAdmin = 14,
-InvalidGoalAmount = 15,
-HelpRequestAlreadyExists = 16,
+    InvalidGoalAmount = 15,
+    HelpRequestAlreadyExists = 16,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -77,5 +77,3 @@ pub enum DataKey {
     Admin,
     Fee,
 }
-
-
