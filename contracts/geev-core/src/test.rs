@@ -2,6 +2,7 @@ use crate::admin::{AdminContract, AdminContractClient};
 use crate::giveaway::{GiveawayContract, GiveawayContractClient};
 use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
 use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
+use soroban_sdk::symbol_short;
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token, Address, Env, String,
@@ -661,4 +662,50 @@ fn test_refund_flow() {
             .unwrap_or(-1);
         assert_eq!(donation_amount, 0);
     });
+}
+
+#[test]
+#[should_panic(expected = "reentrancy detected")]
+fn test_distribute_prize_reentrancy_protection() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GiveawayContract, ());
+    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+    let creator = Address::generate(&env);
+    let winner = Address::generate(&env);
+
+    token_admin_client.mint(&creator, &1000);
+
+    let giveaway_id = contract_client.create_giveaway(
+        &creator,
+        &mock_token,
+        &500,
+        &String::from_str(&env, "Prize Test"),
+        &60,
+    );
+
+    contract_client.enter_giveaway(&winner, &giveaway_id);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += 100;
+    });
+
+    contract_client.pick_winner(&giveaway_id);
+
+    // Simulate the lock already being held before distribute_prize is called
+    // as if a reentrant call is in progress
+    env.as_contract(&contract_id, || {
+        env.storage().temporary().set(&symbol_short!("Lock"), &true);
+    });
+
+    // This should panic with "reentrancy detected" because the lock is already set
+    contract_client.distribute_prize(&giveaway_id);
 }
