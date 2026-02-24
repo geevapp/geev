@@ -75,11 +75,7 @@ impl MutualAidContract {
         }
 
         let donation_key = DataKey::Donation(request_id, donor.clone());
-        let amount: i128 = env
-            .storage()
-            .persistent()
-            .get(&donation_key)
-            .unwrap_or(0);
+        let amount: i128 = env.storage().persistent().get(&donation_key).unwrap_or(0);
 
         if amount <= 0 {
             panic_with_error!(&env, Error::InvalidDonationAmount);

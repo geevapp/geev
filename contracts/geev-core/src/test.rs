@@ -654,8 +654,11 @@ fn test_refund_flow() {
 
     // 5. Verify donation reset
     env.as_contract(&contract_id, || {
-        let donation_amount: i128 = env.storage().persistent().get(&DataKey::Donation(request_id, donor.clone())).unwrap_or(-1);
+        let donation_amount: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Donation(request_id, donor.clone()))
+            .unwrap_or(-1);
         assert_eq!(donation_amount, 0);
     });
 }
-
