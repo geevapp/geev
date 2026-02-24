@@ -6,6 +6,43 @@ pub struct MutualAidContract;
 
 #[contractimpl]
 impl MutualAidContract {
+    pub fn post_help_request(
+        env: Env,
+        creator: Address,
+        request_id: u64,
+        goal: i128,
+        token: Address,
+    ) -> u64 {
+        creator.require_auth();
+
+        if goal <= 0 {
+            panic_with_error!(&env, Error::InvalidGoalAmount);
+        }
+
+        // Prevent overwriting an existing request
+        let request_key = DataKey::HelpRequest(request_id);
+        if env.storage().persistent().has(&request_key) {
+            panic_with_error!(&env, Error::HelpRequestAlreadyExists);
+        }
+
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token,
+            goal,
+            raised_amount: 0, // ✅ bucket starts empty — no funds locked
+            status: HelpRequestStatus::Open,
+        };
+
+        env.storage().persistent().set(&request_key, &request);
+
+        env.events().publish(
+            (Symbol::new(&env, "HelpRequestPosted"), request_id, creator),
+            (goal,),
+        );
+
+        request_id
+    }
     pub fn donate(env: Env, donor: Address, request_id: u64, amount: i128) {
         donor.require_auth();
 
