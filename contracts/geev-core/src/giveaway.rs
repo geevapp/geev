@@ -147,6 +147,25 @@ impl GiveawayContract {
         env.storage().instance().set(&fee_key, &fee_bps);
     }
 
+    pub fn admin_withdraw(env: Env, token: Address, amount: i128, to: Address) {
+        let admin_key = DataKey::Admin;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&admin_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotAdmin));
+
+        admin.require_auth();
+
+        let token_client = token::Client::new(&env, &token);
+        token_client.transfer(&env.current_contract_address(), &to, &amount);
+
+        env.events().publish(
+            (soroban_sdk::Symbol::new(&env, "EmergencyWithdraw"), token),
+            (amount, to),
+        );
+    }
+
     fn generate_id(env: &Env) -> u64 {
         let mut counter: u64 = env
             .storage()

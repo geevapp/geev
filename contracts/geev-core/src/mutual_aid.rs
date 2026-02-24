@@ -6,6 +6,16 @@ pub struct MutualAidContract;
 
 #[contractimpl]
 impl MutualAidContract {
+    pub fn init(env: Env, admin: Address) {
+        let admin_key = DataKey::Admin;
+
+        if env.storage().instance().has(&admin_key) {
+            panic_with_error!(&env, Error::AlreadyInitialized);
+        }
+
+        env.storage().instance().set(&admin_key, &admin);
+    }
+
     pub fn donate(env: Env, donor: Address, request_id: u64, amount: i128) {
         donor.require_auth();
 
@@ -116,6 +126,25 @@ impl MutualAidContract {
         env.events().publish(
             (Symbol::new(&env, "RefundClaimed"), request_id, donor),
             (amount,),
+        );
+    }
+
+    pub fn admin_withdraw(env: Env, token: Address, amount: i128, to: Address) {
+        let admin_key = DataKey::Admin;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&admin_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotAdmin));
+
+        admin.require_auth();
+
+        let token_client = token::Client::new(&env, &token);
+        token_client.transfer(&env.current_contract_address(), &to, &amount);
+
+        env.events().publish(
+            (Symbol::new(&env, "EmergencyWithdraw"), token),
+            (amount, to),
         );
     }
 }

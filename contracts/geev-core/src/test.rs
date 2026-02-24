@@ -552,9 +552,7 @@ fn test_refund_flow() {
     let safe_address = Address::generate(&env);
 
     // Initialize contract with admin
-    env.as_contract(&contract_id, || {
-        env.storage().instance().set(&DataKey::Admin, &admin);
-    });
+    contract_client.init(&admin);
 
     // Mint tokens to contract
     token_admin_client.mint(&contract_id, &1000);
