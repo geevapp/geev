@@ -1,12 +1,7 @@
 use crate::types::{DataKey, Error, Giveaway, GiveawayStatus};
-use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, String};
+use soroban_sdk::{panic_with_error, token, Address, Env, String};
 
-#[contract]
-pub struct GiveawayContract;
-
-#[contractimpl]
-impl GiveawayContract {
-    pub fn create_giveaway(
+pub fn create_giveaway(
         env: Env,
         creator: Address,
         token: Address,
@@ -19,7 +14,7 @@ impl GiveawayContract {
         let token_client = token::Client::new(&env, &token);
         token_client.transfer(&creator, &env.current_contract_address(), &amount);
 
-        let giveaway_id = Self::generate_id(&env);
+        let giveaway_id = generate_id(&env);
         let end_time = env.ledger().timestamp() + duration_seconds;
 
         let giveaway = Giveaway {
@@ -147,25 +142,6 @@ impl GiveawayContract {
         env.storage().instance().set(&fee_key, &fee_bps);
     }
 
-    pub fn admin_withdraw(env: Env, token: Address, amount: i128, to: Address) {
-        let admin_key = DataKey::Admin;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&admin_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NotAdmin));
-
-        admin.require_auth();
-
-        let token_client = token::Client::new(&env, &token);
-        token_client.transfer(&env.current_contract_address(), &to, &amount);
-
-        env.events().publish(
-            (soroban_sdk::Symbol::new(&env, "EmergencyWithdraw"), token),
-            (amount, to),
-        );
-    }
-
     fn generate_id(env: &Env) -> u64 {
         let mut counter: u64 = env
             .storage()
@@ -178,4 +154,3 @@ impl GiveawayContract {
             .set(&DataKey::GiveawayCounter, &counter);
         counter
     }
-}

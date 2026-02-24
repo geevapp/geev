@@ -1,6 +1,4 @@
-use crate::admin::{AdminContract, AdminContractClient};
-use crate::giveaway::{GiveawayContract, GiveawayContractClient};
-use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
+use crate::{GeevContract, GeevContractClient};
 use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
@@ -12,8 +10,8 @@ fn test_giveaway_flow() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
 
@@ -59,8 +57,8 @@ fn test_double_entry_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
 
@@ -94,8 +92,8 @@ fn test_enter_late_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
 
@@ -131,8 +129,8 @@ fn test_pick_winner_early_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
 
@@ -165,8 +163,8 @@ fn test_donation_flow() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(MutualAidContract, ());
-    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -231,8 +229,8 @@ fn test_donation_reaches_goal() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(MutualAidContract, ());
-    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -283,8 +281,8 @@ fn test_donation_to_nonexistent_request_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(MutualAidContract, ());
-    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -307,8 +305,8 @@ fn test_donation_to_fully_funded_request_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(MutualAidContract, ());
-    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -348,8 +346,8 @@ fn test_donation_with_invalid_amount_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(MutualAidContract, ());
-    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -388,8 +386,8 @@ fn test_distribute_prize() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -435,8 +433,8 @@ fn test_init_contract() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     let fee_bps: u32 = 100;
@@ -458,8 +456,8 @@ fn test_distribute_prize_wrong_status_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -488,8 +486,8 @@ fn test_init_twice_fails() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let admin = Address::generate(&env);
     let fee_bps: u32 = 100;
@@ -503,8 +501,8 @@ fn test_refund_flow() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(MutualAidContract, ());
-    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -552,7 +550,7 @@ fn test_refund_flow() {
     let safe_address = Address::generate(&env);
 
     // Initialize contract with admin
-    contract_client.init(&admin);
+    GeevContractClient::new(&env, &contract_id).init(&admin, &0);
 
     // Mint tokens to contract
     token_admin_client.mint(&contract_id, &1000);
@@ -561,7 +559,7 @@ fn test_refund_flow() {
     assert_eq!(token_client.balance(&safe_address), 0);
 
     // Admin withdraws funds
-    contract_client.admin_withdraw(&mock_token, &500, &safe_address);
+    GeevContractClient::new(&env, &contract_id).admin_withdraw(&mock_token, &500, &safe_address);
 
     assert_eq!(token_client.balance(&contract_id), 500);
     assert_eq!(token_client.balance(&safe_address), 500);
@@ -573,8 +571,8 @@ fn test_admin_withdraw_fails_non_admin() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(AdminContract, ());
-    let contract_client = AdminContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
@@ -599,8 +597,8 @@ fn test_admin_withdraw_full_balance() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let contract_id = env.register(AdminContract, ());
-    let contract_client = AdminContractClient::new(&env, &contract_id);
+    let contract_id = env.register(GeevContract, ());
+    let contract_client = GeevContractClient::new(&env, &contract_id);
 
     let token_admin = Address::generate(&env);
     let mock_token = env
