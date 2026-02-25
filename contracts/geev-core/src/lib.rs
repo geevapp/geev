@@ -1,11 +1,9 @@
-pub mod profile;
-
-pub use profile::{Error, ProfileContract, ProfileContractClient, ProfileData};
 #![no_std]
 
 pub mod admin;
 pub mod giveaway;
 pub mod mutual_aid;
+pub mod profile;
 pub mod types;
 pub mod utils;
 
@@ -18,3 +16,4 @@ pub use crate::giveaway::GiveawayContract;
 pub use crate::giveaway::GiveawayContractClient;
 pub use crate::mutual_aid::MutualAidContract;
 pub use crate::mutual_aid::MutualAidContractClient;
+pub use profile::{Error, ProfileContract, ProfileContractClient, ProfileData};
