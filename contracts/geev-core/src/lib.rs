@@ -16,4 +16,4 @@ pub use crate::giveaway::GiveawayContract;
 pub use crate::giveaway::GiveawayContractClient;
 pub use crate::mutual_aid::MutualAidContract;
 pub use crate::mutual_aid::MutualAidContractClient;
-pub use profile::{Error, ProfileContract, ProfileContractClient, ProfileData};
+pub use crate::profile::{ProfileContract, ProfileContractClient};

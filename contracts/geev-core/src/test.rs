@@ -1,6 +1,7 @@
 use crate::admin::{AdminContract, AdminContractClient};
 use crate::giveaway::{GiveawayContract, GiveawayContractClient};
 use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
+use crate::profile::{ProfileContract, ProfileContractClient};
 use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
@@ -869,4 +870,91 @@ fn test_create_giveaway_with_non_whitelisted_token_fails() {
         &String::from_str(&env, "Non-Whitelisted Token Test"),
         &60,
     );
+}
+
+// ── Profile Registry tests ────────────────────────────────────────────────────
+
+#[test]
+fn test_set_and_get_profile() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(ProfileContract, ());
+    let client = ProfileContractClient::new(&env, &contract_id);
+
+    let user = Address::generate(&env);
+    let username = String::from_str(&env, "alice");
+    let avatar = String::from_str(&env, "QmHash123");
+
+    client.set_profile(&user, &username, &avatar);
+
+    let profile = client.get_profile(&user).unwrap();
+    assert_eq!(profile.username, username);
+    assert_eq!(profile.avatar_hash, avatar);
+}
+
+#[test]
+fn test_resolve_username_returns_owner() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(ProfileContract, ());
+    let client = ProfileContractClient::new(&env, &contract_id);
+
+    let user = Address::generate(&env);
+    let username = String::from_str(&env, "bob");
+    let avatar = String::from_str(&env, "QmAvatarBob");
+
+    client.set_profile(&user, &username, &avatar);
+
+    let resolved = client.resolve_username(&username).unwrap();
+    assert_eq!(resolved, user);
+}
+
+#[test]
+#[should_panic]
+fn test_duplicate_username_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(ProfileContract, ());
+    let client = ProfileContractClient::new(&env, &contract_id);
+
+    let alice = Address::generate(&env);
+    let bob = Address::generate(&env);
+    let username = String::from_str(&env, "geev_user");
+    let avatar = String::from_str(&env, "QmHash456");
+
+    client.set_profile(&alice, &username, &avatar);
+    client.set_profile(&bob, &username, &avatar);
+}
+
+#[test]
+fn test_user_can_change_username_and_old_one_is_freed() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(ProfileContract, ());
+    let client = ProfileContractClient::new(&env, &contract_id);
+
+    let user = Address::generate(&env);
+    let old_username = String::from_str(&env, "old_name");
+    let new_username = String::from_str(&env, "new_name");
+    let avatar = String::from_str(&env, "QmHash789");
+
+    client.set_profile(&user, &old_username, &avatar);
+    client.set_profile(&user, &new_username, &avatar);
+
+    assert!(client.resolve_username(&old_username).is_none());
+    assert_eq!(client.resolve_username(&new_username).unwrap(), user);
+}
+
+#[test]
+fn test_get_profile_returns_none_for_unknown_address() {
+    let env = Env::default();
+    let contract_id = env.register(ProfileContract, ());
+    let client = ProfileContractClient::new(&env, &contract_id);
+
+    let stranger = Address::generate(&env);
+    assert!(client.get_profile(&stranger).is_none());
 }
