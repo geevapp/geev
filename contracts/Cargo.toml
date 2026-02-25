@@ -1,3 +1,4 @@
 [workspace]
-members = ["geev-core"]
 resolver = "2"
+members  = ["geev-core"]
+

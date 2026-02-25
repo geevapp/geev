@@ -21,6 +21,7 @@ pub enum Error {
     InvalidGoalAmount = 15,
     HelpRequestAlreadyExists = 16,
     TokenNotSupported = 17,
+    UsernameTaken = 18,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -78,4 +79,13 @@ pub enum DataKey {
     Admin,
     Fee,
     AllowedToken(Address),
+    Profile(Address),
+    Username(String),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct ProfileData {
+    pub username: String,
+    pub avatar_hash: String,
 }
