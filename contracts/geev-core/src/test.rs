@@ -1,3 +1,4 @@
+use crate::access::check_admin;
 use crate::admin::{AdminContract, AdminContractClient};
 use crate::giveaway::{GiveawayContract, GiveawayContractClient};
 use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
@@ -869,4 +870,38 @@ fn test_create_giveaway_with_non_whitelisted_token_fails() {
         &String::from_str(&env, "Non-Whitelisted Token Test"),
         &60,
     );
+}
+
+#[test]
+fn test_check_admin_helper() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(AdminContract, ());
+    let admin = Address::generate(&env);
+
+    // Initialize contract with admin
+    env.as_contract(&contract_id, || {
+        env.storage().instance().set(&DataKey::Admin, &admin);
+    });
+
+    // Test that check_admin returns the admin address
+    env.as_contract(&contract_id, || {
+        let returned_admin = check_admin(&env);
+        assert_eq!(returned_admin, admin);
+    });
+}
+
+#[test]
+#[should_panic]
+fn test_check_admin_fails_when_not_initialized() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(AdminContract, ());
+
+    // DO NOT initialize admin - should panic
+    env.as_contract(&contract_id, || {
+        check_admin(&env);
+    });
 }
