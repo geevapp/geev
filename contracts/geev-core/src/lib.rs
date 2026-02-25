@@ -4,6 +4,7 @@ pub mod access;
 pub mod admin;
 pub mod giveaway;
 pub mod mutual_aid;
+pub mod profile;
 pub mod types;
 pub mod utils;
 
@@ -16,3 +17,4 @@ pub use crate::giveaway::GiveawayContract;
 pub use crate::giveaway::GiveawayContractClient;
 pub use crate::mutual_aid::MutualAidContract;
 pub use crate::mutual_aid::MutualAidContractClient;
+pub use crate::profile::{ProfileContract, ProfileContractClient};
