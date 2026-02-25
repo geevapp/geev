@@ -1,8 +1,8 @@
-use soroban_sdk::{contract, contractimpl, contracttype, panic_with_error, Address, Env, String};
+use soroban_sdk::{contract, contractimpl, contracttype, contracterror, panic_with_error, Address, Env, String};
 
 // ── Error codes ──────────────────────────────────────────────────────────────
 
-#[contracttype]
+#[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(u32)]
 pub enum Error {
@@ -108,22 +108,12 @@ mod tests {
         Env::default()
     }
 
-    fn register(env: &Env, user: &Address, username: &str, avatar: &str) {
-        env.mock_all_auths();
-        let client = ProfileContractClient::new(env, &env.register_contract(None, ProfileContract));
-        client.set_profile(
-            user,
-            &String::from_str(env, username),
-            &String::from_str(env, avatar),
-        );
-    }
-
     #[test]
     fn set_and_get_profile() {
         let env = make_env();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ProfileContract);
+        let contract_id = env.register(ProfileContract, ());
         let client = ProfileContractClient::new(&env, &contract_id);
 
         let user = Address::generate(&env);
@@ -142,7 +132,7 @@ mod tests {
         let env = make_env();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ProfileContract);
+        let contract_id = env.register(ProfileContract, ());
         let client = ProfileContractClient::new(&env, &contract_id);
 
         let user = Address::generate(&env);
@@ -161,7 +151,7 @@ mod tests {
         let env = make_env();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ProfileContract);
+        let contract_id = env.register(ProfileContract, ());
         let client = ProfileContractClient::new(&env, &contract_id);
 
         let alice = Address::generate(&env);
@@ -181,7 +171,7 @@ mod tests {
         let env = make_env();
         env.mock_all_auths();
 
-        let contract_id = env.register_contract(None, ProfileContract);
+        let contract_id = env.register(ProfileContract, ());
         let client = ProfileContractClient::new(&env, &contract_id);
 
         let user = Address::generate(&env);
@@ -205,7 +195,7 @@ mod tests {
     #[test]
     fn get_profile_returns_none_for_unknown_address() {
         let env = make_env();
-        let contract_id = env.register_contract(None, ProfileContract);
+        let contract_id = env.register(ProfileContract, ());
         let client = ProfileContractClient::new(&env, &contract_id);
 
         let stranger = Address::generate(&env);
