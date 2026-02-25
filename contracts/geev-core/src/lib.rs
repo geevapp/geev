@@ -1,5 +1,6 @@
 #![no_std]
 
+pub mod access;
 pub mod admin;
 pub mod giveaway;
 pub mod mutual_aid;

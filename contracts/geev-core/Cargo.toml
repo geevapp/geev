@@ -1,18 +1,13 @@
 [package]
-name    = "geev-core"
+name = "geev-core"
 version = "0.1.0"
 edition = "2021"
-publish = false
-
-[lib]
-crate-type = ["cdylib"]
-doctest    = false
 
 [dependencies]
-soroban-sdk = { version = "22", features = ["alloc"] }
+soroban-sdk = { version = "22.0.0", default-features = false }
 
 [dev-dependencies]
-soroban-sdk = { version = "22", features = ["testutils"] }
+soroban-sdk = { version = "22.0.0", features = ["testutils"] }
 
 [profile.release]
 opt-level        = "z"
