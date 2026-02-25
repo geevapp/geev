@@ -68,9 +68,7 @@ impl AdminContract {
         env.storage().instance().set(&token_key, &true);
 
         // Emit TokenAdded event
-        env.events().publish(
-            (Symbol::new(&env, "TokenAdded"),),
-            token,
-        );
+        env.events()
+            .publish((Symbol::new(&env, "TokenAdded"),), token);
     }
 }

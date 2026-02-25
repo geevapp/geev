@@ -19,11 +19,7 @@ impl GiveawayContract {
 
         // Check if token is whitelisted
         let token_key = DataKey::AllowedToken(token.clone());
-        let is_allowed: bool = env
-            .storage()
-            .instance()
-            .get(&token_key)
-            .unwrap_or(false);
+        let is_allowed: bool = env.storage().instance().get(&token_key).unwrap_or(false);
 
         if !is_allowed {
             panic_with_error!(&env, Error::TokenNotSupported);

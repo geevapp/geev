@@ -870,4 +870,3 @@ fn test_create_giveaway_with_non_whitelisted_token_fails() {
         &60,
     );
 }
-
