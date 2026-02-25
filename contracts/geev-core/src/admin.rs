@@ -1,5 +1,6 @@
-use crate::types::{DataKey, Error};
-use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, Symbol};
+use crate::access::check_admin;
+use crate::types::DataKey;
+use soroban_sdk::{contract, contractimpl, token, Address, Env, Symbol};
 
 #[contract]
 pub struct AdminContract;
@@ -18,16 +19,8 @@ impl AdminContract {
     /// # Panics
     /// Panics if called by non-admin address
     pub fn admin_withdraw(env: Env, token: Address, amount: i128, to: Address) {
-        // Load Admin address from storage
-        let admin_key = DataKey::Admin;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&admin_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NotAdmin));
-
-        // Require Admin authentication
-        admin.require_auth();
+        // Check admin authentication
+        check_admin(&env);
 
         // Initialize Token Client
         let token_client = token::Client::new(&env, &token);
@@ -52,16 +45,8 @@ impl AdminContract {
     /// # Panics
     /// Panics if called by non-admin address
     pub fn add_token(env: Env, token: Address) {
-        // Load Admin address from storage
-        let admin_key = DataKey::Admin;
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&admin_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NotAdmin));
-
-        // Require Admin authentication
-        admin.require_auth();
+        // Check admin authentication
+        check_admin(&env);
 
         // Add token to whitelist
         let token_key = DataKey::AllowedToken(token.clone());
