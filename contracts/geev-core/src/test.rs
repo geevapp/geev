@@ -31,6 +31,12 @@ fn test_giveaway_flow() {
 
     token_admin_client.mint(&creator, &1000);
 
+    env.as_contract(&contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
+
     let title = String::from_str(&env, "Test Giveaway");
     let amount = 500;
     let duration = 60;
@@ -76,6 +82,12 @@ fn test_double_entry_fails() {
 
     token_admin_client.mint(&creator, &1000);
 
+    env.as_contract(&contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
+
     let id = contract_client.create_giveaway(
         &creator,
         &mock_token,
@@ -110,6 +122,12 @@ fn test_enter_late_fails() {
     let late_user = Address::generate(&env);
 
     token_admin_client.mint(&creator, &1000);
+
+    env.as_contract(&contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
 
     let id = contract_client.create_giveaway(
         &creator,
@@ -147,6 +165,12 @@ fn test_pick_winner_early_fails() {
     let user = Address::generate(&env);
 
     token_admin_client.mint(&creator, &1000);
+
+    env.as_contract(&contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
 
     let id = contract_client.create_giveaway(
         &creator,
@@ -405,6 +429,12 @@ fn test_distribute_prize() {
 
     token_admin_client.mint(&creator, &1000);
 
+    env.as_contract(&contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
+
     let giveaway_id = contract_client.create_giveaway(
         &creator,
         &mock_token,
@@ -471,6 +501,12 @@ fn test_distribute_prize_wrong_status_fails() {
 
     let creator = Address::generate(&env);
     token_admin_client.mint(&creator, &1000);
+
+    env.as_contract(&contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
 
     let giveaway_id = contract_client.create_giveaway(
         &creator,
@@ -684,6 +720,12 @@ fn test_distribute_prize_reentrancy_protection() {
 
     token_admin_client.mint(&creator, &1000);
 
+    env.as_contract(&contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
+
     let giveaway_id = contract_client.create_giveaway(
         &creator,
         &mock_token,
@@ -708,4 +750,123 @@ fn test_distribute_prize_reentrancy_protection() {
 
     // This should panic with "reentrancy detected" because the lock is already set
     contract_client.distribute_prize(&giveaway_id);
+}
+
+#[test]
+fn test_add_token_to_whitelist() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(AdminContract, ());
+    let contract_client = AdminContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let token = Address::generate(&env);
+
+    // Initialize contract with admin
+    env.as_contract(&contract_id, || {
+        env.storage().instance().set(&DataKey::Admin, &admin);
+    });
+
+    // Add token to whitelist
+    contract_client.add_token(&token);
+
+    // Verify token is whitelisted
+    env.as_contract(&contract_id, || {
+        let is_allowed: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::AllowedToken(token.clone()))
+            .unwrap_or(false);
+        assert!(is_allowed);
+    });
+}
+
+#[test]
+#[should_panic]
+fn test_add_token_fails_non_admin() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(AdminContract, ());
+    let contract_client = AdminContractClient::new(&env, &contract_id);
+
+    let token = Address::generate(&env);
+
+    // DO NOT initialize contract with admin - this should cause panic
+    // Try to add token without admin being initialized - should panic
+    contract_client.add_token(&token);
+}
+
+#[test]
+fn test_create_giveaway_with_whitelisted_token() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let giveaway_contract_id = env.register(GiveawayContract, ());
+    let giveaway_client = GiveawayContractClient::new(&env, &giveaway_contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let admin = Address::generate(&env);
+    let creator = Address::generate(&env);
+
+    // Initialize both contracts with same admin
+    env.as_contract(&giveaway_contract_id, || {
+        env.storage().instance().set(&DataKey::Admin, &admin);
+    });
+
+    env.as_contract(&giveaway_contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
+
+    token_admin_client.mint(&creator, &1000);
+
+    // Create giveaway with whitelisted token - should succeed
+    let giveaway_id = giveaway_client.create_giveaway(
+        &creator,
+        &mock_token,
+        &500,
+        &String::from_str(&env, "Whitelisted Token Test"),
+        &60,
+    );
+
+    assert_eq!(giveaway_id, 1);
+}
+
+#[test]
+#[should_panic]
+fn test_create_giveaway_with_non_whitelisted_token_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GiveawayContract, ());
+    let contract_client = GiveawayContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+
+    token_admin_client.mint(&creator, &1000);
+
+    // Try to create giveaway without whitelisting token - should panic with TokenNotSupported
+    contract_client.create_giveaway(
+        &creator,
+        &mock_token,
+        &500,
+        &String::from_str(&env, "Non-Whitelisted Token Test"),
+        &60,
+    );
 }

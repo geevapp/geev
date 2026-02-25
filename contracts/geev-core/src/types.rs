@@ -20,6 +20,7 @@ pub enum Error {
     NotAdmin = 14,
     InvalidGoalAmount = 15,
     HelpRequestAlreadyExists = 16,
+    TokenNotSupported = 17,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -76,4 +77,5 @@ pub enum DataKey {
     Donation(u64, Address),
     Admin,
     Fee,
+    AllowedToken(Address),
 }

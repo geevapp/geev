@@ -41,4 +41,34 @@ impl AdminContract {
             (amount, to.clone()),
         );
     }
+
+    /// Add a token to the whitelist - callable only by Admin
+    /// Allows specific tokens to be used for giveaway creation
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `token` - The token address to whitelist
+    ///
+    /// # Panics
+    /// Panics if called by non-admin address
+    pub fn add_token(env: Env, token: Address) {
+        // Load Admin address from storage
+        let admin_key = DataKey::Admin;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&admin_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NotAdmin));
+
+        // Require Admin authentication
+        admin.require_auth();
+
+        // Add token to whitelist
+        let token_key = DataKey::AllowedToken(token.clone());
+        env.storage().instance().set(&token_key, &true);
+
+        // Emit TokenAdded event
+        env.events()
+            .publish((Symbol::new(&env, "TokenAdded"),), token);
+    }
 }
