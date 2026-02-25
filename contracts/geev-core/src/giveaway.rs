@@ -17,6 +17,18 @@ impl GiveawayContract {
     ) -> u64 {
         creator.require_auth();
 
+        // Check if token is whitelisted
+        let token_key = DataKey::AllowedToken(token.clone());
+        let is_allowed: bool = env
+            .storage()
+            .instance()
+            .get(&token_key)
+            .unwrap_or(false);
+
+        if !is_allowed {
+            panic_with_error!(&env, Error::TokenNotSupported);
+        }
+
         let token_client = token::Client::new(&env, &token);
         token_client.transfer(&creator, &env.current_contract_address(), &amount);
 
