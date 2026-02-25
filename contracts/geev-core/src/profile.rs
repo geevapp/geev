@@ -1,4 +1,6 @@
-use soroban_sdk::{contract, contractimpl, contracttype, contracterror, panic_with_error, Address, Env, String};
+use soroban_sdk::{
+    contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env, String,
+};
 
 // ── Error codes ──────────────────────────────────────────────────────────────
 
@@ -13,9 +15,7 @@ pub enum Error {
 
 #[contracttype]
 pub enum DataKey {
-    /// Address → ProfileData  (forward lookup)
     Profile(Address),
-    /// Username → Address     (reverse lookup – enforces uniqueness)
     Username(String),
 }
 
@@ -80,16 +80,12 @@ impl ProfileContract {
         env.storage().persistent().set(&username_key, &user);
     }
 
-    /// Retrieve profile data for a given wallet address.
-    /// Returns `None` if no profile has been registered for that address.
     pub fn get_profile(env: Env, user: Address) -> Option<ProfileData> {
         env.storage()
             .persistent()
             .get::<DataKey, ProfileData>(&DataKey::Profile(user))
     }
 
-    /// Reverse lookup – resolve a username to its owner's address.
-    /// Returns `None` if the username is not registered.
     pub fn resolve_username(env: Env, username: String) -> Option<Address> {
         env.storage()
             .persistent()
