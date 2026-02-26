@@ -202,4 +202,42 @@ impl GiveawayContract {
             .set(&DataKey::GiveawayCounter, &counter);
         counter
     }
+
+    /// Withdraw collected fees for a specific token - callable only by Admin
+    /// Transfers all accumulated fees for the specified token to the admin address
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `token` - The token address to withdraw fees for
+    ///
+    /// # Panics
+    /// Panics if called by non-admin address
+    pub fn withdraw_fees(env: Env, token: Address) {
+        // 1. Admin auth
+        let admin_key = DataKey::Admin;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&admin_key)
+            .expect("Admin not set");
+        admin.require_auth();
+
+        // 2. Read 'CollectedFees(token)' amount
+        let collected_fees_key = DataKey::CollectedFees(token.clone());
+        let fee_amount: i128 = env
+            .storage()
+            .persistent()
+            .get(&collected_fees_key)
+            .unwrap_or(0);
+
+        // Only proceed if there are fees to withdraw
+        if fee_amount > 0 {
+            // 3. Transfer that amount to Admin
+            let token_client = token::Client::new(&env, &token);
+            token_client.transfer(&env.current_contract_address(), &admin, &fee_amount);
+
+            // 4. Set 'CollectedFees(token)' to 0
+            env.storage().persistent().set(&collected_fees_key, &0i128);
+        }
+    }
 }
