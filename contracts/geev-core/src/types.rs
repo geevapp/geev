@@ -78,6 +78,7 @@ pub enum DataKey {
     Donation(u64, Address),
     Admin,
     Fee,
+    CollectedFees(Address),
     AllowedToken(Address),
     Profile(Address),
     Username(String),
