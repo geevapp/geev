@@ -995,3 +995,98 @@ fn test_check_admin_fails_when_not_initialized() {
         check_admin(&env);
     });
 }
+#[test]
+fn test_withdraw_fees() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let giveaway_contract_id = env.register(GiveawayContract, ());
+    let giveaway_client = GiveawayContractClient::new(&env, &giveaway_contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_client = token::Client::new(&env, &mock_token);
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let admin = Address::generate(&env);
+    let creator = Address::generate(&env);
+    let winner = Address::generate(&env);
+
+    // Initialize giveaway contract
+    giveaway_client.init(&admin, &100u32); // 1%
+
+    env.as_contract(&giveaway_contract_id, || {
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+    });
+
+    token_admin_client.mint(&creator, &1000);
+
+    // Create and complete a giveaway to generate fees
+    let giveaway_id = giveaway_client.create_giveaway(
+        &creator,
+        &mock_token,
+        &500,
+        &String::from_str(&env, "Fee Test"),
+        &60,
+    );
+
+    giveaway_client.enter_giveaway(&winner, &giveaway_id);
+
+    env.ledger().with_mut(|li| {
+        li.timestamp += 100;
+    });
+
+    giveaway_client.pick_winner(&giveaway_id);
+    giveaway_client.distribute_prize(&giveaway_id);
+
+    // Verify fees were collected (5 tokens = 1% of 500)
+    assert_eq!(token_client.balance(&giveaway_contract_id), 5);
+    assert_eq!(token_client.balance(&winner), 495);
+    assert_eq!(token_client.balance(&admin), 0);
+
+    // Verify collected fees are tracked in giveaway contract
+    env.as_contract(&giveaway_contract_id, || {
+        let collected_fees: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::CollectedFees(mock_token.clone()))
+            .unwrap_or(0);
+        assert_eq!(collected_fees, 5);
+    });
+
+    // Withdraw fees using giveaway contract
+    giveaway_client.withdraw_fees(&mock_token);
+
+    // Verify fees were transferred to admin and counter reset
+    assert_eq!(token_client.balance(&admin), 5);
+    assert_eq!(token_client.balance(&giveaway_contract_id), 0);
+
+    env.as_contract(&giveaway_contract_id, || {
+        let collected_fees: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::CollectedFees(mock_token.clone()))
+            .unwrap_or(0);
+        assert_eq!(collected_fees, 0);
+    });
+}
+
+#[test]
+#[should_panic]
+fn test_withdraw_fees_fails_non_admin() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let giveaway_contract_id = env.register(GiveawayContract, ());
+    let giveaway_client = GiveawayContractClient::new(&env, &giveaway_contract_id);
+
+    let token = Address::generate(&env);
+
+    // DO NOT initialize admin - should panic
+    giveaway_client.withdraw_fees(&token);
+}
