@@ -139,7 +139,8 @@ impl GiveawayContract {
             let fee_bps: u32 = env.storage().instance().get(&fee_key).unwrap_or(100); // Default to 100 bps (1%)
 
             // 2. Calculate 'fee_amount' (fee_bps / 10000 * amount)
-            let fee_amount = (giveaway.amount as i128)
+            let fee_amount = giveaway
+                .amount
                 .checked_mul(fee_bps as i128)
                 .and_then(|v| v.checked_div(10_000))
                 .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
