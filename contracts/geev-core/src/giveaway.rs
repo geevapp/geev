@@ -134,8 +134,39 @@ impl GiveawayContract {
                 .clone()
                 .unwrap_or_else(|| panic_with_error!(&env, Error::NoParticipants));
 
+            // 1. Load 'fee_bps' from storage
+            let fee_key = DataKey::Fee;
+            let fee_bps: u32 = env.storage().instance().get(&fee_key).unwrap_or(100); // Default to 100 bps (1%)
+
+            // 2. Calculate 'fee_amount' (fee_bps / 10000 * amount)
+            let fee_amount = (giveaway.amount as i128)
+                .checked_mul(fee_bps as i128)
+                .and_then(|v| v.checked_div(10_000))
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+
+            // Calculate net prize
+            let net_prize = giveaway
+                .amount
+                .checked_sub(fee_amount)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+
+            // 3. Transfer 'net_prize' to Winner
             let token_client = token::Client::new(&env, &giveaway.token);
-            token_client.transfer(&env.current_contract_address(), &winner, &giveaway.amount);
+            token_client.transfer(&env.current_contract_address(), &winner, &net_prize);
+
+            // 4. Add 'fee_amount' to CollectedFees storage counter
+            let collected_fees_key = DataKey::CollectedFees(giveaway.token.clone());
+            let current_fees: i128 = env
+                .storage()
+                .persistent()
+                .get(&collected_fees_key)
+                .unwrap_or(0);
+            let new_fees = current_fees
+                .checked_add(fee_amount)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+            env.storage()
+                .persistent()
+                .set(&collected_fees_key, &new_fees);
 
             giveaway.status = GiveawayStatus::Completed;
             env.storage().persistent().set(&giveaway_key, &giveaway);
