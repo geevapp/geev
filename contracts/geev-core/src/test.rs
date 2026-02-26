@@ -459,8 +459,10 @@ fn test_distribute_prize() {
 
     contract_client.distribute_prize(&giveaway_id);
 
-    assert_eq!(token_client.balance(&winner), 500);
-    assert_eq!(token_client.balance(&contract_id), 0);
+    // Winner receives 99% (500 - 1% fee = 495)
+    assert_eq!(token_client.balance(&winner), 495);
+    // Contract retains 1% fee (5 tokens)
+    assert_eq!(token_client.balance(&contract_id), 5);
 }
 
 #[test]
