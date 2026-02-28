@@ -1,7 +1,9 @@
 'use server';
+
+import { apiError, apiSuccess } from '@/lib/api-response';
+
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { apiSuccess, apiError } from '@/lib/api-response';
 
 type ActivityItem = {
   id: string;
@@ -20,7 +22,7 @@ type ActivityItem = {
 
 const MAX_LIMIT = 100;
 
-export async function GET(
+export async function GET (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -39,7 +41,7 @@ export async function GET(
     // Fetch activity in parallel (select only required fields)
     const [posted, entered, won, liked] = await Promise.all([
       prisma.post.findMany({
-        where: { creatorId: id },
+        where: { userId: id },
         select: {
           id: true,
           title: true,

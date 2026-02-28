@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { createToken } from "@/lib/jwt";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -12,7 +12,7 @@ const registerSchema = z.object({
 });
 
 // Mock wallet signature verification - replace with actual implementation
-async function verifyWalletSignature(
+async function verifyWalletSignature (
   walletAddress: string,
   signature: string,
   message: string
@@ -22,7 +22,7 @@ async function verifyWalletSignature(
   return signature.length > 10; // Simple validation for demo
 }
 
-export async function POST(request: Request) {
+export async function POST (request: Request) {
   try {
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     // Verify wallet signature
     const isValidSignature = await verifyWalletSignature(walletAddress, signature, message);
-    
+
     if (!isValidSignature) {
       return NextResponse.json(
         { error: "Invalid wallet signature" },
@@ -69,8 +69,6 @@ export async function POST(request: Request) {
         { status: 409 }
       );
     }
-
-
 
     // Create new user
     const user = await prisma.user.create({

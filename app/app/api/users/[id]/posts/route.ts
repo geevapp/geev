@@ -1,8 +1,9 @@
+import { apiError, apiSuccess } from '@/lib/api-response';
+
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { apiSuccess, apiError } from '@/lib/api-response';
 
-export async function GET(
+export async function GET (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -23,7 +24,7 @@ export async function GET(
 
       // Fetch user's posts
       const userPosts = await prisma.post.findMany({
-        where: { creatorId: id },
+        where: { userId: id },
         orderBy: { createdAt: 'desc' },
         include: {
           entries: {

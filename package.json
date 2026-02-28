@@ -2,7 +2,7 @@
     "name": "geevapp",
     "version": "0.1.0",
     "private": true,
-    "description": "Decentralized learn-to-earn platform on Stellar",
+    "description": "Decentralized social network built on the Stellar blockchain enabling users to create giveaways, request help, and participate in community-driven mutual aid.",
     "keywords": [
         "stellar",
         "give",

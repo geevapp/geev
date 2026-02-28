@@ -5,14 +5,11 @@
 /.pnp
 .pnp.*
 .yarn/*
+.turbo
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-.pnpm
-yarn.lock
-package-lock.json
-pnpm-lock.yaml
 
 # testing
 /coverage
@@ -27,9 +24,6 @@ pnpm-lock.yaml
 # misc
 .DS_Store
 *.pem
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
 
 # debug
 npm-debug.log*
@@ -39,6 +33,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -47,4 +42,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/lib/generated/prisma
+yarn.lock
+package-lock.json
+pnpm-lock.yaml

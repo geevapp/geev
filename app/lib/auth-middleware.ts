@@ -1,15 +1,19 @@
-import { NextResponse } from "next/server";
+import { getTokenFromRequest, verifyToken } from "@/lib/jwt";
+
 import type { NextRequest } from "next/server";
-import { verifyToken, getTokenFromRequest } from "@/lib/jwt";
+import { NextResponse } from "next/server";
+import { auth } from "./auth";
 
 /**
  * Middleware to protect routes that require authentication
  */
-export async function authMiddleware(request: NextRequest) {
+export async function authMiddleware (request: NextRequest) {
+  const session = await auth()
+  console.log(session)
   try {
     // Get token from cookies
     const token = getTokenFromRequest(request);
-    
+
     if (!token) {
       return NextResponse.json(
         { error: "Authentication required" },
@@ -19,13 +23,13 @@ export async function authMiddleware(request: NextRequest) {
 
     // Verify token
     const payload = await verifyToken(token);
-    
+
     // Add user info to request headers for downstream use
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-user-id", payload.userId);
     requestHeaders.set("x-wallet-address", payload.walletAddress);
     requestHeaders.set("x-username", payload.username);
-    
+
     // Return modified request with user info
     return NextResponse.next({
       request: {
@@ -43,7 +47,7 @@ export async function authMiddleware(request: NextRequest) {
 /**
  * Helper function to get user info from request headers (for use in API routes)
  */
-export function getUserFromRequest(request: Request) {
+export function getUserFromRequest (request: Request) {
   const headers = request.headers as Headers;
   return {
     userId: headers.get("x-user-id"),

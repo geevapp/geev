@@ -1,20 +1,18 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { signOut, useSession } from 'next-auth/react';
 
-import { CreateModal } from '@/components/create-modal';
+import { AppFooter } from '@/components/app-footer';
 import { DesktopSidebar } from '@/components/desktop-sidebar';
-import { DevUserSwitcher } from '@/components/dev-user-switcher';
-import { GiveawayModal } from '@/components/create-giveaway-modal';
-import { GuestBanner } from '@/components/guest-banner';
+import { DevUserSwitcher } from './dev-user-switcher';
+import { GuestNavbar } from '@/components/guest-navbar';
 import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import { Navbar } from '@/components/navbar';
 import type React from 'react';
-import { RequestModal } from '@/components/request-modal';
 import { ScrollRestoration } from '@/components/scroll-restoration';
-import { cn } from '@/lib/utils';
-import { trackEvent } from '@/lib/analytics';
+import cn from 'classnames';
 import { useAppContext } from '@/contexts/app-context';
+import { useMobile } from '@/hooks/use-mobile';
 import { usePathname } from 'next/navigation';
 
 interface AppLayoutProps {
@@ -22,48 +20,61 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const pathname = usePathname();
   const { user } = useAppContext();
-  const lastPathRef = useRef<string | null>(null);
+  const session = useSession();
+  console.log(session);
+  const path = usePathname();
+  const isMobile = useMobile();
+  const noNavPages = ['/', '/register', '/login'];
 
-  useEffect(() => {
-    if (!pathname) return;
-    if (lastPathRef.current === pathname) return;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <ScrollRestoration />
 
-    lastPathRef.current = pathname;
-    trackEvent(
-      'page_view',
-      { path: pathname },
-      user ? { userId: user.id } : undefined,
+        {!noNavPages.includes(path) && <GuestNavbar />}
+
+        <main className="p-0">
+          <div className="max-w-screen">{children}</div>
+        </main>
+
+        {/* Dev User Switcher - Only visible in development mode */}
+        <DevUserSwitcher />
+      </div>
     );
-  }, [pathname, user]);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <ScrollRestoration />
 
-      <div className="flex">
-        <DesktopSidebar />
-
-        <main
-          className={cn(
-            `flex-1 ${user ? 'md:ml-64' : ''} min-h-[calc(100vh-4rem)] pb-16 md:pb-0`,
-          )}
-        >
-          <Navbar />
-          <GuestBanner />
-          <div className="max-w-7xl mx-auto w-full">
-            {children}
+      {/* Desktop Layout */}
+      {!isMobile && (
+        <div className="flex">
+          <DesktopSidebar />
+          <div
+            className={cn(
+              'flex-1 flex flex-col min-h-screen transition-all duration-300',
+              'ml-64',
+            )}
+          >
+            <Navbar />
+            <main className="flex-1 p-6">
+              <div className="max-w-4xl mx-auto">{children}</div>
+            </main>
+            <AppFooter />
           </div>
-        </main>
-      </div>
+        </div>
+      )}
 
-      <MobileBottomNav />
-
-      {/* Create Modals */}
-      <CreateModal />
-      <GiveawayModal />
-      <RequestModal />
+      {/* Mobile Layout */}
+      {isMobile && (
+        <div className="flex flex-col min-h-screen pb-16">
+          <Navbar />
+          <main className="flex-1 p-4">{children}</main>
+          <MobileBottomNav />
+        </div>
+      )}
 
       {/* Dev User Switcher - Only visible in development mode */}
       <DevUserSwitcher />

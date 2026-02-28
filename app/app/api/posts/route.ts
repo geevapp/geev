@@ -28,7 +28,7 @@ const POST = async (request: NextRequest) => {
 
     const post = await prisma.post.create({
       data: {
-        creatorId: user.id,
+        userId: user.id,
         type,
         title,
         slug: body.slug || title.toLowerCase().replace(/\s+/g, '-').slice(0, 50),
@@ -38,7 +38,7 @@ const POST = async (request: NextRequest) => {
         endsAt: new Date(endsAt),
       },
       include: {
-        creator: {
+        user: {
           select: {
             id: true,
             name: true,
@@ -76,7 +76,7 @@ const GET = async (request: NextRequest) => {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          creator: {
+          user: {
             select: {
               id: true,
               name: true,

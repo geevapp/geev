@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   ArrowRight,
@@ -8,17 +8,17 @@ import {
   TrendingUp,
   Users,
   Zap,
-} from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockPosts, mockUsers } from '@/lib/mock-data';
-import { useEffect, useState } from 'react';
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { mockPosts, mockUsers } from "@/lib/mock-data";
+import { useEffect, useState } from "react";
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { GuestNavbar } from '@/components/guest-navbar';
-import Link from 'next/link';
-import { useAppContext } from '@/contexts/app-context';
-import { useRouter } from 'next/navigation';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { GuestNavbar } from "@/components/guest-navbar";
+import Link from "next/link";
+import { useAppContext } from "@/contexts/app-context";
+import { useRouter } from "next/navigation";
 
 export default function LandingPage() {
   const { user } = useAppContext();
@@ -27,14 +27,14 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (user) {
-      router.push('/feed');
+      router.push("/feed");
     }
   }, [user, router]);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   if (user) {
@@ -48,12 +48,12 @@ export default function LandingPage() {
 
   // Get trending giveaways
   const trendingGiveaways = mockPosts
-    .filter((p) => p.type === 'giveaway')
+    .filter((p) => p.type === "giveaway")
     .slice(0, 3);
 
   // Get trending requests
   const trendingRequests = mockPosts
-    .filter((p) => p.type === 'help-request')
+    .filter((p) => p.type === "help-request")
     .slice(0, 3);
 
   return (
@@ -62,7 +62,7 @@ export default function LandingPage() {
       <GuestNavbar />
 
       {/* Hero Section */}
-      <section className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden ">
+      <section className="relative py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div
             className="absolute w-96 h-96 bg-orange-100 dark:bg-orange-900 rounded-full blur-3xl opacity-20"
@@ -183,14 +183,14 @@ export default function LandingPage() {
                   <div className="flex items-center gap-4 mb-4">
                     <Avatar className="h-14 w-14 ring-2 ring-offset-2 ring-orange-600">
                       <AvatarImage
-                        src={giver.avatar || '/placeholder.svg'}
+                        src={giver.avatar || "/placeholder.svg"}
                         alt={giver.name}
                       />
                       <AvatarFallback>
                         {giver.name
-                          .split(' ')
+                          .split(" ")
                           .map((n) => n[0])
-                          .join('')}
+                          .join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div>

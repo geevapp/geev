@@ -1,7 +1,7 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ChevronDown, ChevronUp, LogOut, User as UserIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, LogOut } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -9,9 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { login, logout, mockAuthUsers } from '@/lib/mock-auth';
+import { login, logout } from '@/lib/mock-auth';
 
 import { Button } from '@/components/ui/button';
+import { User } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { useState } from 'react';
 
@@ -31,22 +32,42 @@ import { useState } from 'react';
 export function DevUserSwitcher() {
   const { user, login: contextLogin, logout: contextLogout } = useAppContext();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [mockAuthUsers, setMockAuthUsers] = useState([] as User[]);
 
   // Only render in development mode
-  if (process.env.NODE_ENV !== 'development') {
+  if (
+    process.env.NODE_ENV !== 'development' ||
+    typeof location === 'undefined'
+  ) {
     return null;
   }
 
-  const handleUserSwitch = (userId: string) => {
+  if (!mockAuthUsers?.length) {
+    fetch(`${location.origin}/api/mock-users`)
+      .then((res) => res.json())
+      .then((data) => setMockAuthUsers(data.data))
+      .catch((err) => console.error('Failed to fetch mock users:', err));
+  }
+
+  const handleUserSwitch = async (userId: string) => {
     if (userId === 'logout') {
       logout();
-      contextLogout();
+      await contextLogout();
       return;
     }
 
-    const selectedUser = login(userId);
+    const selectedUser = mockAuthUsers.find((u) => u.id === userId);
+
     if (selectedUser) {
-      contextLogin(selectedUser);
+      const walletAddress = selectedUser.walletAddress || '0x0';
+      const timestamp = new Date().toISOString();
+
+      await contextLogin(selectedUser, {
+        walletAddress,
+        email: selectedUser.email ?? `${walletAddress}@example.com`, // Fallback email for mock users
+        signature: '0x' + Math.random().toString(36).substring(2, 30),
+        message: `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}`,
+      });
     }
   };
 
@@ -100,7 +121,7 @@ export function DevUserSwitcher() {
             {user && (
               <div className="flex items-center gap-2 p-2 bg-gray-800 dark:bg-gray-700 rounded-lg">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarImage src={user.avatarUrl ?? ''} alt={user.name} />
                   <AvatarFallback className="bg-orange-100 text-orange-700 text-xs">
                     {getInitials(user.name)}
                   </AvatarFallback>
@@ -133,7 +154,7 @@ export function DevUserSwitcher() {
                       <div className="flex items-center gap-2">
                         <Avatar className="h-5 w-5">
                           <AvatarImage
-                            src={mockUser.avatar}
+                            src={mockUser.avatarUrl ?? ''}
                             alt={mockUser.name}
                           />
                           <AvatarFallback className="bg-orange-100 text-orange-700 text-[10px]">
@@ -142,7 +163,7 @@ export function DevUserSwitcher() {
                         </Avatar>
                         <span className="truncate">{mockUser.name}</span>
                         <span className="text-xs text-gray-400">
-                          ({mockUser.rank.title})
+                          ({mockUser.rank?.title ?? 'User'})
                         </span>
                       </div>
                     </SelectItem>

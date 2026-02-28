@@ -1,19 +1,17 @@
-import "./globals.css";
+import './globals.css';
 
-import { AppLayout } from "@/components/app-layout";
-import { AppProvider } from "@/contexts/app-context";
-import type { Metadata } from "next";
-import type React from "react";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { SessionProvider } from "next-auth/react";
+import { AppLayout } from '@/components/app-layout';
+import { AppProvider } from '@/contexts/app-context';
+import type { Metadata } from 'next';
+import type React from 'react';
+import { SessionProvider } from 'next-auth/react';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from '@/components/ui/sonner';
 
 export const metadata: Metadata = {
-  title: "Geev - Community Giveaways & Help Platform",
-  description: "Giving Made Global",
+  title: 'Geev - Community Giveaways & Help Platform',
+  description: 'Giving Made Global',
 };
-
-import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function RootLayout({
   children,
@@ -21,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>
         <SessionProvider>
           <ThemeProvider
@@ -31,9 +29,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <AppProvider>
-              <ErrorBoundary>
-                <AppLayout>{children}</AppLayout>
-              </ErrorBoundary>
+              <AppLayout>{children}</AppLayout>
               <Toaster />
             </AppProvider>
           </ThemeProvider>
