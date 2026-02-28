@@ -1,12 +1,13 @@
+import { getTokenFromRequest, verifyToken } from "@/lib/jwt";
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken, getTokenFromRequest } from "@/lib/jwt";
 
-export async function GET(request: Request) {
+export async function GET (request: Request) {
   try {
     // Get token from cookies
     const token = getTokenFromRequest(request);
-    
+
     if (!token) {
       return NextResponse.json(
         { error: "No authentication token found" },
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
 
     // Verify and decode token
     const payload = await verifyToken(token);
-    
+    console.log("Session payload:", payload);
     // Find user in database
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
         { status: 401 }
       );
     }
-    
+
     console.error("Session check error:", error);
     return NextResponse.json(
       { error: "Internal server error" },

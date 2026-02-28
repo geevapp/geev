@@ -15,7 +15,7 @@ export interface UserJwtPayload {
 /**
  * Create a new JWT token
  */
-export async function createToken(payload: {
+export async function createToken (payload: {
   userId: string;
   walletAddress: string;
   username: string;
@@ -35,19 +35,19 @@ export async function createToken(payload: {
 /**
  * Verify and decode a JWT token
  */
-export async function verifyToken(token: string): Promise<UserJwtPayload> {
+export async function verifyToken (token: string): Promise<UserJwtPayload> {
   try {
     const verified = await jwtVerify(token, key, {
       algorithms: ["HS256"],
     });
-    
+
     // Type assertion with validation
     const payload: any = verified.payload;
-    
+
     if (!payload.userId || !payload.walletAddress || !payload.username) {
       throw new Error("Invalid token payload");
     }
-    
+
     return {
       jti: payload.jti,
       iat: payload.iat,
@@ -64,15 +64,15 @@ export async function verifyToken(token: string): Promise<UserJwtPayload> {
 /**
  * Get token from request cookies
  */
-export function getTokenFromRequest(request: Request): string | null {
+export function getTokenFromRequest (request: Request): string | null {
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;
-  
+
   const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
     const [name, value] = cookie.trim().split("=");
     acc[name] = value;
     return acc;
   }, {} as Record<string, string>);
-  
-  return cookies["auth-token"] || null;
+
+  return cookies["auth-token"] || cookies["authjs.session-token"] || null;
 }

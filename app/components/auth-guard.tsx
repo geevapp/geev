@@ -1,37 +1,26 @@
-'use client';
+"use client";
 
-import { useAppContext } from '@/contexts/app-context';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import type React from "react";
+import { useAppContext } from "@/contexts/app-context";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 interface AuthGuardProps {
   children: React.ReactNode;
+  requireAuth?: boolean;
 }
 
-export function AuthGuard({ children }: AuthGuardProps) {
-  const { user, isHydrated } = useAppContext();
+export function AuthGuard({ children, requireAuth = true }: AuthGuardProps) {
+  const { user } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
-    // Only redirect after hydration is complete and we know user is not logged in
-    if (isHydrated && !user) {
-      router.push('/login');
+    if (requireAuth && !user) {
+      router.push("/login");
     }
-  }, [user, isHydrated, router]);
+  }, [user, requireAuth, router]);
 
-  // Show loading while context is hydrating
-  if (!isHydrated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-[#101828]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6900] mx-auto mb-4"></div>
-          <p className="text-gray-500 dark:text-[#99A1AF]">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
+  if (requireAuth && !user) {
     return null;
   }
 

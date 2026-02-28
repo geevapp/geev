@@ -1,8 +1,9 @@
+import { apiError, apiSuccess } from '@/lib/api-response';
+
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { apiSuccess, apiError } from '@/lib/api-response';
 
-export async function GET(
+export async function GET (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -24,15 +25,15 @@ export async function GET(
       // Calculate stats using database queries
       const [totalPosts, totalEntries, wins] = await Promise.all([
         prisma.post.count({
-          where: { creatorId: id },
+          where: { userId: id },
         }),
         prisma.entry.count({
           where: { userId: id },
         }),
         prisma.entry.count({
-          where: { 
-            userId: id, 
-            isWinner: true 
+          where: {
+            userId: id,
+            isWinner: true
           },
         }),
       ]);

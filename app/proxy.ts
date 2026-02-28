@@ -1,6 +1,6 @@
-import { auth } from "./auth";
 import { NextResponse } from "next/server";
-import { authMiddleware } from "./lib/auth-middleware";
+import { auth } from "@/lib/auth";
+import { authMiddleware } from "@/lib/auth-middleware";
 
 export default auth(async (req) => {
   const isLoggedIn = !!req.auth;
@@ -19,7 +19,7 @@ export default auth(async (req) => {
     "/api/posts", // All posts routes except GET
     "/api/wallet",
   ];
-  
+
   const publicRoutes = [
     "/",
     "/login",
@@ -33,7 +33,7 @@ export default auth(async (req) => {
   const isProtected = protectedRoutes.some((route) =>
     pathname.startsWith(route),
   );
-  
+
   const isPublic = publicRoutes.some((route) =>
     pathname === route || (route !== "/" && pathname.startsWith(route)),
   );
@@ -48,7 +48,7 @@ export default auth(async (req) => {
       response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       return response;
     }
-    
+
     // Apply custom auth middleware for protected API routes
     if (isProtected) {
       // Special case: Allow GET requests to /api/posts (public)
@@ -57,7 +57,7 @@ export default auth(async (req) => {
         response.headers.set('Access-Control-Allow-Origin', '*');
         return response;
       }
-      
+
       // Apply custom authentication middleware
       return await authMiddleware(req);
     }

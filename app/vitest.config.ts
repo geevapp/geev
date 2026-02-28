@@ -11,6 +11,11 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules/', 'tests/', '**/*.config.*', '**/types.ts'],
     },
+    server: {
+      deps: {
+        inline: ['next']
+      }
+    },
   },
   resolve: {
     alias: {

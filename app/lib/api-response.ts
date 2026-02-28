@@ -1,7 +1,6 @@
 /**
  * API Response utilities for consistent API responses
  */
-
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -12,7 +11,7 @@ export interface ApiResponse<T = any> {
 /**
  * Create a successful API response
  */
-export function apiSuccess<T>(data: T, message?: string, status: number = 200): Response {
+export function apiSuccess<T> (data: T, message?: string, status: number = 200): Response {
   return Response.json({
     success: true,
     data,
@@ -23,7 +22,7 @@ export function apiSuccess<T>(data: T, message?: string, status: number = 200): 
 /**
  * Create an error API response
  */
-export function apiError(message: string, status: number = 400): Response {
+export function apiError (message: string, status: number = 400): Response {
   return Response.json({
     success: false,
     error: message,

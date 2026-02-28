@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { JWT } from "next-auth/jwt";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { PrismaAdapter } from "@auth/prisma-adapter"
 
 // JWT payload structure
 interface UserJWT extends JWT {
@@ -23,7 +24,7 @@ interface UserSession {
 }
 
 // Wallet signature validation (mock for now)
-async function verifyWalletSignature(
+async function verifyWalletSignature (
   walletAddress: string,
   signature: string,
   message: string
@@ -32,13 +33,14 @@ async function verifyWalletSignature(
   // 1. Verify the signature using the wallet's public key
   // 2. Check that the signed message matches what we sent
   // 3. Validate the signature is recent (timestamp check)
-  
+
   // Mock validation - in production, use proper signature verification
   console.log(`Verifying signature for wallet: ${walletAddress}`);
   return signature.length > 10; // Simple validation for demo
 }
 
 export const authConfig = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     Credentials({
       name: "Wallet",
@@ -49,14 +51,15 @@ export const authConfig = {
         username: { label: "Username", type: "text", optional: true },
         email: { label: "Email", type: "email", optional: true },
       },
-      async authorize(credentials) {
+      async authorize (credentials) {
+        // This will be handled in the custom signIn callback
         const parsedCredentials = z
           .object({
             walletAddress: z.string().min(1),
             signature: z.string().min(1),
             message: z.string().min(1),
-            username: z.string().optional(),
-            email: z.string().email().optional(),
+            username: z.string().optional().nullable(),
+            email: z.string().email().optional().nullable(),
           })
           .safeParse(credentials);
 
@@ -69,7 +72,7 @@ export const authConfig = {
         try {
           // Verify wallet signature
           const isValidSignature = await verifyWalletSignature(walletAddress, signature, message);
-          
+
           if (!isValidSignature) {
             throw new Error("Invalid wallet signature");
           }
@@ -118,7 +121,7 @@ export const authConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }): Promise<JWT> {
+    async jwt ({ token, user }): Promise<JWT> {
       if (user) {
         token.id = user.id;
         // Store walletAddress and username in token
@@ -127,7 +130,7 @@ export const authConfig = {
       }
       return token;
     },
-    async session({ session, token }): Promise<any> {
+    async session ({ session, token }): Promise<any> {
       if (token) {
         (session.user as any) = {
           id: token.id as string,
@@ -143,7 +146,7 @@ export const authConfig = {
     error: "/login",
   },
   session: {
-    strategy: "jwt",
+    strategy: "database",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET || "your-secret-key-change-in-production",

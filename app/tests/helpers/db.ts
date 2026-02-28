@@ -1,8 +1,9 @@
-import { prisma } from '@/lib/prisma';
-import type { User, Post, Entry } from '@prisma/client';
-import { Prisma } from '@prisma/client';
+import type { Post, User } from '@prisma/client';
 
-export async function createTestUser(overrides?: Partial<User>): Promise<User> {
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+
+export async function createTestUser (overrides?: Partial<User>): Promise<User> {
   return await prisma.user.create({
     data: {
       walletAddress: `G${Math.random().toString(36).substring(7).toUpperCase()}`,
@@ -14,19 +15,15 @@ export async function createTestUser(overrides?: Partial<User>): Promise<User> {
   });
 }
 
-export async function createTestPost(
+export async function createTestPost (
   userId: string,
   overrides?: Partial<Post>,
 ): Promise<Post> {
-  const title = overrides?.title || 'Test Giveaway Post';
-  const slug = overrides?.slug || title.toLowerCase().replace(/\s+/g, '-');
-
   return await prisma.post.create({
     data: {
-      creatorId: userId,
+      userId: userId,
       type: 'giveaway',
-      title,
-      slug,
+      title: 'Test Giveaway Post',
       description:
         'This is a test description for a giveaway post. It needs to be at least 50 characters long.',
       category: 'electronics',
@@ -38,23 +35,7 @@ export async function createTestPost(
   });
 }
 
-export async function createTestEntry(
-  userId: string,
-  postId: string,
-  overrides?: Partial<Entry>,
-): Promise<Entry> {
-  return await prisma.entry.create({
-    data: {
-      userId,
-      postId,
-      content: 'This is a test entry content for a giveaway post.',
-      proofUrl: null,
-      ...overrides,
-    },
-  });
-}
-
-export async function seedTestDatabase() {
+export async function seedTestDatabase () {
   const user1 = await createTestUser({
     name: 'Alice',
     walletAddress: 'GALICE123',

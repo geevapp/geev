@@ -1,213 +1,211 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Gift, Plus, Trophy, Users, Wallet } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+  ChevronLeft,
+  ChevronRight,
+  Gift,
+  Home,
+  Plus,
+  Settings,
+  TrendingUp,
+  Trophy,
+  Users,
+  Wallet,
+} from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { UserRankBadge } from '@/components/user-rank-badge';
 import { cn } from '@/lib/utils';
-import { navigationItems } from '@/lib/navigation-items';
 import { useAppContext } from '@/contexts/app-context';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
 export function DesktopSidebar() {
+  const { user, setShowCreateModal } = useAppContext(); // Use setShowCreateModal instead of local state
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
-  const { user, setShowCreateModal, isHydrated } = useAppContext();
 
-  if (!isHydrated) return null;
+  const navigation = [
+    { name: 'Feed', href: '/feed', icon: Home },
+    { name: 'Activity', href: '/activity', icon: TrendingUp },
+    { name: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  const stats = [
+    { label: 'Posts', value: user?._count.posts || 0, icon: Gift },
+    { label: 'Followers', value: user?._count.followers || 0, icon: Users },
+    { label: 'Badges', value: user?._count.badges || 0, icon: Trophy },
+  ];
 
   return (
-    <aside className="hidden md:flex flex-col w-64 fixed left-0 top-1 h-screen border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 transition-all duration-300">
-      {/* Profile Card */}
-      {user ? (
-        <div className="mb-6 p-[2px] rounded-3xl bg-linear-to-br from-blue-500 via-purple-500 to-orange-500">
-          <div className="bg-[#0f172a] rounded-[22px] p-5 flex flex-col gap-5">
-            {/* Header: Avatar & Info */}
-            <div className="flex items-center gap-4">
-              <Link href={`/profile/${user.username}`}>
-                <Avatar className="h-14 w-14 border-2 border-white/10 shadow-sm">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
-                    {getInitials(user.name)}
-                  </AvatarFallback>
-                </Avatar>
-              </Link>
+    <div
+      className={cn(
+        'fixed left-0 top-0 flex flex-col h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 z-40',
+        isCollapsed ? 'w-16' : 'w-64',
+      )}
+    >
+      {/* Collapse Toggle */}
+      <div className="flex items-center justify-end p-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
 
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <div>
-                  <h3 className="font-semibold text-white text-sm leading-5 truncate">
-                    {user.name}
-                  </h3>
-                  <p className="text-sm text-slate-400 font-medium truncate mt-1">
-                    @{user.username}
-                  </p>
-                </div>
+      {/* User Profile Section */}
+      {user && (
+        <div className={cn('px-4 pb-6', isCollapsed && 'px-2')}>
+          <div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-blue-500 via-orange-500 to-pink-500 p-[1px] shadow-lg">
+            <Card className="bg-white dark:bg-gray-900 rounded-lg">
+              <CardContent className={cn('p-4', isCollapsed && 'p-2')}>
+                {isCollapsed ? (
+                  <div className="flex justify-center">
+                    <Link href={`/profile/${user.id}`}>
+                      <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-blue-300 transition-all">
+                        <AvatarImage
+                          src={user.avatarUrl || '/placeholder.svg'}
+                          alt={user.name}
+                        />
+                        <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-orange-500 text-white">
+                          {user.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-3">
+                    <Link href={`/profile/${user.id}`}>
+                      <Avatar className="h-12 w-12 cursor-pointer hover:ring-2 hover:ring-blue-300 transition-all">
+                        <AvatarImage
+                          src={user.avatarUrl || '/placeholder.svg'}
+                          alt={user.name}
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-orange-500 text-white">
+                          {user.name
+                            ?.split(' ')
+                            .map((n) => n[0])
+                            .join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/profile/${user.id}`}
+                        className="text-sm font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 transition-colors block truncate"
+                      >
+                        {user.name}
+                      </Link>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        @{user.username}
+                      </p>
+                      <div className="mt-2">
+                        <UserRankBadge rank={user.rank} />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
-                {/* Rank Badge */}
-                <div className="inline-flex items-center gap-1.5 bg-[#7E2A0C] rounded-full px-3 py-1 w-fit">
-                  <Trophy className="h-3 w-3 text-[#FFD6A7]" />
-                  <span className="text-[10px] font-medium text-[#FFD6A7] tracking-wide whitespace-nowrap">
-                    Level {user.rank.level} {user.rank.title}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Wallet Balance */}
-            <div className="max-w-[190px] flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4">
-              <span className="text-xs text-slate-400">Wallet Balance</span>
-              <div className="flex items-center gap-2 bg-[#FF6900] text-white px-2 py-0.5 rounded-full text-xs font-medium shadow-sm">
-                <Wallet className="h-4 w-4" />
-                <span>${user.walletBalance.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Guest Profile Card */
-        <div className="mb-6 p-[2px] rounded-3xl bg-linear-to-br from-blue-500 via-purple-500 to-orange-500">
-          <div className="bg-[#0f172a] rounded-[22px] p-5 flex flex-col gap-5">
-            <div className="flex items-center gap-4">
-              <Link href="/login">
-                <Avatar className="h-14 w-14 border-2 border-white/10 shadow-sm">
-                  <AvatarFallback className='bg-slate-800 text-slate-300 font-medium'>GU</AvatarFallback>
-                </Avatar>
-              </Link>
-
-              <div className="flex flex-col gap-1.5 min-w-0">
-                <div>
-                  <h3 className="font-semibold text-white text-sm leading-5 truncate">
-                    Guest User
-                  </h3>
-                  <p className="text-sm text-slate-400 font-medium truncate mt-1">
-                    @guest
-                  </p>
-                </div>
-              </div>
-            </div>
-            {/* No Wallet or Stats for Guest */}
+                {!isCollapsed && (
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Wallet Balance
+                      </span>
+                      <Link href="/wallet">
+                        <Badge className="text-xs bg-orange-500 text-white border-0 hover:bg-orange-600 transition-all cursor-pointer">
+                          <Wallet className="w-3 h-3 mr-1" />$
+                          {/* {user.walletBalance?.toFixed(2)} */}
+                          00.00
+                        </Badge>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}
 
-      {/* Navigation Items */}
-      <nav className="flex-1 flex flex-col gap-1 mb-6">
-        {navigationItems.map((item) => {
-          const href =
-            item.label === 'Profile' && user
-              ? `/profile/${user.username}`
-              : item.href;
-          const isActive = pathname === href || pathname.startsWith(`${href}/`);
-
+      {/* Navigation */}
+      <nav className="flex-1 px-4 space-y-1">
+        {navigation.map((item) => {
+          const isActive = pathname === item.href;
           return (
-            <Link
-              key={item.href}
-              href={href}
-              className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
-                isActive
-                  ? 'text-orange-600 dark:text-orange-500 font-semibold'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-slate-200',
-              )}
-            >
-              <item.icon
+            <Link key={item.name} href={item.href}>
+              <Button
+                variant="ghost"
                 className={cn(
-                  'h-5 w-5',
+                  'w-full justify-start hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
+                  isCollapsed ? 'px-2 justify-center h-10 w-10' : 'px-4 h-10',
                   isActive &&
-                  'fill-current text-orange-600 dark:text-orange-500',
+                    'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100',
                 )}
-              />
-              <span>{item.label}</span>
+              >
+                <item.icon className={cn('h-4 w-4', !isCollapsed && 'mr-3')} />
+                {!isCollapsed && <span className="text-sm">{item.name}</span>}
+              </Button>
             </Link>
           );
         })}
       </nav>
 
       {/* Create Post Button */}
-      {user ? (
-        <Button
-          onClick={() => setShowCreateModal(true)}
-          className="w-full bg-[#FF6900] hover:bg-[#FF6900]/80 text-white shadow-lg shadow-orange-600/20 mb-4 h-8 rounded-lg text-sm font-medium tracking-wide"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Create Post
-        </Button>
-      ) : (
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-full mb-4 cursor-not-allowed" tabIndex={0}>
-                <Button
-                  disabled
-                  className="w-full bg-slate-100 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border border-dashed border-slate-300 dark:border-slate-800 shadow-none h-8 rounded-lg text-sm font-medium tracking-wide pointer-events-none"
-                >
-                  <Plus className="h-4 w-4 mr-2 opacity-50" />
-                  Create Post
-                </Button>
-              </div >
-            </TooltipTrigger >
-            <TooltipContent side="bottom" className="dark:bg-slate-800 dark:text-slate-200 font-medium">
-              <p>Sign in to create posts</p>
-            </TooltipContent>
-          </Tooltip >
-        </TooltipProvider >
-      )
-      }
+      {!isCollapsed && user && (
+        <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-800">
+          <Button
+            onClick={() => setShowCreateModal(true)} // Use context method instead of dispatch
+            className="w-full cursor-pointer bg-orange-500 hover:bg-orange-600 text-white border-0"
+            size="sm"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Post
+          </Button>
+        </div>
+      )}
 
-      {/* User Stats */}
-      {
-        user && (
-          <div className="mt-auto pt-6 border-t border-slate-200 dark:border-slate-800">
-            <h4 className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
-              Your Stats
-            </h4>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                  <Gift className="h-4 w-4" />
-                  Posts
-                </span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  {user.postsCount}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                  <Users className="h-4 w-4" />
-                  Followers
-                </span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  {user.followersCount}
+      {/* Stats Section */}
+      {!isCollapsed && user && (
+        <div className="px-4 py-6 border-t border-gray-200 dark:border-gray-800">
+          <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+            Your Stats
+          </h3>
+          <div className="space-y-3">
+            {stats.map((stat) => (
+              <div
+                key={stat.label}
+                className="flex items-center justify-between"
+              >
+                <div className="flex items-center space-x-2">
+                  <stat.icon className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {stat.label}
+                  </span>
+                </div>
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {stat.value}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                  <Trophy className="h-4 w-4" />
-                  Badges
-                </span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  {user.badges.length}
-                </span>
-              </div>
-            </div>
+            ))}
           </div>
-        )
-      }
-    </aside >
+        </div>
+      )}
+    </div>
   );
 }

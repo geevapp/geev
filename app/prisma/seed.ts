@@ -1,8 +1,8 @@
-import { PrismaClient, PostType, PostStatus, SelectionMethod } from '@prisma/client';
+import { PostStatus, PostType, PrismaClient, SelectionMethod } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-async function main() {
+async function main () {
   console.log('Seeding database...');
 
   // Create sample badges
@@ -94,7 +94,7 @@ async function main() {
   // Create sample posts
   const posts = [
     {
-      creatorId: createdUsers[0].id,
+      userId: createdUsers[0].id,
       type: PostType.giveaway,
       title: '🎁 $500 USDC Giveaway for New Developers!',
       description: 'Celebrating our community growth! I\'m giving away $500 USDC to help new developers get started. Share your coding journey and what you\'re building!',
@@ -106,7 +106,7 @@ async function main() {
       endsAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
     },
     {
-      creatorId: createdUsers[1].id,
+      userId: createdUsers[1].id,
       type: PostType.giveaway,
       title: '🎨 Design Tutorial Video + Free Resources',
       description: 'Just dropped my latest design tutorial! Learn advanced Figma techniques and get access to my premium design system. Giving away 5 copies of my complete UI kit to lucky winners!',

@@ -9,24 +9,9 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String   @id @default(uuid())
-  walletAddress String   @unique @map("wallet_address") @db.VarChar(56)
-  name          String   @db.VarChar(255)
-  bio           String?
-  avatarUrl     String?  @map("avatar_url")
-  xp            Int      @default(0)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-
-  posts           Post[]           @relation("PostCreator")
-  entries         Entry[]
-  comments        Comment[]
-  interactions    Interaction[]
-  badges          UserBadge[]
-  analyticsEvents AnalyticsEvent[]
-
-  @@map("users")
+enum MediaType {
+  image
+  video
 }
 
 enum PostType {
@@ -43,33 +28,193 @@ enum PostStatus {
 enum SelectionMethod {
   random
   manual
+  firstcome
+}
+
+enum InteractionType {
+  like
+  burn
+  share
+}
+
+enum ActivityType {
+  post_created
+  entry_submitted
+  contribution_made
+}
+
+model Activity {
+  id          String       @id @default(uuid())
+  userId      String
+  postId      String
+  type        ActivityType
+  description String?
+  amount      Float        @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([postId])
+  @@map("activities")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  rankId        String?   @map("rank_id")
+  username      String?   @unique @db.VarChar(50)
+  email         String?   @unique @db.VarChar(255)
+  walletAddress String    @unique @map("wallet_address") @db.VarChar(56)
+  name          String    @db.VarChar(255)
+  bio           String?
+  avatarUrl     String?   @map("avatar_url")
+  xp            Int       @default(0)
+  // walletBalance Float    @default(0) @map("wallet_balance")
+  emailVerified DateTime? @map("email_verified")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  isVerified    Boolean   @default(false) @map("verified")
+
+  posts           Post[]           @relation("PostCreator")
+  entries         Entry[]
+  comments        Comment[]
+  interactions    Interaction[]
+  badges          UserBadge[]
+  analyticsEvents AnalyticsEvent[]
+
+  followings        Follow[]           @relation("UserFollowing")
+  followers         Follow[]           @relation("UserFollower")
+  rank              Rank?              @relation(fields: [rankId], references: [id])
+  helpContributions HelpContribution[]
+  accounts          Account[]
+  sessions          Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  identifier String
+  token      String
+  expires    DateTime
+  user       User?    @relation(fields: [userId], references: [id])
+  userId     String?
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Follow {
+  id          String  @id @default(uuid())
+  userId      String
+  followingId String?
+
+  user      User? @relation("UserFollowing", fields: [userId], references: [id], onDelete: Cascade)
+  following User? @relation("UserFollower", fields: [followingId], references: [id])
+
+  @@unique([userId, followingId])
+  @@index([userId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Media {
+  id        String    @id @default(uuid())
+  type      MediaType
+  url       String    @db.VarChar(255)
+  thumbnail String?   @db.VarChar(255)
+
+  @@map("media")
 }
 
 model Post {
-  id              String          @id @default(uuid())
-  creatorId       String          @map("creator_id")
-  type            PostType
-  slug            String
-  title           String          @db.VarChar(200)
-  description     String
-  category        String          @db.VarChar(50)
-  status          PostStatus      @default(open)
-  selectionMethod SelectionMethod @default(random) @map("selection_method")
-  winnerCount     Int             @default(1) @map("winner_count")
-  media           Json?
-  endsAt          DateTime        @map("ends_at")
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  id                String          @id @default(uuid())
+  userId            String          @map("creator_id")
+  type              PostType
+  slug              String
+  title             String          @db.VarChar(200)
+  description       String?
+  category          String          @db.VarChar(50)
+  status            PostStatus      @default(open)
+  selectionMethod   SelectionMethod @default(random) @map("selection_method")
+  entryRequirements Json?           @map("entry_requirements")
+  winnerCount       Int             @default(1) @map("winner_count")
+  currency          String?         @map("currency") @db.VarChar(10)
+  prizeAmount       Float?          @map("prize_amount")
+  targetAmount      Float?          @map("target_amount")
+  proofRequired     Boolean         @default(false) @map("proof_required")
+  endsAt            DateTime        @map("ends_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
 
-  creator      User          @relation("PostCreator", fields: [creatorId], references: [id], onDelete: Cascade)
-  entries      Entry[]
-  interactions Interaction[]
+  user          User               @relation("PostCreator", fields: [userId], references: [id], onDelete: Cascade)
+  entries       Entry[]
+  interactions  Interaction[]
+  contributions HelpContribution[]
+  media         PostMedia[]
+  comments      Comment[]
 
-  @@index([creatorId])
+  @@index([userId])
   @@index([status])
   @@index([category])
   @@index([createdAt(sort: Desc)])
   @@map("posts")
+}
+
+model PostMedia {
+  id        String    @id @default(uuid())
+  postId    String    @map("post_id")
+  type      MediaType
+  url       String    @db.VarChar(255)
+  thumbnail String?   @db.VarChar(255)
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("post_media")
+}
+
+model HelpContribution {
+  id            String   @id @default(uuid())
+  postId        String   @map("post_id")
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Float
+  message       String?  @map("message")
+  currency      String?  @map("currency")
+  parentId      String?  @map("parent_id")
+  contributedAt DateTime @map("contributed_at")
+  isAnonymous   Boolean? @map("is_anonymous")
+  post          Post     @relation(fields: [postId], references: [id])
+
+  @@index([postId])
+  @@index([userId])
+  @@map("help_contributions")
 }
 
 model Entry {
@@ -93,23 +238,20 @@ model Entry {
 
 model Comment {
   id        String   @id @default(uuid())
-  entryId   String   @map("entry_id")
+  entryId   String?  @map("entry_id")
   userId    String   @map("user_id")
+  postId    String?  @map("post_id")
   content   String
   parentId  String?  @map("parent_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  entry   Entry     @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  entry   Entry?    @relation(fields: [entryId], references: [id], onDelete: Cascade)
   user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    Post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
   parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies Comment[] @relation("CommentReplies")
 
   @@map("comments")
-}
-
-enum InteractionType {
-  like
-  burn
 }
 
 model Interaction {
@@ -127,11 +269,24 @@ model Interaction {
   @@map("interactions")
 }
 
+model Rank {
+  id        String @id @db.VarChar(50)
+  level     Int    @default(1)
+  title     String
+  color     String
+  minPoints Int    @map("min_points")
+  maxPoints Int    @map("max_points")
+  users     User[]
+
+  @@map("ranks")
+}
+
 model Badge {
   id          String  @id @db.VarChar(50)
   name        String  @db.VarChar(100)
   description String?
-  tier        String  @db.VarChar(20)
+  color       String  @db.VarChar(50)
+  tier        String? @db.VarChar(20)
   iconUrl     String? @map("icon_url")
   criteria    Json?
 
@@ -146,7 +301,7 @@ model UserBadge {
   awardedAt DateTime @default(now()) @map("awarded_at")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge Badge @relation(fields: [badgeId], references: [id])
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
   @@id([userId, badgeId])
   @@map("user_badges")

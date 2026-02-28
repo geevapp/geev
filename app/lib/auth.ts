@@ -1,7 +1,11 @@
+import NextAuth from "next-auth";
 // Auth utilities for database integration
 // Replace this with actual Prisma client when database is set up
 import { NextRequest } from 'next/server';
+import { authConfig } from "./auth-config";
 import { prisma } from './prisma';
+
+export const { handlers, signIn, signOut, auth } = NextAuth(authConfig);
 
 const MOCK_MODE = {
     loggedIn: true,           // change to false → simulates not logged in
@@ -12,14 +16,14 @@ const MOCK_MODE = {
 const getCurrentUser = async (request: NextRequest) => {
     if (MOCK_MODE.loggedIn) {
         const mockWalletFromHeader = request.headers.get('x-mock-wallet');
-        
+
         // Try to find user in database first
         try {
             if (mockWalletFromHeader) {
                 const dbUser = await prisma.user.findUnique({
                     where: { walletAddress: mockWalletFromHeader }
                 });
-                
+
                 if (dbUser) {
                     return {
                         id: dbUser.id,
@@ -36,7 +40,7 @@ const getCurrentUser = async (request: NextRequest) => {
         } catch (error) {
             console.log('Database not available, using mock user');
         }
-        
+
         // Fallback to mock user
         const MOCK_USER = {
             id: 'usr_1',
@@ -48,7 +52,7 @@ const getCurrentUser = async (request: NextRequest) => {
             createdAt: new Date('2025-10-01'),
             updatedAt: new Date(),
         };
-        
+
         return MOCK_USER;
     }
     return null;

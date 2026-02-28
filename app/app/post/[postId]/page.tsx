@@ -1,416 +1,603 @@
-'use client';
+"use client";
 
-import { use } from 'react';
-import { useAppContext } from '@/contexts/app-context';
-import { MediaCarousel } from '@/components/media-carousel';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Share2, Edit, Heart, Flame, MessageCircle, Gift, CheckCircle2, ArrowLeft, Trash2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { useState } from 'react';
-import { PostCategory } from '@/lib/types';
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  DollarSign,
+  Flame,
+  Gift,
+  Share2,
+  Target,
+  Users,
+  X,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useParams, useRouter } from "next/navigation";
 
-interface PageProps {
-  params: Promise<{ postId: string }>;
-}
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CommentsSection } from "@/components/comments-section";
+import { ContributionForm } from "@/components/contribution-form";
+import { EntryForm } from "@/components/entry-form";
+import Link from "next/link";
+import { Progress } from "@/components/ui/progress";
+import { UserRankBadge } from "@/components/user-rank-badge";
+import { useAppContext } from "@/contexts/app-context";
+import { useState } from "react";
 
-export default function PostDetailPage({ params }: PageProps) {
-  const { postId } = use(params);
-  const { posts, users, user: currentUser, incrementShare } = useAppContext();
-
-  const post = posts.find((p) => p.id === postId);
-
-  if (!post) {
-    notFound();
-  }
-
-  const creator = post.author;
-  const isCreator = currentUser?.id === post.authorId || currentUser?.id === post.creatorId;
-
-  // Format dates
-  const createdAt = post.createdAt instanceof Date ? post.createdAt : new Date(post.createdAt);
-  const endsAt = post.endsAt ? (post.endsAt instanceof Date ? post.endsAt : new Date(post.endsAt)) : null;
-
-  // Get creator initials for avatar fallback
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  // Get status badge
-  const getStatusBadge = () => {
-    const statusStr = String(post.status);
-
-    if (statusStr === 'open' || statusStr === 'active') {
-      return { variant: 'default' as const, label: 'Open', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' };
-    }
-    if (statusStr === 'in-progress') {
-      return { variant: 'default' as const, label: 'In Progress', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' };
-    }
-    if (statusStr === 'completed') {
-      return { variant: 'secondary' as const, label: 'Completed', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' };
-    }
-    if (statusStr === 'cancelled') {
-      return { variant: 'destructive' as const, label: 'Cancelled', className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' };
-    }
-    return { variant: 'outline' as const, label: statusStr, className: '' };
-  };
-
-  const statusBadge = getStatusBadge();
-
-  // Get category name
-  const getCategoryName = () => {
-    if (post.category) {
-      switch (post.category) {
-        case PostCategory.Giveaway:
-          return 'Giveaway';
-        case PostCategory.HelpRequest:
-          return 'Help Request';
-        case PostCategory.SkillShare:
-          return 'Skill Share';
-        default:
-          return String(post.category);
-      }
-    }
-    return post.type === 'giveaway' ? 'Giveaway' : 'Help Request';
-  };
-
-  const categoryName = getCategoryName();
-  const isGiveaway = post.type === 'giveaway';
-
-  // Handle share
-  const handleShare = async () => {
-    const url = `${window.location.origin}/post/${post.id}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: post.title,
-          text: post.description,
-          url: url,
-        });
-        incrementShare(post.id);
-      } catch (err) {
-        // User cancelled share or error occurred
-        console.log('Share cancelled or failed');
-      }
-    } else {
-      // Fallback: copy to clipboard
-      try {
-        await navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard!');
-        incrementShare(post.id);
-      } catch (err) {
-        console.error('Failed to copy link');
-      }
-    }
-  };
+export default function PostPage() {
+  const { posts, user, burnPost } = useAppContext();
+  const params = useParams();
+  const postId = params.postId as string;
+  const [isBurned, setIsBurned] = useState(false);
+  const [showStats, setShowStats] = useState(false);
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(
+    null,
+  );
+  const [showContributionForm, setShowContributionForm] = useState(false);
 
   const router = useRouter();
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const post = posts.find((p) => p.id === postId);
+  const canInteract = user && user.id !== post?.userId;
 
-  const hasEntries = (post.entriesCount || post.entries?.length || 0) > 0;
+  if (!post) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 text-center">
+        <h1 className="text-2xl font-bold mb-4">Post Not Found</h1>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          The post you're looking for doesn't exist or has been removed.
+        </p>
+        <Link href="/feed">
+          <Button>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Feed
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
-  const handleDeletePost = async () => {
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/posts/${post.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete post');
-      }
-
-      toast.success('Post deleted');
-      // Close dialog handled by unmount/redirect, but good practice if redirect delays
-      setIsDeleteDialogOpen(false); 
-      router.push('/feed');
-    } catch (error) {
-      console.error('Error deleting post:', error);
-      toast.error('Failed to delete post');
-      setIsDeleting(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800";
+      case "completed":
+        return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800";
+      case "cancelled":
+        return "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800";
+      case "expired":
+        return "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
     }
+  };
+
+  const getProgressPercentage = () => {
+    if (
+      post.type === "help-request" &&
+      post.targetAmount &&
+      post.currentAmount
+    ) {
+      return Math.min((post.currentAmount / post.targetAmount) * 100, 100);
+    }
+    return 0;
+  };
+
+  const handleAuthRequiredAction = (action: () => void) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    action();
+  };
+
+  const handleBurn = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleAuthRequiredAction(() => {
+      if (!isBurned) {
+        burnPost(post.id);
+        setIsBurned(true);
+      }
+    });
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (navigator.share) {
+      navigator.share({
+        title: post.title,
+        text: post.description,
+        url: `${window.location.origin}/post/${post.id}`,
+      });
+    } else {
+      navigator.clipboard.writeText(
+        `${window.location.origin}/post/${post.id}`,
+      );
+    }
+  };
+
+  const handleStatsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowStats(!showStats);
+  };
+
+  const handleCardClick = () => {
+    router.push(`/post/${post.id}`);
+  };
+
+  const handleInteractiveClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleMediaClick = (index: number) => {
+    if (post.media && post.media.length > 1) {
+      setSelectedMediaIndex(index);
+    }
+  };
+
+  const handlePrevMedia = () => {
+    if (selectedMediaIndex !== null && post.media) {
+      setSelectedMediaIndex(
+        selectedMediaIndex > 0 ? selectedMediaIndex - 1 : post.media.length - 1,
+      );
+    }
+  };
+
+  const handleNextMedia = () => {
+    if (selectedMediaIndex !== null && post.media) {
+      setSelectedMediaIndex(
+        selectedMediaIndex < post.media.length - 1 ? selectedMediaIndex + 1 : 0,
+      );
+    }
+  };
+
+  const closeOverlay = () => {
+    setSelectedMediaIndex(null);
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      {/* Back button */}
-      <Link
-        href="/feed"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Feed
-      </Link>
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-6">
-        <Link
-          href={`/profile/${creator.id || post.authorId}`}
-          className="flex items-center gap-4 group"
-        >
-          <Avatar className="h-16 w-16 ring-2 ring-border group-hover:ring-primary transition-all">
-            <AvatarImage src={creator.avatar} alt={creator.name} />
-            <AvatarFallback className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 text-xl font-bold">
-              {getInitials(creator.name)}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-xl font-bold group-hover:text-primary transition-colors">
-                {creator.name}
-              </h2>
-              {creator.isVerified && (
-                <CheckCircle2 className="h-5 w-5 text-blue-500" />
-              )}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {formatDistanceToNow(createdAt, { addSuffix: true })}
-            </p>
-          </div>
-        </Link>
-
-        <div className="flex gap-2 w-full sm:w-auto">
-          {isCreator && (
-            <Link href={`/post/${post.id}/edit`}>
-              <Button variant="outline" size="sm" className="flex-1 sm:flex-none flex items-center">
-                <Edit className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            </Link>
-          )}
-
-          {isCreator && !hasEntries && (
-            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive" size="sm" className="flex-1 sm:flex-none">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Are you sure?</DialogTitle>
-                  <DialogDescription>
-                    This cannot be undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
-                    Cancel
-                  </Button>
-                  <Button variant="destructive" onClick={handleDeletePost} disabled={isDeleting}>
-                    {isDeleting ? 'Deleting...' : 'Delete'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleShare}
-            className="flex-1 sm:flex-none"
-          >
-            <Share2 className="h-4 w-4 mr-2" />
-            Share
+    <>
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Back Button */}
+        <Link href="/feed">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Feed
           </Button>
+        </Link>
+        <div className="space-y-6 mt-6">
+          <div className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 rounded-lg">
+            <div className="p-6 space-y-4">
+              <div className="pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <Link href={`/profile/${post.author.id}`}>
+                      <Avatar className="w-10 h-10 cursor-pointer">
+                        <AvatarImage
+                          src={post.author.avatar || "/placeholder.svg"}
+                          alt={post.author.name}
+                        />
+                        <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
+                          {post.author.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Link>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/profile/${post.author.id}`}
+                          className="font-medium text-gray-900 dark:text-gray-100"
+                        >
+                          {post.author.name}
+                        </Link>
+                        <UserRankBadge
+                          rank={post.author.rank}
+                          showLevel={false}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <span>@{post.author.username}</span>
+                        <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                        <span>{post.createdAt.toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      className={`${getStatusColor(
+                        post.status,
+                      )} text-xs font-medium border`}
+                    >
+                      {post.status}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700"
+                    >
+                      {post.type === "giveaway" ? (
+                        <Gift className="w-3 h-3" />
+                      ) : (
+                        <Target className="w-3 h-3" />
+                      )}
+                      {post.type === "giveaway" ? "Giveaway" : "Help Request"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">
+                    {post.title}
+                  </h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {post.description}
+                  </p>
+                </div>
+
+                {post.media && post.media.length > 0 && (
+                  <div className="space-y-3">
+                    {post.media.length === 1 ? (
+                      <div className="rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        {post.media[0].type === "image" ? (
+                          <img
+                            src={post.media[0].url || "/placeholder.svg"}
+                            alt="Post media"
+                            className="w-full aspect-square object-cover"
+                          />
+                        ) : (
+                          <div className="relative aspect-square">
+                            <video
+                              src={post.media[0].url}
+                              controls
+                              className="w-full h-full object-cover"
+                              poster={post.media[0].thumbnail}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {post.media.map((media, index) => (
+                          <div
+                            key={media.id}
+                            className="relative rounded-lg overflow-hidden aspect-square bg-gray-100 dark:bg-gray-800 cursor-pointer"
+                            onClick={() => handleMediaClick(index)}
+                          >
+                            {media.type === "image" ? (
+                              <img
+                                src={media.url || "/placeholder.svg"}
+                                alt={`Post media ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="relative w-full h-full">
+                                <video
+                                  src={media.url}
+                                  className="w-full h-full object-cover"
+                                  poster={media.thumbnail}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                                  <div className="w-8 h-8 text-white drop-shadow-lg">
+                                    ▶
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Giveaway Details */}
+                {post.type === "giveaway" && (
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-xl p-4 space-y-3 border border-blue-100 dark:border-blue-800/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Gift className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          Prize: {post.prizeAmount} {post.currency}
+                        </span>
+                      </div>
+                      {post.endDate && (
+                        <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                          <Clock className="w-4 h-4" />
+                          Ends {post.endDate.toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+
+                    {post.entryRequirements && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">
+                          Requirements:
+                        </p>
+                        <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                          {post.entryRequirements.map((req, index) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                              {req}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {post.status === "active" && (
+                      <Button
+                        onClick={(e) => {
+                          handleInteractiveClick(e);
+                          handleAuthRequiredAction(() =>
+                            setShowEntryForm(true),
+                          );
+                        }}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-sm"
+                      >
+                        {user
+                          ? canInteract
+                            ? "Enter Giveaway"
+                            : "Your Giveaway"
+                          : "Sign in to Enter"}
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* Help Request Details */}
+                {post.type === "help-request" && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl p-4 space-y-3 border border-green-100 dark:border-green-800/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          Goal: ${post.targetAmount} {post.currency}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        ${post.currentAmount} raised
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Progress
+                        value={getProgressPercentage()}
+                        className="h-2 bg-gray-200 dark:bg-gray-700"
+                      />
+                      <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                        <span>
+                          {getProgressPercentage().toFixed(1)}% funded
+                        </span>
+                        <span>
+                          {post.contributions?.length || 0} contributors
+                        </span>
+                      </div>
+                    </div>
+
+                    {post.status === "active" &&
+                      (post.currentAmount || 0) < (post.targetAmount || 0) && (
+                        <Button
+                          onClick={(e) => {
+                            handleInteractiveClick(e);
+                            handleAuthRequiredAction(() =>
+                              setShowContributionForm(true),
+                            );
+                          }}
+                          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-sm"
+                        >
+                          <DollarSign className="w-4 h-4 mr-2" />
+                          {user
+                            ? canInteract
+                              ? "Contribute"
+                              : "Your Request"
+                            : "Sign in to Contribute"}
+                        </Button>
+                      )}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleBurn}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                        isBurned
+                          ? "text-red-600 bg-red-50 dark:bg-red-950/20"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      <Flame
+                        className={`w-4 h-4 ${isBurned ? "fill-current" : ""}`}
+                      />
+                      <span className="text-sm font-medium">
+                        {post.burnCount + (isBurned ? 1 : 0)}
+                      </span>
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleShare}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        {post.shareCount}
+                      </span>
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-500"
+                    >
+                      <Users className="w-4 h-4" />
+                      <span className="text-sm font-medium">
+                        {post.commentCount}
+                      </span>
+                    </Button>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleStatsClick}
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-gray-500"
+                  >
+                    <span className="text-sm">Stats</span>
+                    {showStats ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+
+                {showStats && (
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800/50 dark:to-gray-700/50 rounded-xl p-4 space-y-4 border border-gray-200 dark:border-gray-700">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <Users className="w-4 h-4" />
+                        <span className="font-medium">
+                          {post.entries?.length || 0} entries
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                        <Calendar className="w-4 h-4" />
+                        <span className="font-medium">
+                          Created {post.createdAt.toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {post.type === "giveaway" && (
+                      <div className="pt-2 border-t border-gray-200 dark:border-gray-600 space-y-2">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Selection:</span>{" "}
+                            {post.selectionType}
+                          </div>
+                          <div className="text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Winners:</span>{" "}
+                            {post.winnerCount}
+                          </div>
+                        </div>
+                        {post.proofRequired && (
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Proof required</span>{" "}
+                            for entry
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* All Comments */}
+        <CommentsSection post={post} showAll={true} />
+
+        {/* Media Overlay */}
+        {selectedMediaIndex !== null && post.media && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="relative w-full h-full max-w-4xl max-h-4xl p-4 flex items-center justify-center">
+              {/* Close Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={closeOverlay}
+                className="absolute top-4 right-4 z-10 bg-black/50 text-white hover:bg-black/70 rounded-full w-10 h-10 p-0"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+
+              {/* Navigation Buttons */}
+              {post.media.length > 1 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handlePrevMedia}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 text-white hover:bg-black/70 rounded-full w-10 h-10 p-0"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleNextMedia}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-black/50 text-white hover:bg-black/70 rounded-full w-10 h-10 p-0"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </>
+              )}
+
+              {/* Media Content */}
+              <div className="w-full h-full flex items-center justify-center">
+                {post.media[selectedMediaIndex].type === "image" ? (
+                  <img
+                    src={
+                      post.media[selectedMediaIndex].url || "/placeholder.svg"
+                    }
+                    alt={`Media ${selectedMediaIndex + 1}`}
+                    className="max-w-full max-h-full object-contain rounded-lg"
+                  />
+                ) : (
+                  <video
+                    src={post.media[selectedMediaIndex].url}
+                    controls
+                    autoPlay
+                    className="max-w-full max-h-full object-contain rounded-lg"
+                    poster={post.media[selectedMediaIndex].thumbnail}
+                  />
+                )}
+              </div>
+
+              {/* Media Counter */}
+              {post.media.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                  {selectedMediaIndex + 1} / {post.media.length}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Media Carousel */}
-      {post.media && post.media.length > 0 && (
-        <MediaCarousel images={post.media} className="mb-6" />
+      {/* Entry Form Modal */}
+      {post.type === "giveaway" && (
+        <EntryForm
+          open={showEntryForm}
+          onOpenChange={setShowEntryForm}
+          post={post}
+        />
       )}
 
-      {/* Post content */}
-      <Card className="mb-6">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <Badge
-              variant={isGiveaway ? 'default' : 'secondary'}
-              className={cn(
-                "text-sm",
-                isGiveaway
-                  ? 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300'
-                  : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
-              )}
-            >
-              {isGiveaway ? (
-                <Gift className="h-4 w-4 mr-1" />
-              ) : (
-                <Heart className="h-4 w-4 mr-1" />
-              )}
-              {categoryName}
-            </Badge>
-            <Badge
-              variant={statusBadge.variant}
-              className={cn("text-sm", statusBadge.className)}
-            >
-              {statusBadge.label}
-            </Badge>
-          </div>
-
-          <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">
-            {post.title}
-          </h1>
-
-          <p className="text-lg whitespace-pre-wrap text-muted-foreground leading-relaxed">
-            {post.description}
-          </p>
-
-          {/* Giveaway specific details */}
-          {isGiveaway && post.prizeAmount && (
-            <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-950/20 rounded-lg border border-orange-200 dark:border-orange-900">
-              <p className="text-sm font-medium text-orange-900 dark:text-orange-300 mb-1">
-                Prize Amount
-              </p>
-              <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-                {post.prizeAmount} {post.currency || 'XLM'}
-              </p>
-            </div>
-          )}
-
-          {/* Help request specific details */}
-          {!isGiveaway && post.targetAmount && (
-            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-900">
-              <div className="flex justify-between items-center mb-2">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                  Target Amount
-                </p>
-                <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
-                  {post.currentAmount || 0} / {post.targetAmount} {post.currency || 'XLM'}
-                </p>
-              </div>
-              <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-2">
-                <div
-                  className="bg-blue-600 dark:bg-blue-500 h-2 rounded-full transition-all"
-                  style={{ width: `${Math.min(((post.currentAmount || 0) / post.targetAmount) * 100, 100)}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Stats and timeline */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <MessageCircle className="h-4 w-4 text-muted-foreground" />
-              <p className="text-2xl font-bold">{post.entriesCount || post.entries?.length || 0}</p>
-            </div>
-            <p className="text-sm text-muted-foreground">Entries</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Heart className="h-4 w-4 text-muted-foreground" />
-              <p className="text-2xl font-bold">{post.likesCount || 0}</p>
-            </div>
-            <p className="text-sm text-muted-foreground">Likes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Flame className="h-4 w-4 text-muted-foreground" />
-              <p className="text-2xl font-bold">{post.burnCount || 0}</p>
-            </div>
-            <p className="text-sm text-muted-foreground">Burns</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4 text-center">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <Gift className="h-4 w-4 text-muted-foreground" />
-              <p className="text-2xl font-bold">{post.winnerCount || post.maxWinners || 1}</p>
-            </div>
-            <p className="text-sm text-muted-foreground">Winners</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Timeline */}
-      {endsAt && (
-        <Card className="mb-8">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Timeline</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Created</p>
-                <p className="font-medium">
-                  {createdAt.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Ends</p>
-                <p className="font-medium">
-                  {endsAt.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Time Remaining</p>
-                <p className="font-medium text-orange-600 dark:text-orange-400">
-                  {formatDistanceToNow(endsAt)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Contribution Form Modal */}
+      {post.type === "help-request" && (
+        <ContributionForm
+          open={showContributionForm}
+          onOpenChange={setShowContributionForm}
+          post={post}
+        />
       )}
-
-      {/* Entry list placeholder */}
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            {isGiveaway ? 'Entries' : 'Contributions'}
-          </h3>
-          <div className="text-center py-8 text-muted-foreground">
-            <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">
-              {isGiveaway
-                ? 'Entry list will be displayed here (Issue 037)'
-                : 'Contribution list will be displayed here (Issue 037)'}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </>
   );
 }

@@ -1,219 +1,162 @@
-'use client';
+"use client"
 
-import { FileRejection, useDropzone } from 'react-dropzone';
-import { Loader2, Upload, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import type React from "react"
 
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import imageCompression from 'browser-image-compression';
-import { toast } from 'sonner';
-
-export interface FileWithPreview extends File {
-  preview: string;
-}
+import { useState, useRef } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Upload, X, ImageIcon, Video, FileText } from "lucide-react"
+import type { PostMedia } from "@/lib/types"
 
 interface MediaUploadProps {
-  onChange?: (files: FileWithPreview[]) => void;
-  initialFiles?: FileWithPreview[];
-  maxFiles?: number;
-  maxSize?: number; // in MB
-  className?: string;
+  onMediaChange: (media: PostMedia[]) => void
+  maxFiles?: number
+  acceptedTypes?: string[]
 }
 
-export function MediaUpload({
-  onChange,
-  initialFiles = [],
-  maxFiles = 10,
-  maxSize = 10,
-  className,
-}: MediaUploadProps) {
-  const [files, setFiles] = useState<FileWithPreview[]>(initialFiles);
-  const [isCompressing, setIsCompressing] = useState(false);
+export function MediaUpload({ onMediaChange, maxFiles = 5, acceptedTypes = ["image/*", "video/*"] }: MediaUploadProps) {
+  const [media, setMedia] = useState<PostMedia[]>([])
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Clean up object URLs to avoid memory leaks
-  useEffect(() => {
-    return () => files.forEach((file) => URL.revokeObjectURL(file.preview));
-  }, [files]);
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return
 
-  const onDrop = useCallback(
-    async (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-      // Handle errors
-      if (fileRejections.length > 0) {
-        fileRejections.forEach(({ file, errors }) => {
-          errors.forEach((e) => {
-            if (e.code === 'file-too-large') {
-              toast.error(
-                `File ${file.name} is too large. Max size is ${maxSize}MB`,
-              );
-            } else if (e.code === 'file-invalid-type') {
-              toast.error(
-                `File ${file.name} has invalid type. Supported: JPEG, PNG, GIF, WebP`,
-              );
-            } else {
-              toast.error(`Error with file ${file.name}: ${e.message}`);
-            }
-          });
-        });
+    const newMedia: PostMedia[] = []
+
+    Array.from(files).forEach((file, index) => {
+      if (media.length + newMedia.length >= maxFiles) return
+
+      const isImage = file.type.startsWith("image/")
+      const isVideo = file.type.startsWith("video/")
+
+      if (!isImage && !isVideo) return
+
+      const url = URL.createObjectURL(file)
+      const mediaItem: PostMedia = {
+        id: `${Date.now()}-${index}`,
+        type: isImage ? "image" : "video",
+        url,
+        thumbnail: isVideo ? url : undefined,
       }
 
-      if (acceptedFiles.length === 0) return;
+      newMedia.push(mediaItem)
+    })
 
-      // Check remaining slots
-      const remainingSlots = maxFiles - files.length;
-      if (acceptedFiles.length > remainingSlots) {
-        toast.error(`You can only upload ${maxFiles} files in total`);
-        return;
-      }
+    const updatedMedia = [...media, ...newMedia]
+    setMedia(updatedMedia)
+    onMediaChange(updatedMedia)
+  }
 
-      const filesToProcess = acceptedFiles.slice(0, remainingSlots);
-      setIsCompressing(true);
+  const removeMedia = (id: string) => {
+    const updatedMedia = media.filter((item) => item.id !== id)
+    setMedia(updatedMedia)
+    onMediaChange(updatedMedia)
+  }
 
-      try {
-        const processedFiles = await Promise.all(
-          filesToProcess.map(async (file) => {
-            const options = {
-              maxSizeMB: 1, // Target smaller size for web (maybe configurable?)
-              maxWidthOrHeight: 1200,
-              useWebWorker: true,
-              fileType: file.type, // Maintain original type
-            };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
 
-            try {
-              // Only compress if it's an image
-              let compressedFile = file;
-              if (file.type.startsWith('image/')) {
-                compressedFile = await imageCompression(file, options);
-              }
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
 
-              const fileWithPreview = Object.assign(compressedFile, {
-                preview: URL.createObjectURL(compressedFile),
-              }) as FileWithPreview;
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    handleFileSelect(e.dataTransfer.files)
+  }
 
-              return fileWithPreview;
-            } catch (error) {
-              console.error('Compression error:', error);
-              toast.error(`Failed to process ${file.name}`);
-              // Fallback to original file with preview if compression fails
-              return Object.assign(file, {
-                preview: URL.createObjectURL(file),
-              }) as FileWithPreview;
-            }
-          }),
-        );
-
-        const newFiles = [...files, ...processedFiles];
-        setFiles(newFiles);
-        onChange?.(newFiles);
-      } catch (error) {
-        console.error('Processing error:', error);
-        toast.error('An error occurred while processing files');
-      } finally {
-        setIsCompressing(false);
-      }
-    },
-    [files, maxFiles, maxSize, onChange],
-  );
-
-  const removeFile = (indexToRemove: number) => {
-    const newFiles = files.filter((_, index) => index !== indexToRemove);
-    setFiles(newFiles);
-    onChange?.(newFiles);
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'image/jpeg': [],
-      'image/png': [],
-      'image/gif': [],
-      'image/webp': [],
-    },
-    maxSize: maxSize * 1024 * 1024,
-    maxFiles: maxFiles,
-    disabled: isCompressing || files.length >= maxFiles,
-  });
+  const getFileIcon = (type: string) => {
+    if (type === "image") return <ImageIcon className="w-4 h-4" />
+    if (type === "video") return <Video className="w-4 h-4" />
+    return <FileText className="w-4 h-4" />
+  }
 
   return (
-    <div className={cn('space-y-4', className)}>
-      <div
-        {...getRootProps()}
-        className={cn(
-          'relative flex flex-col items-center justify-center w-full min-h-[160px] rounded-lg border-2 border-dashed border-muted-foreground/25 bg-muted/50 transition-colors hover:bg-muted/80 cursor-pointer',
-          isDragActive && 'border-primary bg-primary/5 ring-4 ring-primary/20',
-          (isCompressing || files.length >= maxFiles) &&
-            'opacity-50 cursor-not-allowed',
-          className,
-        )}
+    <div className="space-y-4">
+      {/* Upload Area */}
+      <Card
+        className={`border-2 border-dashed transition-colors cursor-pointer ${
+          isDragging
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+            : "border-gray-300 dark:border-gray-600 hover:border-gray-400"
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
       >
-        <input {...getInputProps()} />
-        <div className="flex flex-col items-center justify-center p-6 text-center space-y-2">
-          {isCompressing ? (
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground font-medium">
-                Processing images...
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="p-3 bg-background rounded-full shadow-sm">
-                <Upload className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium">
-                  {isDragActive
-                    ? 'Drop the files here'
-                    : 'Click or drag images to upload'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Max {maxFiles} images. Up to {maxSize}MB each.
-                </p>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+        <CardContent className="p-6 text-center">
+          <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+            Drag and drop media files here, or click to browse
+          </p>
+          <p className="text-xs text-gray-500">Supports images and videos • Max {maxFiles} files</p>
+          <Button variant="outline" size="sm" className="mt-3 bg-transparent">
+            <Upload className="w-4 h-4 mr-2" />
+            Choose Files
+          </Button>
+        </CardContent>
+      </Card>
 
-      {files.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {files.map((file, index) => (
-            <Card
-              key={index + file.name}
-              className="relative group overflow-hidden border-none shadow-sm aspect-square bg-muted"
-            >
-              <img
-                src={file.preview}
-                alt={file.name}
-                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                onLoad={() => {
-                  // URL.revokeObjectURL(file.preview)
-                }}
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none" />
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                className="absolute top-2 right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto shadow-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeFile(index);
-                }}
-              >
-                <X className="h-3 w-3" />
-                <span className="sr-only">Remove file</span>
-              </Button>
-              <div className="absolute bottom-2 left-2 right-2 flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <span className="text-[10px] text-white font-medium bg-black/50 px-1.5 py-0.5 rounded truncate max-w-[80%]">
-                  {(file.size / 1024).toFixed(0)}KB
-                </span>
-              </div>
-            </Card>
-          ))}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={acceptedTypes.join(",")}
+        onChange={(e) => handleFileSelect(e.target.files)}
+        className="hidden"
+      />
+
+      {/* Media Preview */}
+      {media.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">
+            Uploaded Media ({media.length}/{maxFiles})
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {media.map((item) => (
+              <Card key={item.id} className="relative group">
+                <CardContent className="p-2">
+                  {item.type === "image" ? (
+                    <img
+                      src={item.url || "/placeholder.svg"}
+                      alt="Upload preview"
+                      className="w-full h-24 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-full h-24 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
+                      <Video className="w-8 h-8 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      {getFileIcon(item.type)}
+                      <span className="ml-1 capitalize">{item.type}</span>
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeMedia(item.id)
+                      }}
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>
-  );
+  )
 }
