@@ -1,14 +1,13 @@
-import { apiError, apiSuccess } from '@/lib/api-response';
-
 import { NextRequest } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiSuccess, apiError } from '@/lib/api-response';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * POST /api/posts/[id]/entries
  * Submit an entry to a giveaway post
  */
-export async function POST (
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -32,7 +31,7 @@ export async function POST (
     // Check if post exists and is open
     const post = await prisma.post.findUnique({
       where: { id: postId },
-      select: { id: true, status: true, userId: true, type: true },
+      select: { id: true, status: true, creatorId: true, type: true },
     });
 
     if (!post) {
@@ -48,7 +47,7 @@ export async function POST (
     }
 
     // Prevent creators from entering their own posts
-    if (post.userId === user.id) {
+    if (post.creatorId === user.id) {
       return apiError('You cannot enter your own giveaway', 403);
     }
 
@@ -97,7 +96,7 @@ export async function POST (
  * GET /api/posts/[id]/entries
  * Get all entries for a post with pagination
  */
-export async function GET (
+export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
