@@ -38,7 +38,7 @@ export function CreateGiveawayModal({
   open,
   onOpenChange,
 }: CreateGiveawayModalProps) {
-  const { createPost } = useAppContext();
+const { refreshPosts } = useAppContext();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -84,21 +84,30 @@ export function CreateGiveawayModal({
     setIsSubmitting(true);
 
     try {
-      createPost({
-        type: "giveaway",
-        title: formData.title,
-        description: formData.description,
-        status: "active",
-        prizeAmount: Number.parseFloat(formData.prizeAmount),
-        currency: formData.currency,
-        winnerCount: Number.parseInt(formData.winnerCount),
-        selectionType: formData.selectionType,
-        entryRequirements: requirements,
-        proofRequired: formData.proofRequired,
-        endDate: formData.endDate ? new Date(formData.endDate) : undefined,
-        media: media.length > 0 ? media : undefined,
-        userId: "", // Will be set by context
+const response = await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "giveaway",
+          title: formData.title,
+          description: formData.description,
+          status: "active",
+          prizeAmount: Number.parseFloat(formData.prizeAmount),
+          currency: formData.currency,
+          winnerCount: Number.parseInt(formData.winnerCount),
+          selectionType: formData.selectionType,
+          entryRequirements: requirements,
+          proofRequired: formData.proofRequired,
+          endDate: formData.endDate ? new Date(formData.endDate) : undefined,
+          media: media.length > 0 ? media : undefined,
+        }),
       });
+      if (!response.ok) {
+        throw new Error(`Failed to create giveaway: ${response.statusText}`);
+      }
+      await refreshPosts();
 
       toast("Giveaway created!", {
         description: "Your giveaway has been posted to the community.",

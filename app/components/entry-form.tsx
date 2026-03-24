@@ -25,7 +25,7 @@ interface EntryFormProps {
 }
 
 export function EntryForm({ open, onOpenChange, post }: EntryFormProps) {
-  const { submitEntry } = useAppContext();
+const { refreshPostDetail } = useAppContext();
 
   const [formData, setFormData] = useState({
     content: "",
@@ -48,12 +48,20 @@ export function EntryForm({ open, onOpenChange, post }: EntryFormProps) {
     setIsSubmitting(true);
 
     try {
-      submitEntry({
-        postId: post.id,
-        userId: "", // Will be set by context
-        content: formData.content,
-        proofUrl: formData.proofUrl || undefined,
+const response = await fetch(`/api/posts/${post.id}/entries`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: formData.content,
+          proofUrl: formData.proofUrl || undefined,
+        }),
       });
+      if (!response.ok) {
+        throw new Error(`Failed to submit entry: ${response.statusText}`);
+      }
+      await refreshPostDetail(post.id);
 
       toast("Entry submitted!", {
         description: "Your entry has been recorded. Good luck!",
