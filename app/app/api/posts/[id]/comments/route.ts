@@ -40,10 +40,10 @@ async function buildCommentsTree(comments: any[]) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id: postId } = params;
+    const { id: postId } = await params;
     if (!postId) return apiError('Post id is required', 400);
 
     const post = await prisma.post.findUnique({ where: { id: postId } });
@@ -111,13 +111,13 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
     if (!user) return apiError('Unauthorized', 401);
 
-    const { id: postId } = params;
+    const { id: postId } = await params;
     if (!postId) return apiError('Post id is required', 400);
 
     const post = await prisma.post.findUnique({ where: { id: postId } });

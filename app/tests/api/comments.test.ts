@@ -52,7 +52,7 @@ describe('Comments API', () => {
     prisma.comment.count = vi.fn().mockResolvedValue(0);
 
     const request = createMockRequest(`http://localhost:3000/api/posts/${testPost.id}/comments`);
-    const response = await GET(request, { params: { id: testPost.id } } as any);
+    const response = await GET(request, { params: Promise.resolve({ id: testPost.id }) } as any);
     const { status, data } = await parseResponse(response);
 
     expect(status).toBe(200);
@@ -68,7 +68,7 @@ describe('Comments API', () => {
       body,
     });
 
-    const response = await POST(request, { params: { id: testPost.id } } as any);
+    const response = await POST(request, { params: Promise.resolve({ id: testPost.id }) } as any);
     const { status, data } = await parseResponse(response);
 
     expect(status).toBe(201);
@@ -84,7 +84,7 @@ describe('Comments API', () => {
       body: { content: '' },
     });
 
-    const response = await POST(request, { params: { id: testPost.id } } as any);
+    const response = await POST(request, { params: Promise.resolve({ id: testPost.id }) } as any);
     const { status } = await parseResponse(response);
 
     expect(status).toBe(400);
@@ -97,7 +97,7 @@ describe('Comments API', () => {
       method: 'DELETE',
     });
 
-    const response = await DELETE(request, { params: { commentId: 'comment_123' } } as any);
+    const response = await DELETE(request, { params: Promise.resolve({ commentId: 'comment_123' }) } as any);
     const { status, data } = await parseResponse(response);
 
     expect(status).toBe(200);
@@ -112,7 +112,7 @@ describe('Comments API', () => {
       method: 'DELETE',
     });
 
-    const response = await DELETE(request, { params: { commentId: 'comment_123' } } as any);
+    const response = await DELETE(request, { params: Promise.resolve({ commentId: 'comment_123' }) } as any);
     const { status } = await parseResponse(response);
 
     expect(status).toBe(403);

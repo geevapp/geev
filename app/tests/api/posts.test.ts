@@ -37,6 +37,10 @@ describe('Posts API', () => {
         updatedAt: new Date(),
         creator: testUser
       }));
+      // Mock prisma.postRequirements.create
+      prisma.postRequirements = {
+        create: vi.fn().mockResolvedValue({ id: 'req_123', proofRequired: false }),
+      } as any;
     } else {
       testUser = await createTestUser();
     }
@@ -100,6 +104,9 @@ describe('Posts API', () => {
         userId: testUser.id,
       };
 
+      prisma.postRequirements = {
+        create: vi.fn().mockResolvedValue({ id: 'req_123', proofRequired: false }),
+      } as any;
       prisma.post.create = vi.fn().mockResolvedValue(mockCreatedPost);
 
       const request = createMockRequest('http://localhost:3000/api/posts', {

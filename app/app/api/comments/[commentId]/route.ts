@@ -5,13 +5,13 @@ import { prisma } from '@/lib/prisma';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { commentId: string } },
+  { params }: { params: Promise<{ commentId: string }> },
 ) {
   try {
     const user = await getCurrentUser(request);
     if (!user) return apiError('Unauthorized', 401);
 
-    const { commentId } = params;
+    const { commentId } = await params;
     if (!commentId) return apiError('Comment id is required', 400);
 
     const comment = await prisma.comment.findUnique({ where: { id: commentId } });
