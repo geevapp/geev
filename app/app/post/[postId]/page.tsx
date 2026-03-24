@@ -28,10 +28,11 @@ import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { UserRankBadge } from "@/components/user-rank-badge";
 import { useAppContext } from "@/contexts/app-context";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function PostPage() {
-  const { posts, user, burnPost } = useAppContext();
+  const { user, burnPost } = useAppContext();
+  const [post, setPost] = useState<any>(null);
   const params = useParams();
   const postId = params.postId as string;
   const [isBurned, setIsBurned] = useState(false);
@@ -43,8 +44,22 @@ export default function PostPage() {
   const [showContributionForm, setShowContributionForm] = useState(false);
 
   const router = useRouter();
-  const post = posts.find((p) => p.id === postId);
   const canInteract = user && user.id !== post?.userId;
+
+  useEffect(() => {
+    const loadPost = async () => {
+      try {
+        const res = await fetch(`/api/posts/${postId}`);
+        if(res.ok) {
+          const data = await res.json();
+          setPost(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to load post: ', error);
+      }
+    };
+    if (postId) loadPost();
+  }, [postId]);
 
   if (!post) {
     return (

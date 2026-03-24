@@ -18,7 +18,6 @@ import {
   useState,
 } from 'react';
 import { deserializeState, serializeState } from '@/lib/utils';
-import { mockPosts, mockUsers } from '@/lib/mock-data';
 import { signIn, signOut } from 'next-auth/react';
 
 import type React from 'react';
@@ -229,10 +228,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to load state from localStorage:', error);
     }
 
-    // Load mock data
-    dispatch({ type: 'SET_USERS', payload: mockUsers });
-    dispatch({ type: 'SET_POSTS', payload: mockPosts });
-
     setIsHydrated(true);
   }, []);
 
@@ -249,9 +244,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timeoutId);
   }, [state, isHydrated]);
 
+  // Load real data from API
   useEffect(() => {
-    dispatch({ type: 'SET_USERS', payload: mockUsers });
-    dispatch({ type: 'SET_POSTS', payload: mockPosts });
+    const loadData = async () => {
+      try{
+        const [postRes, userRes] = await Promise.all([
+          fetch('/api/posts'),
+          fetch('/api/users'),
+        ]);
+
+        if (postRes.ok) {
+          const postData = await postRes.json();
+          dispatch({ type: 'SET_POSTS', payload: Array.isArray(postData.data) ? postData.data : postData.data?.posts ?? [] });
+        }
+
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          dispatch({ type: 'SET_USERS', payload: userData.data ?? [] });
+        }
+
+      } catch (error) {
+        console.error('Failed to load data from API', error);
+      }
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
