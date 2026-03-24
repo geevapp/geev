@@ -9,12 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { login, logout } from '@/lib/mock-auth';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { User } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 /**
  * DevUserSwitcher Component
@@ -31,8 +31,10 @@ import { useState } from 'react';
  */
 export function DevUserSwitcher() {
   const { user, login: contextLogin, logout: contextLogout } = useAppContext();
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [mockAuthUsers, setMockAuthUsers] = useState([] as User[]);
+  const [hasLoadedUsers, setHasLoadedUsers] = useState(false);
 
   // Only render in development mode
   if (
@@ -42,16 +44,33 @@ export function DevUserSwitcher() {
     return null;
   }
 
-  if (!mockAuthUsers?.length) {
-    fetch(`${location.origin}/api/mock-users`)
+  useEffect(() => {
+    if (hasLoadedUsers) return;
+
+    let isMounted = true;
+
+    fetch('/api/dev-users')
       .then((res) => res.json())
-      .then((data) => setMockAuthUsers(data.data))
-      .catch((err) => console.error('Failed to fetch mock users:', err));
-  }
+      .then((data) => {
+        if (isMounted) {
+          setMockAuthUsers(data?.data ?? []);
+          setHasLoadedUsers(true);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.error('Failed to fetch dev users:', err);
+          setHasLoadedUsers(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasLoadedUsers]);
 
   const handleUserSwitch = async (userId: string) => {
     if (userId === 'logout') {
-      logout();
       await contextLogout();
       return;
     }
@@ -62,12 +81,17 @@ export function DevUserSwitcher() {
       const walletAddress = selectedUser.walletAddress || '0x0';
       const timestamp = new Date().toISOString();
 
-      await contextLogin(selectedUser, {
+      const result = await contextLogin(selectedUser, {
         walletAddress,
         email: selectedUser.email ?? `${walletAddress}@example.com`, // Fallback email for mock users
         signature: '0x' + Math.random().toString(36).substring(2, 30),
         message: `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}`,
       });
+
+      if (!result?.error) {
+        router.push('/feed');
+        router.refresh();
+      }
     }
   };
 
@@ -81,7 +105,7 @@ export function DevUserSwitcher() {
   };
 
   return (
-    <div className="fixed hidden md:block bottom-4 right-4 z-50">
+    <div className="fixed z-50 hidden md:block bottom-4 right-4">
       <div
         className={`
           bg-gray-900 dark:bg-gray-800 text-white rounded-lg shadow-xl
@@ -92,14 +116,14 @@ export function DevUserSwitcher() {
         {/* Header / Toggle */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+          className="flex items-center justify-between w-full gap-2 px-3 py-2 transition-colors hover:bg-gray-800 dark:hover:bg-gray-700"
         >
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-orange-500 flex items-center justify-center text-xs font-bold">
+            <div className="flex items-center justify-center w-6 h-6 text-xs font-bold bg-orange-500 rounded">
               DEV
             </div>
             {!isExpanded && user && (
-              <span className="text-sm text-gray-300 truncate max-w-[120px]">
+              <span className="text-sm text-gray-300 truncate max-w-30">
                 @{user.username}
               </span>
             )}
@@ -108,21 +132,21 @@ export function DevUserSwitcher() {
             )}
           </div>
           {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-400" />
+            <ChevronDown className="w-4 h-4 text-gray-400" />
           ) : (
-            <ChevronUp className="h-4 w-4 text-gray-400" />
+            <ChevronUp className="w-4 h-4 text-gray-400" />
           )}
         </button>
 
         {/* Expanded Panel */}
         {isExpanded && (
-          <div className="p-3 border-t border-gray-700 space-y-3">
+          <div className="p-3 space-y-3 border-t border-gray-700">
             {/* Current User Display */}
             {user && (
-              <div className="flex items-center gap-2 p-2 bg-gray-800 dark:bg-gray-700 rounded-lg">
-                <Avatar className="h-8 w-8">
+              <div className="flex items-center gap-2 p-2 bg-gray-800 rounded-lg dark:bg-gray-700">
+                <Avatar className="w-8 h-8">
                   <AvatarImage src={user.avatarUrl ?? ''} alt={user.name} />
-                  <AvatarFallback className="bg-orange-100 text-orange-700 text-xs">
+                  <AvatarFallback className="text-xs text-orange-700 bg-orange-100">
                     {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -137,14 +161,14 @@ export function DevUserSwitcher() {
 
             {/* User Selector */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 uppercase tracking-wider">
+              <label className="text-xs tracking-wider text-gray-400 uppercase">
                 Switch User
               </label>
               <Select value={user?.id || ''} onValueChange={handleUserSwitch}>
-                <SelectTrigger className="w-full bg-gray-800 dark:bg-gray-700 border-gray-600 text-white">
+                <SelectTrigger className="w-full text-white bg-gray-800 border-gray-600 dark:bg-gray-700">
                   <SelectValue placeholder="Select a user..." />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 dark:bg-gray-800 border-gray-700">
+                <SelectContent className="bg-gray-900 border-gray-700 dark:bg-gray-800">
                   {mockAuthUsers.map((mockUser) => (
                     <SelectItem
                       key={mockUser.id}
@@ -152,7 +176,7 @@ export function DevUserSwitcher() {
                       className="text-white hover:bg-gray-800 dark:hover:bg-gray-700 focus:bg-gray-800 focus:text-white"
                     >
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
+                        <Avatar className="w-5 h-5">
                           <AvatarImage
                             src={mockUser.avatarUrl ?? ''}
                             alt={mockUser.name}
@@ -178,16 +202,16 @@ export function DevUserSwitcher() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleUserSwitch('logout')}
-                className="w-full bg-transparent border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+                className="w-full text-gray-300 bg-transparent border-gray-600 hover:bg-gray-800 hover:text-white"
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </Button>
             )}
 
             {/* Login Prompt */}
             {!user && (
-              <p className="text-xs text-gray-400 text-center">
+              <p className="text-xs text-center text-gray-400">
                 Select a user above to log in
               </p>
             )}
@@ -195,7 +219,7 @@ export function DevUserSwitcher() {
             {/* Dev Info */}
             <div className="pt-2 border-t border-gray-700">
               <p className="text-[10px] text-gray-500 text-center">
-                Dev mode only • Auth persists in localStorage
+                Dev mode only • Auth uses Prisma users
               </p>
             </div>
           </div>

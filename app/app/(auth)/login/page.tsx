@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Card,
@@ -6,15 +6,31 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { WalletLoginForm } from "@/components/wallet-login-form";
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { WalletLoginForm } from '@/components/wallet-login-form';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { status } = useSession();
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/feed');
+    }
+  }, [status, router]);
+
+  if (status === 'authenticated') {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -56,7 +72,7 @@ export default function LoginPage() {
 
             <div className="text-center text-sm">
               <span className="text-gray-600 dark:text-gray-400">
-                Don't have an account?{" "}
+                Don't have an account?{' '}
               </span>
               <Link
                 href="/register"
