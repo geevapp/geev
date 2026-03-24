@@ -60,7 +60,7 @@ describe('Posts API', () => {
       prisma.post.findMany = vi.fn().mockResolvedValue([{
         id: 'post_123',
         title: 'Test Post',
-        creator: testUser
+        user: testUser
       }]);
       prisma.post.count = vi.fn().mockResolvedValue(1);
 
@@ -96,8 +96,8 @@ describe('Posts API', () => {
         endsAt: new Date(postData.endsAt),
         createdAt: new Date(),
         updatedAt: new Date(),
-        creator: testUser,
-        creatorId: testUser.id,
+        user: testUser,
+        userId: testUser.id,
       };
 
       prisma.post.create = vi.fn().mockResolvedValue(mockCreatedPost);

@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,15 +8,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { LogOut, Moon, Settings, Sun, User, Wallet } from "lucide-react";
+} from '@/components/ui/dropdown-menu';
+import { LogOut, Moon, Settings, Sun, User, Wallet } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { UserRankBadge } from "@/components/user-rank-badge";
-import { useAppContext } from "@/contexts/app-context";
-import { useRouter } from "next/navigation";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { UserRankBadge } from '@/components/user-rank-badge';
+import { useAppContext } from '@/contexts/app-context';
+import { useRouter } from 'next/navigation';
 
 export function Navbar() {
   const { user, logout, theme, toggleTheme } = useAppContext();
@@ -24,7 +24,7 @@ export function Navbar() {
 
   const handleLogout = () => {
     logout();
-    router.push("/");
+    router.push('/');
   };
 
   return (
@@ -33,7 +33,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link
-            href={user ? "/feed" : "/"}
+            href={user ? '/feed' : '/'}
             className="flex items-center space-x-3 group"
           >
             <img src="/logo-light.png" alt="Geev" className="h-8 dark:hidden" />
@@ -49,11 +49,11 @@ export function Navbar() {
           {user && (
             <div className="flex items-center space-x-3">
               {/* Wallet Balance */}
-              {user.walletBalance > 0 && (
+              {(user.walletBalance ?? 0) > 0 && (
                 <Link href="/wallet">
                   <Badge className="hidden sm:flex items-center gap-1 bg-orange-500 text-white border-0 hover:bg-orange-600 transition-all cursor-pointer">
                     <Wallet className="w-3 h-3" />$
-                    {user.walletBalance.toFixed(2)}
+                    {(user.walletBalance ?? 0).toFixed(2)}
                   </Badge>
                 </Link>
               )}
@@ -65,7 +65,7 @@ export function Navbar() {
                 onClick={toggleTheme}
                 className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
               >
-                {theme === "dark" ? (
+                {theme === 'dark' ? (
                   <Sun className="w-4 h-4" />
                 ) : (
                   <Moon className="w-4 h-4" />
@@ -81,14 +81,14 @@ export function Navbar() {
                   >
                     <Avatar className="h-9 w-9">
                       <AvatarImage
-                        src={user.avatar || "/placeholder.svg"}
+                        src={user.avatarUrl || '/placeholder.svg'}
                         alt={user.name}
                       />
                       <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 text-sm font-medium">
                         {user.name
-                          .split(" ")
+                          .split(' ')
                           .map((n) => n[0])
-                          .join("")}
+                          .join('')}
                       </AvatarFallback>
                     </Avatar>
                   </Button>

@@ -1,17 +1,29 @@
-"use client"
+'use client';
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import type { Badge as BadgeType } from "@/lib/types"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+
+import { Badge } from '@/components/ui/badge';
+import type { Badge as BadgeType } from '@/lib/types';
 
 interface AchievementsDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  badges: BadgeType[]
-  userName: string
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  badges: BadgeType[];
+  userName: string;
 }
 
-export function AchievementsDialog({ open, onOpenChange, badges, userName }: AchievementsDialogProps) {
+export function AchievementsDialog({
+  open,
+  onOpenChange,
+  badges,
+  userName,
+}: AchievementsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[70vh] overflow-y-auto">
@@ -30,10 +42,23 @@ export function AchievementsDialog({ open, onOpenChange, badges, userName }: Ach
                   key={badge.id}
                   className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50"
                 >
-                  <div className="text-2xl flex-shrink-0">{badge.icon}</div>
+                  <div className="text-2xl flex-shrink-0">
+                    {badge.iconUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={badge.iconUrl}
+                        alt={badge.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span>🏅</span>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-sm truncate">{badge.name}</h3>
+                      <h3 className="font-medium text-sm truncate">
+                        {badge.name}
+                      </h3>
                       <Badge
                         variant="secondary"
                         className="text-xs px-2 py-0 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
@@ -41,8 +66,12 @@ export function AchievementsDialog({ open, onOpenChange, badges, userName }: Ach
                         Earned
                       </Badge>
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 line-clamp-2">{badge.description}</p>
-                    <p className="text-xs text-gray-500">{badge.earnedAt.toLocaleDateString()}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 line-clamp-2">
+                      {badge.description}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {badge.awardedAt.toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -61,5 +90,5 @@ export function AchievementsDialog({ open, onOpenChange, badges, userName }: Ach
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

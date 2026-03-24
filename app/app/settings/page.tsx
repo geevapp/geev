@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   ArrowLeft,
@@ -10,38 +10,38 @@ import {
   Sun,
   Trash2,
   Wallet,
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+} from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
 
-import { AuthGuard } from "@/components/auth-guard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import type React from "react";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { useAppContext } from "@/contexts/app-context";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { AuthGuard } from '@/components/auth-guard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import Link from 'next/link';
+import type React from 'react';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { useAppContext } from '@/contexts/app-context';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function SettingsPage() {
   const { user, logout, toggleTheme, theme } = useAppContext();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    username: user?.username || "",
-    bio: user?.bio || "",
-    email: user?.email || "",
+    name: user?.name || '',
+    username: user?.username || '',
+    bio: user?.bio || '',
+    email: user?.email || '',
   });
 
   const [notifications, setNotifications] = useState({
@@ -61,21 +61,21 @@ export default function SettingsPage() {
 
   const handleSaveProfile = () => {
     // Mock save functionality
-    toast("Profile updated", {
-      description: "Your profile has been saved successfully.",
+    toast('Profile updated', {
+      description: 'Your profile has been saved successfully.',
     });
   };
 
   const handleDeleteAccount = () => {
     if (
       confirm(
-        "Are you sure you want to delete your account? This action cannot be undone.",
+        'Are you sure you want to delete your account? This action cannot be undone.',
       )
     ) {
       logout();
-      router.push("/");
-      toast.error("Account deleted", {
-        description: "Your account has been permanently deleted.",
+      router.push('/');
+      toast.error('Account deleted', {
+        description: 'Your account has been permanently deleted.',
       });
     }
   };
@@ -107,14 +107,14 @@ export default function SettingsPage() {
             <div className="flex items-center gap-4">
               <Avatar className="w-20 h-20">
                 <AvatarImage
-                  src={user?.avatar || "/placeholder.svg"}
+                  src={user?.avatarUrl || '/placeholder.svg'}
                   alt={user?.name}
                 />
                 <AvatarFallback className="text-lg">
                   {user?.name
-                    .split(" ")
+                    .split(' ')
                     .map((n) => n[0])
-                    .join("")}
+                    .join('')}
                 </AvatarFallback>
               </Avatar>
               <Button variant="outline" size="sm">
@@ -188,7 +188,7 @@ export default function SettingsPage() {
                 <div>
                   <div className="font-medium">Wallet Balance</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    ${user?.walletBalance?.toFixed(2) || "0.00"} available
+                    $0.00 available
                   </div>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export default function SettingsPage() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {theme === "dark" ? (
+                {theme === 'dark' ? (
                   <Moon className="w-5 h-5" />
                 ) : (
                   <Sun className="w-5 h-5" />
@@ -240,7 +240,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <Switch
-                checked={theme === "dark"}
+                checked={theme === 'dark'}
                 onCheckedChange={toggleTheme}
               />
             </div>

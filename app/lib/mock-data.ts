@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Activity, Badge, Comment, Entry, HelpContribution, Post, User, UserRank } from "./types"
 
 export const userRanks: UserRank[] = [

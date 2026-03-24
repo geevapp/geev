@@ -105,7 +105,7 @@ export function DevUserSwitcher() {
   };
 
   return (
-    <div className="fixed z-50 hidden md:block bottom-4 right-4">
+    <div className="fixed hidden md:block bottom-4 right-4 z-50">
       <div
         className={`
           bg-gray-900 dark:bg-gray-800 text-white rounded-lg shadow-xl
@@ -116,10 +116,10 @@ export function DevUserSwitcher() {
         {/* Header / Toggle */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center justify-between w-full gap-2 px-3 py-2 transition-colors hover:bg-gray-800 dark:hover:bg-gray-700"
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center w-6 h-6 text-xs font-bold bg-orange-500 rounded">
+            <div className="w-6 h-6 rounded bg-orange-500 flex items-center justify-center text-xs font-bold">
               DEV
             </div>
             {!isExpanded && user && (
@@ -132,21 +132,21 @@ export function DevUserSwitcher() {
             )}
           </div>
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+            <ChevronDown className="h-4 w-4 text-gray-400" />
           ) : (
-            <ChevronUp className="w-4 h-4 text-gray-400" />
+            <ChevronUp className="h-4 w-4 text-gray-400" />
           )}
         </button>
 
         {/* Expanded Panel */}
         {isExpanded && (
-          <div className="p-3 space-y-3 border-t border-gray-700">
+          <div className="p-3 border-t border-gray-700 space-y-3">
             {/* Current User Display */}
             {user && (
-              <div className="flex items-center gap-2 p-2 bg-gray-800 rounded-lg dark:bg-gray-700">
-                <Avatar className="w-8 h-8">
+              <div className="flex items-center gap-2 p-2 bg-gray-800 dark:bg-gray-700 rounded-lg">
+                <Avatar className="h-8 w-8">
                   <AvatarImage src={user.avatarUrl ?? ''} alt={user.name} />
-                  <AvatarFallback className="text-xs text-orange-700 bg-orange-100">
+                  <AvatarFallback className="bg-orange-100 text-orange-700 text-xs">
                     {getInitials(user.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -161,14 +161,14 @@ export function DevUserSwitcher() {
 
             {/* User Selector */}
             <div className="space-y-1.5">
-              <label className="text-xs tracking-wider text-gray-400 uppercase">
+              <label className="text-xs text-gray-400 uppercase tracking-wider">
                 Switch User
               </label>
               <Select value={user?.id || ''} onValueChange={handleUserSwitch}>
-                <SelectTrigger className="w-full text-white bg-gray-800 border-gray-600 dark:bg-gray-700">
+                <SelectTrigger className="w-full bg-gray-800 dark:bg-gray-700 border-gray-600 text-white">
                   <SelectValue placeholder="Select a user..." />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-700 dark:bg-gray-800">
+                <SelectContent className="bg-gray-900 dark:bg-gray-800 border-gray-700">
                   {mockAuthUsers.map((mockUser) => (
                     <SelectItem
                       key={mockUser.id}
@@ -176,7 +176,7 @@ export function DevUserSwitcher() {
                       className="text-white hover:bg-gray-800 dark:hover:bg-gray-700 focus:bg-gray-800 focus:text-white"
                     >
                       <div className="flex items-center gap-2">
-                        <Avatar className="w-5 h-5">
+                        <Avatar className="h-5 w-5">
                           <AvatarImage
                             src={mockUser.avatarUrl ?? ''}
                             alt={mockUser.name}
@@ -202,16 +202,16 @@ export function DevUserSwitcher() {
                 variant="outline"
                 size="sm"
                 onClick={() => handleUserSwitch('logout')}
-                className="w-full text-gray-300 bg-transparent border-gray-600 hover:bg-gray-800 hover:text-white"
+                className="w-full bg-transparent border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
               >
-                <LogOut className="w-4 h-4 mr-2" />
+                <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
             )}
 
             {/* Login Prompt */}
             {!user && (
-              <p className="text-xs text-center text-gray-400">
+              <p className="text-xs text-gray-400 text-center">
                 Select a user above to log in
               </p>
             )}

@@ -7,8 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest run --ui",
     "test:coverage": "vitest --coverage",
     "test:ci": "vitest run"
   },
@@ -80,6 +81,7 @@
     "postcss": "^8.5",
     "prisma": "^7.4.2",
     "tailwindcss": "^4.1.9",
+    "tsx": "^4.21.0",
     "tw-animate-css": "1.3.3",
     "typescript": "^5",
     "vitest": "^4.0.18"

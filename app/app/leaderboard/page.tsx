@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Crown,
   Gift,
@@ -11,29 +11,29 @@ import {
   TrendingUp,
   Trophy,
   Users,
-} from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { mockPosts, mockUsers } from "@/lib/mock-data";
+} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { mockPosts, mockUsers } from '@/lib/mock-data';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { useAppContext } from "@/contexts/app-context";
-import { useState } from "react";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useAppContext } from '@/contexts/app-context';
+import { useState } from 'react';
 
-type FilterPeriod = "week" | "month" | "all-time";
+type FilterPeriod = 'week' | 'month' | 'all-time';
 
 export default function LeaderboardPage() {
   const { user } = useAppContext();
   const [selectedPeriod, setSelectedPeriod] =
-    useState<FilterPeriod>("all-time");
+    useState<FilterPeriod>('all-time');
 
   // Calculate top givers (by number of giveaways created)
   const topGivers = mockUsers
     .map((u) => ({
       ...u,
       giveawayCount: mockPosts.filter(
-        (p) => p.userId === u.id && p.type === "giveaway",
+        (p) => p.userId === u.id && p.type === 'giveaway',
       ).length,
     }))
     .sort((a, b) => b.giveawayCount - a.giveawayCount)
@@ -41,7 +41,7 @@ export default function LeaderboardPage() {
 
   // Get top giveaways (by entries and engagement)
   const topGiveaways = mockPosts
-    .filter((p) => p.type === "giveaway")
+    .filter((p) => p.type === 'giveaway')
     .sort(
       (a, b) =>
         (b.entriesCount || 0) +
@@ -55,7 +55,7 @@ export default function LeaderboardPage() {
     .map((u) => ({
       ...u,
       requestCount: mockPosts.filter(
-        (p) => p.userId === u.id && p.type === "help-request",
+        (p) => p.userId === u.id && p.type === 'help-request',
       ).length,
     }))
     .sort((a, b) => b.requestCount - a.requestCount)
@@ -63,7 +63,7 @@ export default function LeaderboardPage() {
 
   // Get top requests (by responses and engagement)
   const topRequests = mockPosts
-    .filter((p) => p.type === "help-request")
+    .filter((p) => p.type === 'help-request')
     .sort(
       (a, b) =>
         (b.entriesCount || 0) +
@@ -76,7 +76,7 @@ export default function LeaderboardPage() {
   const trendingUsers = mockUsers
     .map((u) => ({
       ...u,
-      activityScore: (u.postsCount || 0) + (u.followersCount || 0) / 100,
+      activityScore: (u._count?.posts || 0) + (u._count?.followers || 0) / 100,
     }))
     .sort((a, b) => b.activityScore - a.activityScore)
     .slice(0, 20);
@@ -108,22 +108,22 @@ export default function LeaderboardPage() {
       {/* Period Filter */}
       <div className="max-w-6xl mx-auto px-4 mb-6">
         <div className="flex gap-2">
-          {(["week", "month", "all-time"] as const).map((period) => (
+          {(['week', 'month', 'all-time'] as const).map((period) => (
             <Button
               key={period}
-              variant={selectedPeriod === period ? "default" : "outline"}
+              variant={selectedPeriod === period ? 'default' : 'outline'}
               onClick={() => setSelectedPeriod(period)}
               className={
                 selectedPeriod === period
-                  ? "bg-orange-600 hover:bg-orange-700"
-                  : ""
+                  ? 'bg-orange-600 hover:bg-orange-700'
+                  : ''
               }
             >
-              {period === "week"
-                ? "This Week"
-                : period === "month"
-                  ? "This Month"
-                  : "All Time"}
+              {period === 'week'
+                ? 'This Week'
+                : period === 'month'
+                  ? 'This Month'
+                  : 'All Time'}
             </Button>
           ))}
         </div>
@@ -177,14 +177,14 @@ export default function LeaderboardPage() {
                         </span>
                         <Avatar className="h-10 w-10">
                           <AvatarImage
-                            src={giver.avatar || "/placeholder.svg"}
+                            src={giver.avatarUrl || '/placeholder.svg'}
                             alt={giver.name}
                           />
                           <AvatarFallback className="bg-orange-500 text-white">
                             {giver.name
-                              .split(" ")
+                              .split(' ')
                               .map((n) => n[0])
-                              .join("")}
+                              .join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
@@ -253,7 +253,7 @@ export default function LeaderboardPage() {
                               {post.title}
                             </p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                              by {creator?.name || "Unknown"}
+                              by {creator?.name || 'Unknown'}
                             </p>
                           </div>
                           <div className="text-right">
@@ -303,14 +303,14 @@ export default function LeaderboardPage() {
                         </span>
                         <Avatar className="h-10 w-10">
                           <AvatarImage
-                            src={requestor.avatar || "/placeholder.svg"}
+                            src={requestor.avatarUrl || '/placeholder.svg'}
                             alt={requestor.name}
                           />
                           <AvatarFallback className="bg-red-500 text-white">
                             {requestor.name
-                              .split(" ")
+                              .split(' ')
                               .map((n) => n[0])
-                              .join("")}
+                              .join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
@@ -379,7 +379,7 @@ export default function LeaderboardPage() {
                               {post.title}
                             </p>
                             <p className="text-sm text-gray-600 dark:text-gray-400">
-                              by {creator?.name || "Unknown"}
+                              by {creator?.name || 'Unknown'}
                             </p>
                           </div>
                           <div className="text-right">
@@ -432,14 +432,14 @@ export default function LeaderboardPage() {
                         </span>
                         <Avatar className="h-10 w-10">
                           <AvatarImage
-                            src={trendingUser.avatar || "/placeholder.svg"}
+                            src={trendingUser.avatarUrl || '/placeholder.svg'}
                             alt={trendingUser.name}
                           />
                           <AvatarFallback className="bg-yellow-500 text-white">
                             {trendingUser.name
-                              .split(" ")
+                              .split(' ')
                               .map((n) => n[0])
-                              .join("")}
+                              .join('')}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
@@ -459,7 +459,7 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-orange-600">
-                            {trendingUser.postsCount}
+                            {trendingUser._count?.posts || 0}
                           </div>
                           <div className="text-xs text-gray-600 dark:text-gray-400">
                             Posts
@@ -467,7 +467,8 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="text-right">
                           <div className="font-bold text-blue-600">
-                            {(trendingUser.followersCount / 1000).toFixed(1)}K
+                            {(trendingUser._count?.followers / 1000).toFixed(1)}
+                            K
                           </div>
                           <div className="text-xs text-gray-600 dark:text-gray-400">
                             Followers

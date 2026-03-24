@@ -180,7 +180,7 @@ export default function PostPage() {
                     <Link href={`/profile/${post.author.id}`}>
                       <Avatar className="w-10 h-10 cursor-pointer">
                         <AvatarImage
-                          src={post.author.avatar || "/placeholder.svg"}
+                          src={post.author.avatarUrl || "/placeholder.svg"}
                           alt={post.author.name}
                         />
                         <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
