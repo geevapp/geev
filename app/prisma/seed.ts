@@ -1,190 +1,203 @@
-import { PostStatus, PostType, PrismaClient, SelectionMethod } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-const prisma = new PrismaClient();
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL is required to run Prisma seed');
+}
+
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
+
+const ranks = [
+  {
+    id: 'newcomer',
+    level: 1,
+    title: 'Newcomer',
+    color: 'text-gray-500',
+    minPoints: 0,
+    maxPoints: 199,
+  },
+  {
+    id: 'helper',
+    level: 2,
+    title: 'Helper',
+    color: 'text-green-500',
+    minPoints: 200,
+    maxPoints: 799,
+  },
+  {
+    id: 'contributor',
+    level: 3,
+    title: 'Contributor',
+    color: 'text-blue-500',
+    minPoints: 800,
+    maxPoints: 1999,
+  },
+  {
+    id: 'champion',
+    level: 4,
+    title: 'Champion',
+    color: 'text-orange-500',
+    minPoints: 2000,
+    maxPoints: 4999,
+  },
+  {
+    id: 'legend',
+    level: 5,
+    title: 'Legend',
+    color: 'text-yellow-500',
+    minPoints: 5000,
+    maxPoints: 999999,
+  },
+];
+
+const badges = [
+  {
+    id: 'first-step',
+    name: 'First Step',
+    description: 'Completed your first activity',
+    color: 'bg-blue-100 text-blue-800',
+    tier: 'Bronze',
+    iconUrl: 'https://api.dicebear.com/9.x/icons/svg?seed=first-step',
+    criteria: { activities: 1 },
+  },
+  {
+    id: 'generous-giver',
+    name: 'Generous Giver',
+    description: 'Completed five activities',
+    color: 'bg-green-100 text-green-800',
+    tier: 'Silver',
+    iconUrl: 'https://api.dicebear.com/9.x/icons/svg?seed=generous-giver',
+    criteria: { activities: 5 },
+  },
+  {
+    id: 'community-hero',
+    name: 'Community Hero',
+    description: 'Completed ten activities',
+    color: 'bg-yellow-100 text-yellow-800',
+    tier: 'Gold',
+    iconUrl: 'https://api.dicebear.com/9.x/icons/svg?seed=community-hero',
+    criteria: { activities: 10 },
+  },
+];
+
+const users = [
+  {
+    walletAddress: '9FakeSolanaWallet11111111111111111111111111111',
+    name: 'Alex Chen',
+    username: 'alex',
+    email: 'alex@example.com',
+    bio: 'Crypto enthusiast and community builder.',
+    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=AlexChen',
+    xp: 2500,
+  },
+  {
+    walletAddress: '9FakeSolanaWallet22222222222222222222222222222',
+    name: 'Sarah Johnson',
+    username: 'sarah',
+    email: 'sarah@example.com',
+    bio: 'Designer and open source contributor.',
+    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SarahJohnson',
+    xp: 890,
+  },
+  {
+    walletAddress: '9FakeSolanaWallet33333333333333333333333333333',
+    name: 'Marcus Williams',
+    username: 'marcus',
+    email: 'marcus@example.com',
+    bio: 'Founder building community tools.',
+    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=MarcusWilliams',
+    xp: 5200,
+  },
+  {
+    walletAddress: '9FakeSolanaWallet44444444444444444444444444444',
+    name: 'Nina Patel',
+    username: 'nina',
+    email: 'nina@example.com',
+    bio: 'Frontend engineer and mentor.',
+    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=NinaPatel',
+    xp: 1450,
+  },
+  {
+    walletAddress: '9FakeSolanaWallet55555555555555555555555555555',
+    name: 'Jordan Kim',
+    username: 'jordan',
+    email: 'jordan@example.com',
+    bio: 'Product-minded full stack developer.',
+    avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=JordanKim',
+    xp: 320,
+  },
+];
+
+function rankIdForXp (xp: number): string {
+  if (xp >= 5000) return 'legend';
+  if (xp >= 2000) return 'champion';
+  if (xp >= 800) return 'contributor';
+  if (xp >= 200) return 'helper';
+  return 'newcomer';
+}
 
 async function main () {
-  console.log('Seeding database...');
+  console.log('Seeding auth-related data...');
 
-  // Create sample badges
-  const badges = await prisma.badge.createMany({
-    data: [
-      {
-        id: 'helper',
-        name: 'Helper',
-        description: 'Awarded for making your first contribution',
-        tier: 'bronze',
-        iconUrl: '🥉',
-        criteria: JSON.stringify({ entries: 1 }),
-      },
-      {
-        id: 'contributor',
-        name: 'Contributor',
-        description: 'Awarded for making 5 contributions',
-        tier: 'silver',
-        iconUrl: '🥈',
-        criteria: JSON.stringify({ entries: 5 }),
-      },
-      {
-        id: 'community-pillar',
-        name: 'Community Pillar',
-        description: 'Awarded for making 10 contributions',
-        tier: 'gold',
-        iconUrl: '🥇',
-        criteria: JSON.stringify({ entries: 10 }),
-      },
-      {
-        id: 'legend',
-        name: 'Legend',
-        description: 'Awarded for making 25 contributions',
-        tier: 'platinum',
-        iconUrl: '💎',
-        criteria: JSON.stringify({ entries: 25 }),
-      },
-      {
-        id: 'icon',
-        name: 'Icon',
-        description: 'Awarded for making 50 contributions',
-        tier: 'diamond',
-        iconUrl: '👑',
-        criteria: JSON.stringify({ entries: 50 }),
-      },
-    ],
-    skipDuplicates: true,
-  });
+  for (const rank of ranks) {
+    await prisma.rank.upsert({
+      where: { id: rank.id },
+      update: rank,
+      create: rank,
+    });
+  }
+  console.log(`Upserted ${ranks.length} ranks`);
 
-  console.log(`Created ${badges.count} badges`);
-
-  // Create sample users
-  const users = [
-    {
-      walletAddress: '9FakeSolanaWallet11111111111111111111111111111',
-      name: 'Alex Chen',
-      bio: 'Crypto enthusiast and community builder. Love helping others succeed! 🚀',
-      avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=AlexChen',
-      xp: 2500,
-    },
-    {
-      walletAddress: '9FakeSolanaWallet22222222222222222222222222222',
-      name: 'Sarah Johnson',
-      bio: 'Artist and designer. Creating beautiful things and spreading positivity ✨',
-      avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=SarahJohnson',
-      xp: 890,
-    },
-    {
-      walletAddress: '9FakeSolanaWallet33333333333333333333333333333',
-      name: 'Marcus Williams',
-      bio: 'Tech entrepreneur. Building the future one project at a time 💻',
-      avatarUrl: 'https://api.dicebear.com/9.x/avataaars/svg?seed=MarcusWilliams',
-      xp: 5200,
-    },
-  ];
+  for (const badge of badges) {
+    await prisma.badge.upsert({
+      where: { id: badge.id },
+      update: badge,
+      create: badge,
+    });
+  }
+  console.log(`Upserted ${badges.length} badges`);
 
   const createdUsers = [];
-  for (const userData of users) {
-    const user = await prisma.user.upsert({
-      where: { walletAddress: userData.walletAddress },
-      update: {},
-      create: userData,
+  for (const user of users) {
+    const created = await prisma.user.upsert({
+      where: { walletAddress: user.walletAddress },
+      update: {
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        bio: user.bio,
+        avatarUrl: user.avatarUrl,
+        xp: user.xp,
+        rankId: rankIdForXp(user.xp),
+      },
+      create: {
+        ...user,
+        rankId: rankIdForXp(user.xp),
+      },
     });
-    createdUsers.push(user);
+    createdUsers.push(created);
   }
+  console.log(`Upserted ${createdUsers.length} users`);
 
-  console.log(`Created/updated ${createdUsers.length} users`);
-
-  // Create sample posts
-  const posts = [
-    {
-      userId: createdUsers[0].id,
-      type: PostType.giveaway,
-      title: '🎁 $500 USDC Giveaway for New Developers!',
-      description: 'Celebrating our community growth! I\'m giving away $500 USDC to help new developers get started. Share your coding journey and what you\'re building!',
-      category: 'technology',
-      status: PostStatus.open,
-      selectionMethod: SelectionMethod.random,
-      winnerCount: 1,
-      media: JSON.stringify([{ type: 'image', url: '/crypto-giveaway-banner.png' }]),
-      endsAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 days from now
-    },
-    {
-      userId: createdUsers[1].id,
-      type: PostType.giveaway,
-      title: '🎨 Design Tutorial Video + Free Resources',
-      description: 'Just dropped my latest design tutorial! Learn advanced Figma techniques and get access to my premium design system. Giving away 5 copies of my complete UI kit to lucky winners!',
-      category: 'design',
-      status: PostStatus.open,
-      selectionMethod: SelectionMethod.random,
-      winnerCount: 5,
-      media: JSON.stringify([{ type: 'video', url: '/design-tutorial-thumbnail.png' }]),
-      endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-    },
-  ];
-
-  const createdPosts = [];
-  for (const postData of posts) {
-    const post = await prisma.post.create({
-      data: postData,
-    });
-    createdPosts.push(post);
-  }
-
-  console.log(`Created ${createdPosts.length} posts`);
-
-  // Create sample entries
-  const entries = [
-    {
-      postId: createdPosts[0].id,
-      userId: createdUsers[1].id,
-      content: 'Started coding 2 years ago with Python! Currently building a web app for local businesses.',
-      proofUrl: 'https://github.com/sarahj/local-business-app',
-      isWinner: false,
-    },
-    {
-      postId: createdPosts[0].id,
-      userId: createdUsers[2].id,
-      content: 'Been coding for 3 years, started with game development! Now working on streaming tools.',
-      proofUrl: 'https://github.com/marcusw/stream-tools',
-      isWinner: true,
-    },
-  ];
-
-  const createdEntries = [];
-  for (const entryData of entries) {
-    const entry = await prisma.entry.create({
-      data: entryData,
-    });
-    createdEntries.push(entry);
-  }
-
-  console.log(`Created ${createdEntries.length} entries`);
-
-  // Assign some badges to users
   await prisma.userBadge.createMany({
     data: [
-      {
-        userId: createdUsers[0].id,
-        badgeId: 'legend',
-        awardedAt: new Date(),
-      },
-      {
-        userId: createdUsers[1].id,
-        badgeId: 'contributor',
-        awardedAt: new Date(),
-      },
-      {
-        userId: createdUsers[2].id,
-        badgeId: 'icon',
-        awardedAt: new Date(),
-      },
+      { userId: createdUsers[0].id, badgeId: 'community-hero' },
+      { userId: createdUsers[1].id, badgeId: 'generous-giver' },
+      { userId: createdUsers[2].id, badgeId: 'community-hero' },
+      { userId: createdUsers[3].id, badgeId: 'first-step' },
+      { userId: createdUsers[4].id, badgeId: 'first-step' },
     ],
     skipDuplicates: true,
   });
+  console.log('Assigned default badges');
 
-  console.log('Database seeding completed!');
+  console.log('Database seeding completed');
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .catch((error) => {
+    console.error(error);
     process.exit(1);
   })
   .finally(async () => {
