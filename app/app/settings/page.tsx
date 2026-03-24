@@ -1,5 +1,13 @@
 'use client';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   ArrowLeft,
   Bell,
@@ -11,30 +19,22 @@ import {
   Trash2,
   Wallet,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 
 import { AuthGuard } from '@/components/auth-guard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import Link from 'next/link';
-import type React from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/app-context';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import type React from 'react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
-  const { user, logout, toggleTheme, theme } = useAppContext();
+  const { user, logout, toggleTheme, theme, setCurrentUser } = useAppContext();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -43,6 +43,8 @@ export default function SettingsPage() {
     bio: user?.bio || '',
     email: user?.email || '',
   });
+
+  const [isSaving, setIsSaving] = useState(false);
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -59,11 +61,46 @@ export default function SettingsPage() {
     });
   };
 
-  const handleSaveProfile = () => {
-    // Mock save functionality
-    toast('Profile updated', {
-      description: 'Your profile has been saved successfully.',
-    });
+  const handleSaveProfile = async () => {
+    if (!user?.id) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          username: formData.username,
+          bio: formData.bio,
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error('Failed to save', {
+          description: data.error || 'Something went wrong. Please try again.',
+        });
+        return;
+      }
+
+      // Merge the returned fields back into the current user object so every
+      // part of the UI (navbar, profile page) reflects the change immediately
+      // without requiring a full page reload.
+      setCurrentUser({ ...user, ...data.data });
+
+      toast.success('Profile updated', {
+        description: 'Your profile has been saved successfully.',
+      });
+    } catch {
+      toast.error('Network error', {
+        description: 'Could not reach the server. Please check your connection.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -169,7 +206,9 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <Button onClick={handleSaveProfile}>Save Changes</Button>
+            <Button onClick={handleSaveProfile} disabled={isSaving}>
+              {isSaving ? 'Saving…' : 'Save Changes'}
+            </Button>
           </CardContent>
         </Card>
 
