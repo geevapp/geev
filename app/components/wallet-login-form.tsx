@@ -13,7 +13,6 @@ import { signIn, signOut, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { useAppContext } from '@/contexts/app-context';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -33,7 +32,6 @@ export function WalletLoginForm({
   ) => {
     return toast[type](message);
   };
-  const { login: contextLogin } = useAppContext();
   const { data: session, status } = useSession();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +66,6 @@ export function WalletLoginForm({
     setIsLoading(true);
 
     try {
-      // Try NextAuth login first
       const result = await signIn('credentials', {
         walletAddress,
         signature,
@@ -82,27 +79,7 @@ export function WalletLoginForm({
         return;
       }
 
-      // Fallback to custom API endpoint
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          signature,
-          message,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Update app context with user data
-        await contextLogin(data.user);
-        showToast('Successfully logged in!', 'success');
-        router.push('/feed');
-      } else {
-        showToast(data.error || 'Login failed', 'error');
-      }
+      showToast(result?.error || 'Login failed', 'error');
     } catch (error) {
       console.error('Login error:', error);
       showToast('Login failed. Please try again.', 'error');
@@ -120,27 +97,20 @@ export function WalletLoginForm({
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          signature,
-          message,
-          username,
-          email: email || undefined,
-        }),
+      const result = await signIn('credentials', {
+        walletAddress,
+        signature,
+        message,
+        username,
+        email: email || undefined,
+        redirect: false,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Update app context with user data
-        await contextLogin(data.user);
+      if (result?.ok && !result.error) {
         showToast('Account created successfully!', 'success');
         router.push('/feed');
       } else {
-        showToast(data.error || 'Registration failed', 'error');
+        showToast(result?.error || 'Registration failed', 'error');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -231,7 +201,7 @@ export function WalletLoginForm({
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="flex min-h-[80px] w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-0"
+                className="flex min-h-20 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-0"
                 placeholder="Message to sign..."
               />
               <Button
@@ -249,7 +219,7 @@ export function WalletLoginForm({
           <Button
             onClick={handleLogin}
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
+            className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
           >
             <Wallet className="w-4 h-4 mr-2" />
             {isLoading ? 'Logging in...' : 'Login'}
@@ -324,7 +294,7 @@ export function WalletLoginForm({
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="flex min-h-[80px] w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-20 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Message to sign..."
               />
               <Button
@@ -342,7 +312,7 @@ export function WalletLoginForm({
           <Button
             onClick={handleRegister}
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
+            className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
           >
             <Wallet className="w-4 h-4 mr-2" />
             {isLoading ? 'Creating account...' : 'Create Account'}

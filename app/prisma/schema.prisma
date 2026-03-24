@@ -19,14 +19,9 @@ enum PostType {
   request
 }
 
-enum PostStatus {
-  open
-  closed
-  completed
-}
-
 enum SelectionMethod {
   random
+  merit_based
   manual
   firstcome
 }
@@ -41,6 +36,80 @@ enum ActivityType {
   post_created
   entry_submitted
   contribution_made
+}
+
+/**
+ * Status of a post throughout its lifecycle.
+ * Used to track the current state of giveaways and help requests.
+ */
+enum PostStatus {
+  open
+  in_progress
+  completed
+  cancelled
+  active
+  expired
+}
+
+/**
+ * Tier levels for badges with corresponding numeric values.
+ * Higher tiers represent greater achievements.
+ */
+enum BadgeTier {
+  /**
+   * Basic achievement tier
+   */
+  Bronze
+  /**
+   * Intermediate achievement tier
+   */
+  Silver
+  /**
+   * Advanced achievement tier
+   */
+  Gold
+  /**
+   * Expert achievement tier
+   */
+  Platinum
+  /**
+   * Legendary achievement tier
+   */
+  Diamond
+}
+
+/**
+ * Urgency level for help requests.
+ * Indicates how time-sensitive the request is.
+ */
+enum Urgency {
+  /**
+   * General requests, flexible timeline
+   */
+  low
+  /**
+   * Helpful soon, not critical
+   */
+  medium
+  /**
+   * Needed within days
+   */
+  high
+  /**
+   * Critical, immediate need
+   */
+  urgent
+}
+
+/**
+ * Type of help being requested.
+ * Categorizes the kind of assistance needed.
+ */
+enum HelpType {
+  material
+  service
+  advice
+  other
 }
 
 model Activity {
@@ -86,6 +155,7 @@ model User {
   helpContributions HelpContribution[]
   accounts          Account[]
   sessions          Session[]
+  wins              PostWinner[]       @relation("PostWinner")
 
   @@map("users")
 }
@@ -159,11 +229,13 @@ model Post {
   slug              String
   title             String          @db.VarChar(200)
   description       String?
-  category          String          @db.VarChar(50)
+  duration          Int?            @map("duration") // Duration in seconds for time-limited posts
+  helpType          HelpType?       @map("help_type")
+  urgency           Urgency?        @map("urgency")
   status            PostStatus      @default(open)
   selectionMethod   SelectionMethod @default(random) @map("selection_method")
   entryRequirements Json?           @map("entry_requirements")
-  winnerCount       Int             @default(1) @map("winner_count")
+  maxWinners        Int?            @map("max_winners") // Optional cap on winners for open-ended giveaways
   currency          String?         @map("currency") @db.VarChar(10)
   prizeAmount       Float?          @map("prize_amount")
   targetAmount      Float?          @map("target_amount")
@@ -172,18 +244,48 @@ model Post {
   createdAt         DateTime        @default(now()) @map("created_at")
   updatedAt         DateTime        @updatedAt @map("updated_at")
 
-  user          User               @relation("PostCreator", fields: [userId], references: [id], onDelete: Cascade)
-  entries       Entry[]
-  interactions  Interaction[]
-  contributions HelpContribution[]
-  media         PostMedia[]
-  comments      Comment[]
+  user               User               @relation("PostCreator", fields: [userId], references: [id], onDelete: Cascade)
+  entries            Entry[]
+  interactions       Interaction[]
+  contributions      HelpContribution[]
+  requirements       PostRequirements   @relation(fields: [postRequirementsId], references: [id])
+  media              PostMedia[]
+  comments           Comment[]
+  postRequirementsId String
+  winners            PostWinner[]       @relation("WonPost")
+  burns              Burn[]
 
   @@index([userId])
   @@index([status])
-  @@index([category])
   @@index([createdAt(sort: Desc)])
   @@map("posts")
+}
+
+model PostRequirements {
+  id            String     @id @default(uuid())
+  /**
+   * Minimum badge tier required to enter
+   */
+  minBadgeTier  BadgeTier?
+  /**
+   * Minimum reputation score required
+   */
+  minReputation Int?
+  /**
+   * Whether proof of action is required
+   */
+  proofRequired Boolean
+  posts         Post[]
+}
+
+model PostWinner {
+  post       Post   @relation("WonPost", fields: [postId], references: [id])
+  user       User   @relation("PostWinner", fields: [userId], references: [id])
+  postId     String
+  userId     String
+  assignedBy String
+
+  @@id([postId, userId])
 }
 
 model PostMedia {
@@ -217,18 +319,49 @@ model HelpContribution {
   @@map("help_contributions")
 }
 
-model Entry {
+enum ProofType {
+  image
+  link
+}
+
+/**
+ * Burn interaction for boosting visibility.
+ * Users burn tokens to promote entries.
+ */
+model Burn {
   id        String   @id @default(uuid())
-  postId    String   @map("post_id")
   userId    String   @map("user_id")
-  content   String
-  proofUrl  String?  @map("proof_url")
-  isWinner  Boolean  @default(false) @map("is_winner")
+  entryId   String?  @map("entry_id")
+  postId    String?  @map("post_id")
   createdAt DateTime @default(now()) @map("created_at")
 
-  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entry Entry? @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  post  Post?  @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model ProofData {
+  id      String    @id @default(uuid())
+  type    ProofType
+  url     String    @db.VarChar(255)
+  entry   Entry     @relation(fields: [entryId], references: [id])
+  entryId String    @unique // Foreign key with unique constraint
+}
+
+model Entry {
+  id         String   @id @default(uuid())
+  postId     String   @map("post_id")
+  userId     String   @map("user_id")
+  content    String
+  proofUrl   String?  @map("proof_url")
+  proofImage String?  @map("proof_image")
+  isWinner   Boolean  @default(false) @map("is_winner")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  post     Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   comments Comment[]
+  proof    ProofData?
+  burns    Burn[]
 
   @@unique([postId, userId])
   @@index([postId])

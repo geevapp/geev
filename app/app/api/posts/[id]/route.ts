@@ -1,7 +1,8 @@
 import { apiError, apiSuccess } from "@/lib/api-response";
+
+import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { NextRequest } from "next/server";
 
 const GET = async (
     request: NextRequest,
@@ -12,7 +13,7 @@ const GET = async (
         const post = await prisma.post.findUnique({
             where: { id },
             include: {
-                creator: {
+                user: {
                     select: {
                         id: true,
                         name: true,
@@ -62,7 +63,7 @@ const PATCH = async (
             return apiError('Post not found', 404);
         }
 
-        if (post.creatorId !== user.id) {
+        if (post.userId !== user.id) {
             return apiError('Forbidden', 403);
         }
 
@@ -107,7 +108,7 @@ const DELETE = async (
             return apiError('Post not found', 404);
         }
 
-        if (post.creatorId !== user.id) {
+        if (post.userId !== user.id) {
             return apiError('Forbidden', 403);
         }
 

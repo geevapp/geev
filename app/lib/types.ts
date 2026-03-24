@@ -3,6 +3,7 @@ import type { User as BaseUser, Badge as Basebadge, Rank } from "@prisma/client"
 import { SignInResponse } from "next-auth/react"
 
 export type User = BaseUser & {
+  walletBalance?: number
   rank: Rank
   badges: Badge[]
   _count: {
@@ -46,7 +47,6 @@ export interface Post {
   media?: PostMedia[]
   createdAt: Date
   updatedAt: Date
-  creatorId?: string
   status: PostStatus
   burnCount: number
   shareCount: number

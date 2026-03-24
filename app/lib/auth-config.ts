@@ -93,6 +93,8 @@ export const authConfig = {
               data: {
                 walletAddress,
                 name: username,
+                username,
+                email: email || null,
                 bio: null,
                 avatarUrl: `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`,
                 xp: 0,
@@ -105,7 +107,7 @@ export const authConfig = {
               id: user.id,
               walletAddress: user.walletAddress,
               username: user.name,
-              email: null,
+              email: user.email,
               avatar: user.avatarUrl,
               bio: user.bio,
               joinDate: user.createdAt,
@@ -146,7 +148,7 @@ export const authConfig = {
     error: "/login",
   },
   session: {
-    strategy: "database",
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET || "your-secret-key-change-in-production",

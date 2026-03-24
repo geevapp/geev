@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Calendar,
   ChevronDown,
@@ -13,22 +13,22 @@ import {
   Share2,
   Target,
   Users,
-} from "lucide-react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+} from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CommentsSection } from "@/components/comments-section";
-import { ContributionForm } from "@/components/contribution-form";
-import { EntryForm } from "@/components/entry-form";
-import Link from "next/link";
-import type { Post } from "@/lib/types";
-import { Progress } from "@/components/ui/progress";
-import type React from "react";
-import { UserRankBadge } from "@/components/user-rank-badge";
-import { useAppContext } from "@/contexts/app-context";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CommentsSection } from '@/components/comments-section';
+import { ContributionForm } from '@/components/contribution-form';
+import { EntryForm } from '@/components/entry-form';
+import Link from 'next/link';
+import type { Post } from '@/lib/types';
+import { Progress } from '@/components/ui/progress';
+import type React from 'react';
+import { UserRankBadge } from '@/components/user-rank-badge';
+import { useAppContext } from '@/contexts/app-context';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface PostCardProps {
   post: Post;
@@ -45,7 +45,7 @@ export function PostCard({ post }: PostCardProps) {
 
   const handleAuthRequiredAction = (action: () => void) => {
     if (!user) {
-      router.push("/login");
+      router.push('/login');
       return;
     }
     action();
@@ -96,22 +96,22 @@ export function PostCard({ post }: PostCardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "active":
-        return "bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800";
-      case "completed":
-        return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800";
-      case "cancelled":
-        return "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800";
-      case "expired":
-        return "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+      case 'active':
+        return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800';
+      case 'completed':
+        return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800';
+      case 'cancelled':
+        return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800';
+      case 'expired':
+        return 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
       default:
-        return "bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700";
+        return 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
     }
   };
 
   const getProgressPercentage = () => {
     if (
-      post.type === "help-request" &&
+      post.type === 'help-request' &&
       post.targetAmount &&
       post.currentAmount
     ) {
@@ -124,7 +124,7 @@ export function PostCard({ post }: PostCardProps) {
 
   const handleMediaClick = (e: React.MouseEvent, media: any) => {
     e.stopPropagation();
-    if (media.type !== "video") {
+    if (media.type !== 'video') {
       router.push(`/post/${post.id}`);
     }
   };
@@ -144,14 +144,14 @@ export function PostCard({ post }: PostCardProps) {
               <Link href={`/profile/${post.author.id}`}>
                 <Avatar className="w-10 h-10 cursor-pointer">
                   <AvatarImage
-                    src={post.author.avatar || "/placeholder.svg"}
+                    src={post.author.avatarUrl || '/placeholder.svg'}
                     alt={post.author.name}
                   />
                   <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
                     {post.author.name
-                      .split(" ")
+                      .split(' ')
                       .map((n) => n[0])
-                      .join("")}
+                      .join('')}
                   </AvatarFallback>
                 </Avatar>
               </Link>
@@ -184,12 +184,12 @@ export function PostCard({ post }: PostCardProps) {
                 variant="outline"
                 className="flex items-center gap-1 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700"
               >
-                {post.type === "giveaway" ? (
+                {post.type === 'giveaway' ? (
                   <Gift className="w-3 h-3" />
                 ) : (
                   <Target className="w-3 h-3" />
                 )}
-                {post.type === "giveaway" ? "Giveaway" : "Help Request"}
+                {post.type === 'giveaway' ? 'Giveaway' : 'Help Request'}
               </Badge>
             </div>
           </div>
@@ -209,9 +209,9 @@ export function PostCard({ post }: PostCardProps) {
             <div className="space-y-3" onClick={handleInteractiveClick}>
               {post.media.length === 1 ? (
                 <div className="rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
-                  {post.media[0].type === "image" ? (
+                  {post.media[0].type === 'image' ? (
                     <img
-                      src={post.media[0].url || "/placeholder.svg"}
+                      src={post.media[0].url || '/placeholder.svg'}
                       alt="Post media"
                       className="w-full aspect-square object-cover cursor-pointer"
                       onClick={(e) => handleMediaClick(e, post.media![0])}
@@ -234,9 +234,9 @@ export function PostCard({ post }: PostCardProps) {
                       key={media.id}
                       className="relative rounded-lg overflow-hidden aspect-square bg-gray-100 dark:bg-gray-800"
                     >
-                      {media.type === "image" ? (
+                      {media.type === 'image' ? (
                         <img
-                          src={media.url || "/placeholder.svg"}
+                          src={media.url || '/placeholder.svg'}
                           alt={`Post media ${index + 1}`}
                           className="w-full h-full object-cover cursor-pointer"
                           onClick={(e) => handleMediaClick(e, media)}
@@ -268,7 +268,7 @@ export function PostCard({ post }: PostCardProps) {
           )}
 
           {/* Giveaway Details */}
-          {post.type === "giveaway" && (
+          {post.type === 'giveaway' && (
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-xl p-4 space-y-3 border border-blue-100 dark:border-blue-800/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -301,7 +301,7 @@ export function PostCard({ post }: PostCardProps) {
                 </div>
               )}
 
-              {post.status === "active" && (
+              {post.status === 'active' && (
                 <Button
                   onClick={(e) => {
                     handleInteractiveClick(e);
@@ -311,16 +311,16 @@ export function PostCard({ post }: PostCardProps) {
                 >
                   {user
                     ? canInteract
-                      ? "Enter Giveaway"
-                      : "Your Giveaway"
-                    : "Sign in to Enter"}
+                      ? 'Enter Giveaway'
+                      : 'Your Giveaway'
+                    : 'Sign in to Enter'}
                 </Button>
               )}
             </div>
           )}
 
           {/* Help Request Details */}
-          {post.type === "help-request" && (
+          {post.type === 'help-request' && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl p-4 space-y-3 border border-green-100 dark:border-green-800/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -345,7 +345,7 @@ export function PostCard({ post }: PostCardProps) {
                 </div>
               </div>
 
-              {post.status === "active" &&
+              {post.status === 'active' &&
                 (post.currentAmount || 0) < (post.targetAmount || 0) && (
                   <Button
                     onClick={(e) => {
@@ -359,9 +359,9 @@ export function PostCard({ post }: PostCardProps) {
                     <DollarSign className="w-4 h-4 mr-2" />
                     {user
                       ? canInteract
-                        ? "Contribute"
-                        : "Your Request"
-                      : "Sign in to Contribute"}
+                        ? 'Contribute'
+                        : 'Your Request'
+                      : 'Sign in to Contribute'}
                   </Button>
                 )}
             </div>
@@ -376,12 +376,12 @@ export function PostCard({ post }: PostCardProps) {
                 onClick={handleBurn}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
                   isBurned
-                    ? "text-red-600 bg-red-50 dark:bg-red-950/20"
-                    : "text-gray-500"
+                    ? 'text-red-600 bg-red-50 dark:bg-red-950/20'
+                    : 'text-gray-500'
                 }`}
               >
                 <Flame
-                  className={`w-4 h-4 ${isBurned ? "fill-current" : ""}`}
+                  className={`w-4 h-4 ${isBurned ? 'fill-current' : ''}`}
                 />
                 <span className="text-sm font-medium">
                   {post.burnCount + (isBurned ? 1 : 0)}
@@ -404,8 +404,8 @@ export function PostCard({ post }: PostCardProps) {
                 onClick={handleCommentsClick}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
                   showComments
-                    ? "text-blue-600 bg-blue-50 dark:bg-blue-950/20"
-                    : "text-gray-500"
+                    ? 'text-blue-600 bg-blue-50 dark:bg-blue-950/20'
+                    : 'text-gray-500'
                 }`}
               >
                 <Users className="w-4 h-4" />
@@ -451,15 +451,15 @@ export function PostCard({ post }: PostCardProps) {
                 </div>
               </div>
 
-              {post.type === "giveaway" && (
+              {post.type === 'giveaway' && (
                 <div className="pt-2 border-t border-gray-200 dark:border-gray-600 space-y-2">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="text-gray-600 dark:text-gray-400">
-                      <span className="font-medium">Selection:</span>{" "}
+                      <span className="font-medium">Selection:</span>{' '}
                       {post.selectionType}
                     </div>
                     <div className="text-gray-600 dark:text-gray-400">
-                      <span className="font-medium">Winners:</span>{" "}
+                      <span className="font-medium">Winners:</span>{' '}
                       {post.winnerCount}
                     </div>
                   </div>
@@ -477,7 +477,7 @@ export function PostCard({ post }: PostCardProps) {
       </Card>
 
       {/* Entry Form Modal */}
-      {post.type === "giveaway" && (
+      {post.type === 'giveaway' && (
         <EntryForm
           open={showEntryForm}
           onOpenChange={setShowEntryForm}
@@ -486,7 +486,7 @@ export function PostCard({ post }: PostCardProps) {
       )}
 
       {/* Contribution Form Modal */}
-      {post.type === "help-request" && (
+      {post.type === 'help-request' && (
         <ContributionForm
           open={showContributionForm}
           onOpenChange={setShowContributionForm}

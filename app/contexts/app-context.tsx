@@ -22,7 +22,6 @@ import { mockPosts, mockUsers } from '@/lib/mock-data';
 import { signIn, signOut } from 'next-auth/react';
 
 import type React from 'react';
-import { getUserById } from '@/lib/mock-auth';
 import { useSession } from 'next-auth/react';
 
 const initialState: AppState = {
@@ -182,15 +181,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
 
   useEffect(() => {
-    if (session?.user?.id) {
-      const fullUser = getUserById(session.user.id);
-      if (fullUser) {
-        dispatch({ type: 'SET_USER', payload: fullUser });
+    let isMounted = true;
+
+    const syncSessionUser = async () => {
+      if (!session?.user?.id) {
+        if (isMounted) {
+          dispatch({ type: 'SET_USER', payload: null });
+        }
+        return;
       }
-    } else {
-      dispatch({ type: 'SET_USER', payload: null });
-    }
-  }, [session]);
+
+      try {
+        const response = await fetch('/api/auth/me', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error('Failed to fetch current user');
+        }
+
+        const result = await response.json();
+        if (isMounted) {
+          dispatch({ type: 'SET_USER', payload: result?.data ?? null });
+        }
+      } catch (error) {
+        if (isMounted) {
+          dispatch({ type: 'SET_USER', payload: null });
+        }
+      }
+    };
+
+    syncSessionUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.user?.id]);
 
   // Load state from localStorage and mock data on mount
   useEffect(() => {
@@ -260,8 +283,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...credentials,
       });
 
-      if (!url.error) {
-        dispatch({ type: 'SET_USER', payload: user });
+      if (!url?.error) {
+        try {
+          const response = await fetch('/api/auth/me', { cache: 'no-store' });
+          const result = await response.json();
+          dispatch({ type: 'SET_USER', payload: result?.data ?? user });
+        } catch {
+          dispatch({ type: 'SET_USER', payload: user });
+        }
       }
       return url;
     },

@@ -16,7 +16,7 @@ const POST = async (request: NextRequest) => {
       return apiError('Invalid or missing JSON body', 400);
     }
 
-    const { title, description, category, type, winnerCount, endsAt } = body;
+    const { title, description, type, winnerCount, endsAt, proofRequired } = body;
 
     if (!title || title.length < 10 || title.length > 200) {
       return apiError('Title must be 10-200 characters', 400);
@@ -26,19 +26,25 @@ const POST = async (request: NextRequest) => {
       return apiError('Description must be at least 50 characters', 400);
     }
 
+    const requirements = await prisma.postRequirements.create({
+      data: {
+        proofRequired: Boolean(proofRequired),
+      },
+    });
+
     const post = await prisma.post.create({
       data: {
-        creatorId: user.id,
+        userId: user.id,
         type,
         title,
         slug: body.slug || title.toLowerCase().replace(/\s+/g, '-').slice(0, 50),
         description,
-        category,
-        winnerCount,
+        maxWinners: winnerCount ? Number(winnerCount) : null,
+        postRequirementsId: requirements.id,
         endsAt: new Date(endsAt),
       },
       include: {
-        creator: {
+        user: {
           select: {
             id: true,
             name: true,
@@ -59,13 +65,11 @@ const GET = async (request: NextRequest) => {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
-    const category = searchParams.get('category');
     const status = searchParams.get('status');
     const type = searchParams.get('type');
 
     const where: any = {};
 
-    if (category) where.category = category;
     if (status) where.status = status;
     if (type) where.type = type;
 
@@ -76,7 +80,7 @@ const GET = async (request: NextRequest) => {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          creator: {
+          user: {
             select: {
               id: true,
               name: true,

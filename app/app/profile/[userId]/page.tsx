@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, Gift, Settings, Star } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Calendar, Gift, Settings, Star } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { AchievementsDialog } from "@/components/achievements-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { PostCard } from "@/components/post-card";
-import { UserRankBadge } from "@/components/user-rank-badge";
-import { useAppContext } from "@/contexts/app-context";
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { AchievementsDialog } from '@/components/achievements-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { PostCard } from '@/components/post-card';
+import { UserRankBadge } from '@/components/user-rank-badge';
+import { useAppContext } from '@/contexts/app-context';
+import { useParams } from 'next/navigation';
+import { useState } from 'react';
 
 export default function ProfilePage() {
   const params = useParams();
@@ -25,8 +25,8 @@ export default function ProfilePage() {
   const userPosts = posts.filter((p) => p.userId === userId);
   const isOwnProfile = currentUser?.id === userId;
 
-  const givePosts = userPosts.filter((p) => p.type === "giveaway").length;
-  const takePosts = userPosts.filter((p) => p.type === "help-request").length;
+  const givePosts = userPosts.filter((p) => p.type === 'giveaway').length;
+  const takePosts = userPosts.filter((p) => p.type === 'help-request').length;
 
   if (!profileUser) {
     return (
@@ -52,14 +52,14 @@ export default function ProfilePage() {
               <div className="relative">
                 <Avatar className="w-24 h-24 border-4 border-white shadow-sm">
                   <AvatarImage
-                    src={profileUser.avatar || "/placeholder.svg"}
+                    src={profileUser.avatarUrl || '/placeholder.svg'}
                     alt={profileUser.name}
                   />
                   <AvatarFallback className="text-2xl font-bold">
                     {profileUser.name
-                      .split(" ")
+                      .split(' ')
                       .map((n) => n[0])
-                      .join("")}
+                      .join('')}
                   </AvatarFallback>
                 </Avatar>
               </div>
@@ -100,7 +100,7 @@ export default function ProfilePage() {
               <div className="flex justify-center gap-8 text-sm">
                 <button className="flex flex-col items-center hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                    {profileUser.followersCount}
+                    {profileUser._count?.followers || 0}
                   </span>
                   <span className="text-gray-600 dark:text-gray-400">
                     Followers
@@ -108,7 +108,7 @@ export default function ProfilePage() {
                 </button>
                 <button className="flex flex-col items-center hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                    {profileUser.followingCount || 0}
+                    {profileUser._count?.followings || 0}
                   </span>
                   <span className="text-gray-600 dark:text-gray-400">
                     Following
@@ -146,10 +146,10 @@ export default function ProfilePage() {
               {/* Join Date */}
               <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                 <Calendar className="w-4 h-4" />
-                Joined{" "}
-                {profileUser.joinedAt.toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
+                Joined{' '}
+                {profileUser.createdAt.toLocaleDateString('en-US', {
+                  month: 'long',
+                  year: 'numeric',
                 })}
               </div>
 
@@ -177,7 +177,7 @@ export default function ProfilePage() {
                   <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
                   <p className="text-gray-600 dark:text-gray-400">
                     {isOwnProfile
-                      ? "Start creating giveaways or help requests!"
+                      ? 'Start creating giveaways or help requests!'
                       : `${profileUser.name} hasn't posted anything yet.`}
                   </p>
                 </CardContent>
@@ -187,7 +187,7 @@ export default function ProfilePage() {
 
           <TabsContent value="giveaways" className="space-y-4">
             {userPosts
-              .filter((p) => p.type === "giveaway")
+              .filter((p) => p.type === 'giveaway')
               .map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
@@ -195,7 +195,7 @@ export default function ProfilePage() {
 
           <TabsContent value="requests" className="space-y-4">
             {userPosts
-              .filter((p) => p.type === "help-request")
+              .filter((p) => p.type === 'help-request')
               .map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
