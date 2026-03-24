@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   Card,
@@ -6,45 +6,45 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Copy, Key, Mail, User, Wallet } from 'lucide-react';
-import { signIn, signOut, useSession } from 'next-auth/react';
+} from "@/components/ui/card";
+import { Copy, Key, Mail, User, Wallet } from "lucide-react";
+import { signIn, signOut, useSession } from "next-auth/react";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 /**
  * Wallet-based login and registration form
  */
 export function WalletLoginForm({
-  authType = 'login',
+  authType = "login",
 }: {
-  authType?: 'login' | 'register';
+  authType?: "login" | "register";
 }) {
   const router = useRouter();
   // Simple toast simulation
   const showToast = (
     message: string,
-    type: 'success' | 'error' = 'success',
+    type: "success" | "error" = "success",
   ) => {
     return toast[type](message);
   };
   const { data: session, status } = useSession();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [signature, setSignature] = useState('');
-  const [message, setMessage] = useState('');
+  const [walletAddress, setWalletAddress] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [signature, setSignature] = useState("");
+  const [message, setMessage] = useState("");
 
   // Generate a mock signature for demo purposes
   const generateMockSignature = () => {
     // In a real app, this would come from the wallet provider
-    const mockSignature = '0x' + Math.random().toString(36).substring(2, 30);
+    const mockSignature = "0x" + Math.random().toString(36).substring(2, 30);
     setSignature(mockSignature);
     return mockSignature;
   };
@@ -59,14 +59,14 @@ export function WalletLoginForm({
 
   const handleLogin = async () => {
     if (!walletAddress || !signature || !message) {
-      showToast('Please fill in all required fields', 'error');
+      showToast("Please fill in all required fields", "error");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         walletAddress,
         signature,
         message,
@@ -74,15 +74,15 @@ export function WalletLoginForm({
       });
 
       if (result?.ok && !result.error) {
-        showToast('Successfully logged in!', 'success');
-        router.push('/feed');
+        showToast("Successfully logged in!", "success");
+        router.push("/feed");
         return;
       }
 
-      showToast(result?.error || 'Login failed', 'error');
+      showToast(result?.error || "Login failed", "error");
     } catch (error) {
-      console.error('Login error:', error);
-      showToast('Login failed. Please try again.', 'error');
+      console.error("Login error:", error);
+      showToast("Login failed. Please try again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -90,14 +90,14 @@ export function WalletLoginForm({
 
   const handleRegister = async () => {
     if (!walletAddress || !username || !signature || !message) {
-      showToast('Please fill in all required fields', 'error');
+      showToast("Please fill in all required fields", "error");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         walletAddress,
         signature,
         message,
@@ -107,14 +107,14 @@ export function WalletLoginForm({
       });
 
       if (result?.ok && !result.error) {
-        showToast('Account created successfully!', 'success');
-        router.push('/feed');
+        showToast("Account created successfully!", "success");
+        router.push("/feed");
       } else {
-        showToast(result?.error || 'Registration failed', 'error');
+        showToast(result?.error || "Registration failed", "error");
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      showToast('Registration failed. Please try again.', 'error');
+      console.error("Registration error:", error);
+      showToast("Registration failed. Please try again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -124,19 +124,16 @@ export function WalletLoginForm({
     try {
       await signOut({ redirect: false });
 
-      // Also call custom logout endpoint
-      await fetch('/api/auth/logout', { method: 'POST' });
-
-      showToast('Successfully logged out!', 'success');
-      router.push('/login');
+      showToast("Successfully logged out!", "success");
+      router.push("/login");
     } catch (error) {
-      console.error('Logout error:', error);
-      showToast('Logout failed', 'error');
+      console.error("Logout error:", error);
+      showToast("Logout failed", "error");
     }
   };
 
   // If user is already logged in
-  if (status === 'authenticated' || session) {
+  if (status === "authenticated" || session) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
@@ -148,7 +145,7 @@ export function WalletLoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={() => router.push('/feed')} className="w-full">
+          <Button onClick={() => router.push("/feed")} className="w-full">
             Go to Feed
           </Button>
           <Button variant="outline" onClick={handleLogout} className="w-full">
@@ -161,7 +158,7 @@ export function WalletLoginForm({
 
   return (
     <div className="w-full mx-auto">
-      {authType === 'login' && (
+      {authType === "login" && (
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Wallet Address</label>
@@ -222,12 +219,12 @@ export function WalletLoginForm({
             className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
           >
             <Wallet className="w-4 h-4 mr-2" />
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? "Logging in..." : "Login"}
           </Button>
         </div>
       )}
 
-      {authType === 'register' && (
+      {authType === "register" && (
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Wallet Address</label>
@@ -315,7 +312,7 @@ export function WalletLoginForm({
             className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
           >
             <Wallet className="w-4 h-4 mr-2" />
-            {isLoading ? 'Creating account...' : 'Create Account'}
+            {isLoading ? "Creating account..." : "Create Account"}
           </Button>
         </div>
       )}
