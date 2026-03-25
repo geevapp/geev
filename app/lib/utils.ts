@@ -43,10 +43,11 @@ export const serializeState = (state: AppState): string => {
 export const deserializeState = (stored: string): Partial<AppState> | null => {
   try {
     const parsed = JSON.parse(stored);
+    const { users: _legacyUsers, ...rest } = parsed;
     return {
-      ...parsed,
-      likes: new Set<string>(parsed.likes || []),
-      burns: new Set<string>(parsed.burns || []),
+      ...rest,
+      likes: new Set<string>(rest.likes || []),
+      burns: new Set<string>(rest.burns || []),
     };
   } catch (error) {
     console.error("Failed to deserialize app state:", error);

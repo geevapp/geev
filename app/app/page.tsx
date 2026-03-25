@@ -10,7 +10,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockPosts } from '@/lib/mock-data';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +43,7 @@ type LandingPost = {
   id: string;
   title: string;
   description?: string | null;
+  type?: 'giveaway' | 'help-request';
   media?: Array<{ url?: string | null }>;
   entriesCount?: number;
   likesCount?: number;
@@ -55,9 +55,7 @@ export default function LandingPage() {
   const [scrollY, setScrollY] = useState(0);
   const [topGivers, setTopGivers] = useState<LandingUser[]>([]);
   const [trendingGiveaways, setTrendingGiveaways] = useState<LandingPost[]>([]);
-  const [trendingRequests, setTrendingRequests] = useState<LandingPost[]>(
-    mockPosts.filter((post) => post.type === 'help-request').slice(0, 3),
-  );
+  const [trendingRequests, setTrendingRequests] = useState<LandingPost[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -76,14 +74,16 @@ export default function LandingPage() {
 
     const fetchLandingData = async () => {
       try {
-        const [leaderboardRes, giveawaysRes] = await Promise.all([
+        const [leaderboardRes, giveawaysRes, requestsRes] = await Promise.all([
           fetch('/api/leaderboard?limit=3'),
           fetch('/api/posts?type=giveaway&limit=3'),
+          fetch('/api/posts?type=help-request&limit=3'),
         ]);
 
-        const [leaderboardJson, giveawaysJson] = await Promise.all([
+        const [leaderboardJson, giveawaysJson, requestsJson] = await Promise.all([
           leaderboardRes.json(),
           giveawaysRes.json(),
+          requestsRes.json(),
         ]);
 
         if (isCancelled) return;
@@ -93,6 +93,9 @@ export default function LandingPage() {
           : [];
         const giveawaysPosts = Array.isArray(giveawaysJson?.data?.posts)
           ? giveawaysJson.data.posts
+          : [];
+        const requestPosts = Array.isArray(requestsJson?.data?.posts)
+          ? requestsJson.data.posts
           : [];
 
         setTopGivers(
@@ -118,6 +121,7 @@ export default function LandingPage() {
           })),
         );
         setTrendingGiveaways(giveawaysPosts.slice(0, 3));
+        setTrendingRequests(requestPosts.slice(0, 3));
       } catch (error) {
         console.error('Failed to load landing page data:', error);
       }

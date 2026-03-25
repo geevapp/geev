@@ -134,7 +134,6 @@ export interface AppState {
   burns: Set<string>
   user: User | null
   posts: Post[]
-  users: User[]
   entries: Entry[]
   contributions: HelpContribution[]
   comments: Comment[]
