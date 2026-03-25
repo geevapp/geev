@@ -13,20 +13,54 @@ import { PostCard } from '@/components/post-card';
 import { UserRankBadge } from '@/components/user-rank-badge';
 import { useAppContext } from '@/contexts/app-context';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function ProfilePage() {
   const params = useParams();
-  const { users, posts, user: currentUser } = useAppContext();
+  const { user: currentUser } = useAppContext();
+  const [profileUser, setProfileUser] = useState<any>(null);
+  const [userPosts, setUserPosts] = useState<any[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
 
   const userId = params.userId as string;
-  const profileUser = users.find((u) => u.id === userId);
-  const userPosts = posts.filter((p) => p.userId === userId);
+  //const profileUser = users.find((u) => u.id === userId);
+  //const userPosts = posts.filter((p) => p.userId === userId);
   const isOwnProfile = currentUser?.id === userId;
 
   const givePosts = userPosts.filter((p) => p.type === 'giveaway').length;
   const takePosts = userPosts.filter((p) => p.type === 'help-request').length;
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const [userRes, postsRes] = await Promise.all([
+          fetch(`/api/users/${userId}`),
+          fetch(`/api/posts?userId=${userId}`),
+        ]);
+
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setProfileUser(userData.data);
+        }
+
+        if (postsRes.ok) {
+          const postsData = await postsRes.json(); 
+          setUserPosts(postsData.data ?? []);
+        }
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      }
+    };
+
+    if (userId) loadProfile();
+  }, [userId]);
+
+
+
+
+
+
+
 
   if (!profileUser) {
     return (

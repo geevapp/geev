@@ -31,7 +31,8 @@ import { useAppContext } from "@/contexts/app-context";
 import { useEffect, useState } from "react";
 
 export default function PostPage() {
-  const { posts, user, burnPost } = useAppContext();
+  const { user, burnPost } = useAppContext();
+  const [post, setPost] = useState<any>(null);
   const params = useParams();
   const postId = params.postId as string;
   const contextPost = posts.find((p) => p.id === postId);
