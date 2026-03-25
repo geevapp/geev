@@ -67,6 +67,7 @@ export async function POST (
       return apiError('You have already entered this giveaway', 400);
     }
 
+
     // Create entry
     const entry = await prisma.$transaction(async (tx) => {
       const createdEntry = await tx.entry.create({
@@ -101,16 +102,25 @@ export async function POST (
         tx,
       );
 
-      // Notify post owner
+      // Notify post owner, but ignore if notifications table is missing
       if (post.userId) {
-        await tx.notification.create({
-          data: {
-            userId: post.userId,
-            type: 'giveaway_entry',
-            message: `${user.name} entered your giveaway`,
-            link: `/post/${postId}`,
-          },
-        });
+        try {
+          await tx.notification.create({
+            data: {
+              userId: post.userId,
+              type: 'giveaway_entry',
+              message: `${user.name} entered your giveaway`,
+              link: `/post/${postId}`,
+            },
+          });
+        } catch (err: any) {
+          if (err?.code === 'P2021' && String(err?.meta?.modelName).toLowerCase() === 'notification') {
+            // Table does not exist, skip notification
+            // Optionally log: console.warn('Notification table missing, skipping notification.');
+          } else {
+            throw err;
+          }
+        }
       }
 
       return createdEntry;
