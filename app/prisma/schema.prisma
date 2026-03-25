@@ -1,3 +1,27 @@
+enum NotificationType {
+  giveaway_entry
+  giveaway_win
+  help_contribution
+  post_closed
+  badge_awarded
+  rank_up
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  message   String
+  link      String?
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -155,12 +179,15 @@ model User {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   isVerified    Boolean   @default(false) @map("verified")
 
+
   posts           Post[]           @relation("PostCreator")
   entries         Entry[]
   comments        Comment[]
   interactions    Interaction[]
   badges          UserBadge[]
   analyticsEvents AnalyticsEvent[]
+
+  notifications   Notification[]
 
   followings        Follow[]           @relation("UserFollowing")
   followers         Follow[]           @relation("UserFollower")
