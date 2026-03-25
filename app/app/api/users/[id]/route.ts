@@ -13,22 +13,48 @@ export async function GET(
     try {
       const user = await prisma.user.findUnique({
         where: { id },
-        select: {
-          id: true,
-          walletAddress: true,
-          name: true,
-          username: true,
-          bio: true,
-          email: true,
-          avatarUrl: true,
-          xp: true,
-          createdAt: true,
-          updatedAt: true,
+        include: {
+          badges: {
+            include: {
+              badge: true,
+            },
+          },
+          rank: true,
+          _count: {
+            select: {
+              posts: true,
+              entries: true,
+              comments: true,
+              interactions: true,
+              badges: true,
+              followers: true,
+              helpContributions: true,
+            },
+          },
         },
       });
 
       if (user) {
-        return apiSuccess(user);
+        // Return only the fields we want to expose
+        const normalizedUser = {
+          id: user.id,
+          walletAddress: user.walletAddress,
+          name: user.name,
+          username: user.username,
+          bio: user.bio,
+          email: user.email,
+          avatarUrl: user.avatarUrl,
+          xp: user.xp,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          badges: user.badges.map((userBadge) => ({
+            ...userBadge.badge,
+            awardedAt: userBadge.awardedAt,
+          })),
+          rank: user.rank,
+          _count: user._count,
+        };
+        return apiSuccess(normalizedUser);
       }
     } catch (dbError) {
       console.log('Database not available, falling back to mock data');

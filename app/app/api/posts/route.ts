@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from '@/lib/api-response';
 import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { checkAndAwardBadges } from '@/lib/badges';
 
 const POST = async (request: NextRequest) => {
   try {
@@ -53,6 +54,11 @@ const POST = async (request: NextRequest) => {
         },
       },
     });
+
+    // Award badges for creating first giveaway
+    if (type === 'giveaway') {
+      await checkAndAwardBadges(user.id);
+    }
 
     return apiSuccess(post, "Post created successfully", 201);
   } catch (error) {

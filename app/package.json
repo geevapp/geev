@@ -85,5 +85,8 @@
     "tw-animate-css": "1.3.3",
     "typescript": "^5",
     "vitest": "^4.0.18"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

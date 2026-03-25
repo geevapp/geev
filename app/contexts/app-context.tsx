@@ -354,7 +354,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         user: state.user!,
       };
       dispatch({ type: 'ADD_ENTRY', payload: newEntry });
-      checkAndAwardBadges(state.user?.id || '', 'entry');
+      // Badge awarding is handled server-side via API endpoints
     },
     makeContribution: (contributionData) => {
       const newContribution: HelpContribution = {
@@ -364,7 +364,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         user: state.user!,
       };
       dispatch({ type: 'ADD_CONTRIBUTION', payload: newContribution });
-      checkAndAwardBadges(state.user?.id || '', 'contribution');
+      // Badge awarding is handled server-side via API endpoints
     },
     addReply: (
       entry: Omit<Reply, 'id' | 'createdAt' | 'user' | 'burnCount'>,
@@ -393,52 +393,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     isHydrated,
   };
-
-  function checkAndAwardBadges(
-    userId: string,
-    activityType: 'entry' | 'contribution',
-  ) {
-    const user = state.users.find((u) => u.id === userId);
-    if (!user) return;
-
-    const userEntries = state.entries.filter((e) => e.userId === userId).length;
-    const userContributions = state.contributions.filter(
-      (c) => c.userId === userId,
-    ).length;
-    const totalActivity = userEntries + userContributions;
-
-    const availableBadges = [
-      { min: 1, name: 'First Step' },
-      { min: 5, name: 'Generous Giver' },
-      { min: 10, name: 'Community Hero' },
-      { min: 25, name: 'Legendary Giver' },
-      { min: 50, name: 'Giveaway Champion' },
-    ];
-
-    for (const badgeThreshold of availableBadges) {
-      if (totalActivity >= badgeThreshold.min) {
-        const alreadyHasBadge = user.badges.some(
-          (b) => b.name === badgeThreshold.name,
-        );
-        if (!alreadyHasBadge) {
-          const newBadge: Badge = {
-            id: Date.now().toString(),
-            name: badgeThreshold.name,
-            description: `Earned after ${badgeThreshold.min} giveaway/contribution activities`,
-            iconUrl: '🏆',
-            tier: null,
-            criteria: null,
-            color: 'bg-yellow-100 text-yellow-800',
-            awardedAt: new Date(),
-          };
-          dispatch({
-            type: 'AWARD_BADGE',
-            payload: { userId, badge: newBadge },
-          });
-        }
-      }
-    }
-  }
 
   return (
     <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
