@@ -26,10 +26,11 @@ export function isPostExpired (endDate: Date): boolean {
  * Converts Sets to Arrays for JSON serialization
  */
 export const serializeState = (state: AppState): string => {
-  const { user, ...stateWithoutUser } = state;
+  // Exclude user (re-fetched from session) and posts (re-fetched from API)
+  const { user: _user, posts: _posts, ...stateWithoutRemoteData } = state;
 
   const serializable = {
-    ...stateWithoutUser,
+    ...stateWithoutRemoteData,
     likes: Array.from(state.likes),
     burns: Array.from(state.burns),
   };
