@@ -10,7 +10,6 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // Try to fetch from database first
     try {
       const user = await prisma.user.findUnique({
         where: { id },
@@ -18,7 +17,9 @@ export async function GET(
           id: true,
           walletAddress: true,
           name: true,
+          username: true,
           bio: true,
+          email: true,
           avatarUrl: true,
           xp: true,
           createdAt: true,
@@ -33,10 +34,7 @@ export async function GET(
       console.log('Database not available, falling back to mock data');
     }
 
-    // Fallback to mock data if database is not available
-    // Note: In production, this fallback should be removed
     return apiError('User not found', 404);
-
   } catch (error) {
     return apiError('Failed to fetch user', 500);
   }
@@ -52,27 +50,53 @@ export async function PATCH(
 
     const { id } = await params;
 
-    // Check if user is updating their own profile
     if (currentUser.id !== id) {
       return apiError('Can only update own profile', 403);
     }
 
-    const { name, bio } = await request.json();
+    const { name, username, bio, email } = await request.json();
 
-    // Try to update in database first
     try {
+      // --- Uniqueness checks ---
+      // These run as a single query each so we can return a field-specific error
+      // message instead of letting Prisma throw a generic unique-constraint error.
+      if (username !== undefined) {
+        const existing = await prisma.user.findFirst({
+          where: { username, NOT: { id } },
+          select: { id: true },
+        });
+        if (existing) {
+          return apiError('Username is already taken', 409);
+        }
+      }
+
+      if (email !== undefined) {
+        const existing = await prisma.user.findFirst({
+          where: { email, NOT: { id } },
+          select: { id: true },
+        });
+        if (existing) {
+          return apiError('Email address is already in use', 409);
+        }
+      }
+
+      // --- Perform the update ---
       const updatedUser = await prisma.user.update({
         where: { id },
         data: {
           ...(name !== undefined && { name }),
+          ...(username !== undefined && { username }),
           ...(bio !== undefined && { bio }),
+          ...(email !== undefined && { email }),
           updatedAt: new Date(),
         },
         select: {
           id: true,
           walletAddress: true,
           name: true,
+          username: true,
           bio: true,
+          email: true,
           avatarUrl: true,
           xp: true,
           createdAt: true,
@@ -85,7 +109,6 @@ export async function PATCH(
       console.log('Database not available, cannot update user');
       return apiError('Database not available', 500);
     }
-
   } catch (error) {
     return apiError('Failed to update profile', 500);
   }
