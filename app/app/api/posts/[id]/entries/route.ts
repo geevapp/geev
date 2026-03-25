@@ -101,6 +101,18 @@ export async function POST (
         tx,
       );
 
+      // Notify post owner
+      if (post.userId) {
+        await tx.notification.create({
+          data: {
+            userId: post.userId,
+            type: 'giveaway_entry',
+            message: `${user.name} entered your giveaway`,
+            link: `/post/${postId}`,
+          },
+        });
+      }
+
       return createdEntry;
     });
 
