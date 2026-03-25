@@ -35,6 +35,9 @@ export default function PostPage() {
   const [post, setPost] = useState<any>(null);
   const params = useParams();
   const postId = params.postId as string;
+  const contextPost = posts.find((p) => p.id === postId);
+  const [fetchedPost, setFetchedPost] = useState<any | null>(null);
+  const [isLoadingPost, setIsLoadingPost] = useState(false);
   const [isBurned, setIsBurned] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showEntryForm, setShowEntryForm] = useState(false);
@@ -44,22 +47,92 @@ export default function PostPage() {
   const [showContributionForm, setShowContributionForm] = useState(false);
 
   const router = useRouter();
-  const canInteract = user && user.id !== post?.userId;
+  const normalizeApiPost = (apiPost: any) => {
+    if (!apiPost) return null;
+
+    const normalizedType =
+      apiPost.type === "request" ? "help-request" : apiPost.type;
+    const normalizedStatus =
+      apiPost.status === "open" || apiPost.status === "in_progress"
+        ? "active"
+        : apiPost.status;
+    const fallbackUsername =
+      apiPost.user?.name?.toLowerCase()?.replace(/\s+/g, "") || "user";
+
+    return {
+      ...apiPost,
+      type: normalizedType,
+      status: normalizedStatus,
+      createdAt: apiPost.createdAt ? new Date(apiPost.createdAt) : new Date(),
+      updatedAt: apiPost.updatedAt ? new Date(apiPost.updatedAt) : new Date(),
+      endDate: apiPost.endsAt ? new Date(apiPost.endsAt) : undefined,
+      burnCount: apiPost.burnCount ?? 0,
+      shareCount: apiPost.shareCount ?? 0,
+      commentCount: apiPost.commentCount ?? 0,
+      likesCount: apiPost.likesCount ?? apiPost._count?.interactions ?? 0,
+      entriesCount: apiPost.entriesCount ?? apiPost._count?.entries ?? 0,
+      author: {
+        id: apiPost.user?.id ?? apiPost.userId,
+        name: apiPost.user?.name ?? "Unknown User",
+        username: apiPost.user?.username ?? fallbackUsername,
+        avatarUrl: apiPost.user?.avatarUrl,
+        rank: apiPost.user?.rank,
+      },
+    };
+  };
 
   useEffect(() => {
+    let ignore = false;
+
     const loadPost = async () => {
+      if (contextPost) {
+        setFetchedPost(null);
+        setIsLoadingPost(false);
+        return;
+      }
+
+      setIsLoadingPost(true);
+
       try {
-        const res = await fetch(`/api/posts/${postId}`);
-        if(res.ok) {
-          const data = await res.json();
-          setPost(data.data);
+        const response = await fetch(`/api/posts/${postId}`, {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          if (!ignore) {
+            setFetchedPost(null);
+          }
+          return;
+        }
+
+        const result = await response.json();
+        if (!ignore) {
+          setFetchedPost(normalizeApiPost(result?.data));
         }
       } catch (error) {
-        console.error('Failed to load post: ', error);
+        if (!ignore) {
+          setFetchedPost(null);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingPost(false);
+        }
       }
     };
-    if (postId) loadPost();
-  }, [postId]);
+
+    loadPost();
+
+    return () => {
+      ignore = true;
+    };
+  }, [contextPost, postId]);
+
+  const post = contextPost ?? fetchedPost;
+  const canInteract = user && user.id !== post?.userId;
+
+  if (!post && isLoadingPost) {
+    return null;
+  }
 
   if (!post) {
     return (
@@ -201,7 +274,7 @@ export default function PostPage() {
                         <AvatarFallback className="bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
                           {post.author.name
                             .split(" ")
-                            .map((n) => n[0])
+                            .map((n:any) => n[0])
                             .join("")}
                         </AvatarFallback>
                       </Avatar>
@@ -282,7 +355,7 @@ export default function PostPage() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-2">
-                        {post.media.map((media, index) => (
+                        {post.media.map((media:any, index:any) => (
                           <div
                             key={media.id}
                             className="relative rounded-lg overflow-hidden aspect-square bg-gray-100 dark:bg-gray-800 cursor-pointer"
@@ -339,7 +412,7 @@ export default function PostPage() {
                           Requirements:
                         </p>
                         <ul className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                          {post.entryRequirements.map((req, index) => (
+                          {post.entryRequirements.map((req:any, index:any) => (
                             <li key={index} className="flex items-center gap-2">
                               <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
                               {req}
@@ -371,7 +444,7 @@ export default function PostPage() {
 
                 {/* Help Request Details */}
                 {post.type === "help-request" && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl p-4 space-y-3 border border-green-100 dark:border-green-800/30">
+                  <div className="bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl p-4 space-y-3 border border-green-100 dark:border-green-800/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Target className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -408,7 +481,7 @@ export default function PostPage() {
                               setShowContributionForm(true),
                             );
                           }}
-                          className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-sm"
+                          className="w-full bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white border-0 shadow-sm"
                         >
                           <DollarSign className="w-4 h-4 mr-2" />
                           {user
