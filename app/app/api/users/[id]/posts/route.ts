@@ -42,8 +42,7 @@ export async function GET (
       return apiSuccess(userPosts);
 
     } catch (dbError) {
-      console.log('Database not available');
-      return apiError('Database not available', 500);
+      return apiError('Failed to fetch user posts', 500);
     }
 
   } catch (error) {
