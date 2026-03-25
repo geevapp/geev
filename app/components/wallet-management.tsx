@@ -36,66 +36,126 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { WalletTransaction } from "@/lib/types";
 import { toast } from "sonner";
 import { useAppContext } from "@/contexts/app-context";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const INCOMING_TYPES = new Set(["fund", "prize_in"]);
+
+const TX_LABEL: Record<WalletTransaction["type"], string> = {
+  fund: "Deposit",
+  prize_in: "Prize Received",
+  withdraw: "Withdrawal",
+  contribution_out: "Contribution",
+};
+
+function getMonthBounds() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  return { start, end };
+}
 
 export function WalletManagement() {
-  const { user } = useAppContext();
+  const { user, setCurrentUser } = useAppContext();
   const [showFundModal, setShowFundModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [fundAmount, setFundAmount] = useState("");
   const [fundMethod, setFundMethod] = useState("card");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [isLoadingTx, setIsLoadingTx] = useState(true);
 
-  const transactions = [
-    {
-      id: "1",
-      type: "deposit",
-      amount: 100,
-      method: "Credit Card",
-      date: new Date("2024-01-15"),
-      status: "completed",
-    },
-    {
-      id: "2",
-      type: "withdrawal",
-      amount: 25,
-      method: "Bank Transfer",
-      date: new Date("2024-01-14"),
-      status: "completed",
-    },
-    {
-      id: "3",
-      type: "deposit",
-      amount: 50,
-      method: "Crypto Wallet",
-      date: new Date("2024-01-13"),
-      status: "pending",
-    },
-  ];
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const res = await fetch("/api/wallet/transactions?limit=20");
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        setTransactions(
+          (data.data?.transactions ?? []).map((tx: WalletTransaction) => ({
+            ...tx,
+            createdAt: new Date(tx.createdAt),
+            updatedAt: new Date(tx.updatedAt),
+          }))
+        );
+      } catch {
+        // silently fail — transactions will just be empty
+      } finally {
+        setIsLoadingTx(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  const { start, end } = getMonthBounds();
+  const thisMonthTx = transactions.filter(
+    (tx) =>
+      tx.status !== "failed" &&
+      new Date(tx.createdAt) >= start &&
+      new Date(tx.createdAt) <= end
+  );
+  const receivedThisMonth = thisMonthTx
+    .filter((tx) => INCOMING_TYPES.has(tx.type))
+    .reduce((sum, tx) => sum + tx.amount, 0);
+  const sentThisMonth = thisMonthTx
+    .filter((tx) => !INCOMING_TYPES.has(tx.type))
+    .reduce((sum, tx) => sum + tx.amount, 0);
 
   const handleFundWallet = async () => {
-    if (!fundAmount || Number.parseFloat(fundAmount) <= 0) return;
+    const amount = parseFloat(fundAmount);
+    if (!fundAmount || amount <= 0) return;
 
     setIsProcessing(true);
+    try {
+      const res = await fetch("/api/wallet/fund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, method: fundMethod }),
+      });
 
-    // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+      const data = await res.json();
 
-    toast("Wallet funded successfully!", {
-      description: `$${fundAmount} has been added to your wallet.`,
-    });
+      if (!res.ok) {
+        toast.error("Failed to add funds", {
+          description: data.error ?? "Please try again.",
+        });
+        return;
+      }
 
-    setFundAmount("");
-    setShowFundModal(false);
-    setIsProcessing(false);
+      const newTx: WalletTransaction = {
+        ...data.data.transaction,
+        createdAt: new Date(data.data.transaction.createdAt),
+        updatedAt: new Date(data.data.transaction.updatedAt),
+      };
+      setTransactions((prev) => [newTx, ...prev]);
+
+      if (user) {
+        setCurrentUser({ ...user, walletBalance: data.data.balance });
+      }
+
+      toast("Wallet funded successfully!", {
+        description: `$${amount.toFixed(2)} has been added to your wallet.`,
+      });
+
+      setFundAmount("");
+      setShowFundModal(false);
+    } catch {
+      toast.error("Something went wrong", {
+        description: "Please try again.",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleWithdraw = async () => {
-    if (!withdrawAmount || Number.parseFloat(withdrawAmount) <= 0) return;
-    if (Number.parseFloat(withdrawAmount) > (user?.walletBalance || 0)) {
+    const amount = parseFloat(withdrawAmount);
+    if (!withdrawAmount || amount <= 0) return;
+    if (amount > (user?.walletBalance ?? 0)) {
       toast.error("Insufficient funds", {
         description: "You don't have enough balance for this withdrawal.",
       });
@@ -103,17 +163,46 @@ export function WalletManagement() {
     }
 
     setIsProcessing(true);
+    try {
+      const res = await fetch("/api/wallet/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, method: "bank" }),
+      });
 
-    // Simulate withdrawal processing
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+      const data = await res.json();
 
-    toast("Withdrawal initiated", {
-      description: `$${withdrawAmount} withdrawal is being processed.`,
-    });
+      if (!res.ok) {
+        toast.error("Withdrawal failed", {
+          description: data.error ?? "Please try again.",
+        });
+        return;
+      }
 
-    setWithdrawAmount("");
-    setShowWithdrawModal(false);
-    setIsProcessing(false);
+      const newTx: WalletTransaction = {
+        ...data.data.transaction,
+        createdAt: new Date(data.data.transaction.createdAt),
+        updatedAt: new Date(data.data.transaction.updatedAt),
+      };
+      setTransactions((prev) => [newTx, ...prev]);
+
+      if (user) {
+        setCurrentUser({ ...user, walletBalance: data.data.balance });
+      }
+
+      toast("Withdrawal initiated", {
+        description: `$${amount.toFixed(2)} withdrawal is being processed.`,
+      });
+
+      setWithdrawAmount("");
+      setShowWithdrawModal(false);
+    } catch {
+      toast.error("Something went wrong", {
+        description: "Please try again.",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -129,7 +218,7 @@ export function WalletManagement() {
         </div>
 
         <div className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-          ${user?.walletBalance?.toFixed(2) || "0.00"}
+          ${(user?.walletBalance ?? 0).toFixed(2)}
         </div>
 
         <div className="flex gap-3">
@@ -156,13 +245,15 @@ export function WalletManagement() {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
           <CardContent className="p-4 text-center">
             <ArrowDownLeft className="w-8 h-8 mx-auto mb-2 text-green-500" />
             <div className="font-semibold">Received</div>
-            <div className="text-2xl font-bold text-green-600">$245.00</div>
+            <div className="text-2xl font-bold text-green-600">
+              ${receivedThisMonth.toFixed(2)}
+            </div>
             <div className="text-sm text-gray-500">This month</div>
           </CardContent>
         </Card>
@@ -171,7 +262,9 @@ export function WalletManagement() {
           <CardContent className="p-4 text-center">
             <ArrowUpRight className="w-8 h-8 mx-auto mb-2 text-blue-500" />
             <div className="font-semibold">Sent</div>
-            <div className="text-2xl font-bold text-blue-600">$89.50</div>
+            <div className="text-2xl font-bold text-blue-600">
+              ${sentThisMonth.toFixed(2)}
+            </div>
             <div className="text-sm text-gray-500">This month</div>
           </CardContent>
         </Card>
@@ -181,7 +274,7 @@ export function WalletManagement() {
             <DollarSign className="w-8 h-8 mx-auto mb-2 text-orange-500" />
             <div className="font-semibold">Available</div>
             <div className="text-2xl font-bold text-orange-600">
-              ${user?.walletBalance?.toFixed(2) || "0.00"}
+              ${(user?.walletBalance ?? 0).toFixed(2)}
             </div>
             <div className="text-sm text-gray-500">Ready to use</div>
           </CardContent>
@@ -198,65 +291,76 @@ export function WalletManagement() {
           <CardDescription>Your latest wallet activity</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {transactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700"
-              >
-                <div className="flex items-center gap-3">
+          {isLoadingTx ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              Loading transactions...
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              No transactions yet. Add funds to get started.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {transactions.map((transaction) => {
+                const isIncoming = INCOMING_TYPES.has(transaction.type);
+                return (
                   <div
-                    className={`p-2 rounded-full ${
-                      transaction.type === "deposit"
-                        ? "bg-green-100 text-green-600"
-                        : "bg-blue-100 text-blue-600"
-                    }`}
+                    key={transaction.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700"
                   >
-                    {transaction.type === "deposit" ? (
-                      <ArrowDownLeft className="w-4 h-4" />
-                    ) : (
-                      <ArrowUpRight className="w-4 h-4" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="font-medium capitalize">
-                      {transaction.type}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`p-2 rounded-full ${
+                          isIncoming
+                            ? "bg-green-100 text-green-600"
+                            : "bg-blue-100 text-blue-600"
+                        }`}
+                      >
+                        {isIncoming ? (
+                          <ArrowDownLeft className="w-4 h-4" />
+                        ) : (
+                          <ArrowUpRight className="w-4 h-4" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium">
+                          {TX_LABEL[transaction.type]}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {transaction.method ?? "—"}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {transaction.method}
+                    <div className="text-right">
+                      <div
+                        className={`font-semibold ${
+                          isIncoming ? "text-green-600" : "text-blue-600"
+                        }`}
+                      >
+                        {isIncoming ? "+" : "-"}$
+                        {transaction.amount.toFixed(2)}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            transaction.status === "completed"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="text-xs"
+                        >
+                          {transaction.status}
+                        </Badge>
+                        <span className="text-xs text-gray-500">
+                          {new Date(transaction.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div
-                    className={`font-semibold ${
-                      transaction.type === "deposit"
-                        ? "text-green-600"
-                        : "text-blue-600"
-                    }`}
-                  >
-                    {transaction.type === "deposit" ? "+" : "-"}$
-                    {transaction.amount.toFixed(2)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={
-                        transaction.status === "completed"
-                          ? "default"
-                          : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {transaction.status}
-                    </Badge>
-                    <span className="text-xs text-gray-500">
-                      {transaction.date.toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -356,10 +460,10 @@ export function WalletManagement() {
                 placeholder="0.00"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}
-                max={user?.walletBalance || 0}
+                max={user?.walletBalance ?? 0}
               />
               <div className="text-sm text-gray-500">
-                Available balance: ${user?.walletBalance?.toFixed(2) || "0.00"}
+                Available balance: ${(user?.walletBalance ?? 0).toFixed(2)}
               </div>
             </div>
 
