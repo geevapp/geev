@@ -33,7 +33,7 @@ export function CreateRequestModal({
   open,
   onOpenChange,
 }: CreateRequestModalProps) {
-  const { createPost } = useAppContext();
+const { refreshPosts } = useAppContext();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -58,16 +58,25 @@ export function CreateRequestModal({
     setIsSubmitting(true);
 
     try {
-      createPost({
-        type: "help-request",
-        title: formData.title,
-        description: formData.description,
-        status: "active",
-        targetAmount: Number.parseFloat(formData.targetAmount),
-        currentAmount: 0,
-        currency: formData.currency,
-        userId: "", // Will be set by context
+const response = await fetch("/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "help-request",
+          title: formData.title,
+          description: formData.description,
+          status: "active",
+          targetAmount: Number.parseFloat(formData.targetAmount),
+          currentAmount: 0,
+          currency: formData.currency,
+        }),
       });
+      if (!response.ok) {
+        throw new Error(`Failed to create request: ${response.statusText}`);
+      }
+      await refreshPosts();
 
       toast("Help request created!", {
         description: "Your request has been posted to the community.",
