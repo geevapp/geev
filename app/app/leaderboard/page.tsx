@@ -96,8 +96,7 @@ export default function LeaderboardPage() {
   }, [selectedPeriod]);
 
   // Derive the per-tab arrays from the single API response.
-  // The API returns a unified list sorted by total_contributions.
-  // We re-sort per tab to surface the right metric for each view.
+  // The API ranks users by XP, but individual tabs still re-sort for their local metric.
   const users = data?.leaderboard ?? [];
 
   /** Top Givers — users who have created the most posts (giveaways). */
@@ -112,7 +111,10 @@ export default function LeaderboardPage() {
 
   /** Trending — users with the highest overall activity (posts + entries). */
   const trendingUsers = [...users]
-    .sort((a, b) => b.total_contributions - a.total_contributions)
+    .sort((a, b) => {
+      if (b.xp !== a.xp) return b.xp - a.xp;
+      return b.total_contributions - a.total_contributions;
+    })
     .slice(0, 20);
 
   // ── Render helpers ──────────────────────────────────────────────────────────
@@ -377,8 +379,8 @@ export default function LeaderboardPage() {
                   <div className="space-y-4">
                     {trendingUsers.map((u, idx) =>
                       renderUserRow(u, idx, {
-                        value: u.total_contributions,
-                        label: 'Activity',
+                        value: u.xp,
+                        label: 'XP',
                         colorClass: 'text-yellow-600',
                       })
                     )}

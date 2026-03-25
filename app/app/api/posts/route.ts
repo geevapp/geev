@@ -1,4 +1,5 @@
 import { apiError, apiSuccess } from '@/lib/api-response';
+import { awardXp, XP_REWARDS } from '@/lib/xp';
 
 import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
@@ -26,32 +27,64 @@ const POST = async (request: NextRequest) => {
       return apiError('Description must be at least 50 characters', 400);
     }
 
-    const requirements = await prisma.postRequirements.create({
-      data: {
-        proofRequired: Boolean(proofRequired),
-      },
-    });
+    const post = await prisma.$transaction(async (tx) => {
+      const requirements = await tx.postRequirements.create({
+        data: {
+          proofRequired: Boolean(proofRequired),
+        },
+      });
 
-    const post = await prisma.post.create({
-      data: {
-        userId: user.id,
-        type,
-        title,
-        slug: body.slug || title.toLowerCase().replace(/\s+/g, '-').slice(0, 50),
-        description,
-        maxWinners: winnerCount ? Number(winnerCount) : null,
-        postRequirementsId: requirements.id,
-        endsAt: new Date(endsAt),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
+      const createdPost = await tx.post.create({
+        data: {
+          userId: user.id,
+          type,
+          title,
+          slug: body.slug || title.toLowerCase().replace(/\s+/g, '-').slice(0, 50),
+          description,
+          maxWinners: winnerCount ? Number(winnerCount) : null,
+          postRequirementsId: requirements.id,
+          endsAt: new Date(endsAt),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
           },
         },
-      },
+      });
+
+      if (type === 'giveaway') {
+        await awardXp(
+          user.id,
+          XP_REWARDS.createGiveawayPost,
+          'giveaway_post_created',
+          {
+            metadata: {
+              postId: createdPost.id,
+              postType: type,
+            },
+          },
+          tx,
+        );
+      } else if (type === 'request') {
+        await awardXp(
+          user.id,
+          XP_REWARDS.createHelpRequest,
+          'help_request_created',
+          {
+            metadata: {
+              postId: createdPost.id,
+              postType: type,
+            },
+          },
+          tx,
+        );
+      }
+
+      return createdPost;
     });
 
     return apiSuccess(post, "Post created successfully", 201);

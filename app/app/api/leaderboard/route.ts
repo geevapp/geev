@@ -39,6 +39,9 @@ export async function GET (request: NextRequest) {
           },
         },
       },
+      orderBy: {
+        xp: 'desc',
+      },
       take: limit,
       skip: (page - 1) * limit,
     });
@@ -69,8 +72,11 @@ export async function GET (request: NextRequest) {
       }),
     );
 
-    // Sort by total contributions
-    leaderboard.sort((a, b) => b.total_contributions - a.total_contributions);
+    // Sort by XP and fall back to total contributions for ties.
+    leaderboard.sort((a, b) => {
+      if (b.xp !== a.xp) return b.xp - a.xp;
+      return b.total_contributions - a.total_contributions;
+    });
 
     return apiSuccess({
       leaderboard,

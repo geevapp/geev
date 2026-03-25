@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Leaderboard API provides ranked lists of top contributors based on their activity on the platform. Users are ranked by their total contributions (posts + entries) and can be filtered by time periods.
+The Leaderboard API provides ranked lists of top contributors based on their standing on the platform. Users are ranked by XP, while contribution counts are still returned for breakdown and tie-breaking purposes.
 
 ## Endpoint
 
@@ -86,7 +86,7 @@ curl "http://localhost:3000/api/leaderboard?period=monthly"
 
 ## Ranking Logic
 
-Users are ranked by their `total_contributions` in descending order. The `total_contributions` is calculated as:
+Users are ranked by `xp` in descending order. If two users have the same XP, `total_contributions` is used as a tie-breaker. The `total_contributions` value is calculated as:
 
 ```
 total_contributions = post_count + entry_count
