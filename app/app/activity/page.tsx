@@ -17,43 +17,42 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { UserRankBadge } from '@/components/user-rank-badge';
 import { useAppContext } from '@/contexts/app-context';
+import { useEffect,  useState } from 'react';
 
 export default function ActivityPage() {
-  const { posts, entries, contributions, user } = useAppContext();
+  const { user } = useAppContext();
+  const [activity, setActivity] = useState<any>(null);
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [userEntries, setUserEntries] = useState<any[]>([]);
+  const [userContributions, setUserContributions] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
 
-  // Get user's activities
-  const userPosts = posts.filter((post) => post.userId === user?.id);
-  const userEntries = entries.filter((entry) => entry.userId === user?.id);
-  const userContributions = contributions.filter(
-    (contribution) => contribution.userId === user?.id,
-  );
+  useEffect(() => {
+    if (!user?.id) return;
 
-  // Get recent activities from all users
-  const recentActivities = [
-    ...posts.map((post) => ({
-      id: `post-${post.id}`,
-      type: 'post' as const,
-      user: post.author,
-      post,
-      timestamp: post.createdAt,
-    })),
-    ...entries.map((entry) => ({
-      id: `entry-${entry.id}`,
-      type: 'entry' as const,
-      user: entry.user,
-      entry,
-      post: posts.find((p) => p.id === entry.postId),
-      timestamp: entry.submittedAt,
-    })),
-    ...contributions.map((contribution) => ({
-      id: `contribution-${contribution.id}`,
-      type: 'contribution' as const,
-      user: contribution.user,
-      contribution,
-      post: posts.find((p) => p.id === contribution.postId),
-      timestamp: contribution.contributedAt,
-    })),
-  ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    const loadActivity = async () => {
+      try{
+        const [activityRes, postsRes] = await Promise.all([
+          fetch(`/api/users/${user.id}/activity`),
+          fetch(`/api/posts`),
+        ]);
+
+        if (activityRes.ok) {
+          const activityData = await activityRes.json();
+          const data = activityData.data ?? {};
+          setUserPosts(data.posts ?? []);
+          setUserEntries(data.entries ?? []);
+          setUserContributions(data.contributions ?? []);
+          setRecentActivities(data.recentActivities ?? []);
+        }
+      } catch (error) {
+        console.error('Failed to load activity:', error);
+    }
+    };
+    loadActivity();
+  }, [user?.id]);
+
+
 
   const ActivityItem = ({
     activity,
@@ -253,7 +252,7 @@ export default function ActivityPage() {
               <CardContent className="space-y-4">
                 {userEntries.length > 0 ? (
                   userEntries.map((entry) => {
-                    const post = posts.find((p) => p.id === entry.postId);
+                    const post = entry.post;
                     return (
                       <Card
                         key={entry.id}
@@ -304,9 +303,7 @@ export default function ActivityPage() {
               <CardContent className="space-y-4">
                 {userContributions.length > 0 ? (
                   userContributions.map((contribution) => {
-                    const post = posts.find(
-                      (p) => p.id === contribution.postId,
-                    );
+                    const post = contribution.post;
                     return (
                       <Card
                         key={contribution.id}
