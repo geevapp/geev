@@ -209,8 +209,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsHydrated(true);
   }, []);
 
-  // Save state to localStorage on changes (debounced)
+  // Save state to localStorage on changes (debounced, only after hydration)
   useEffect(() => {
+    if (!isHydrated) return;
+
     const timeoutId = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, serializeState(state));
