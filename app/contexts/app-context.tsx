@@ -3,7 +3,6 @@
 import type {
   AppContextType,
   AppState,
-  Badge,
   Entry,
   HelpContribution,
   Post,
@@ -28,7 +27,6 @@ const initialState: AppState = {
   burns: new Set<string>(),
   user: null,
   posts: [],
-  users: [],
   entries: [],
   replies: [],
   contributions: [],
@@ -46,7 +44,6 @@ const STORAGE_KEY = 'geev_app_state';
 type AppAction =
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_POSTS'; payload: Post[] }
-  | { type: 'SET_USERS'; payload: User[] }
   | { type: 'ADD_POST'; payload: Post }
   | { type: 'UPDATE_POST'; payload: { id: string; updates: Partial<Post> } }
   | { type: 'DELETE_POST'; payload: string }
@@ -59,12 +56,11 @@ type AppAction =
       payload: {
         parentId: string;
         parentType: 'entry' | 'contribution';
-        reply: any;
+        reply: Reply;
       };
     }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'TOGGLE_THEME' }
-  | { type: 'AWARD_BADGE'; payload: { userId: string; badge: Badge } }
   | { type: 'SET_CREATE_MODAL'; payload: boolean }
   | { type: 'SET_GIVEAWAY_MODAL'; payload: boolean }
   | { type: 'SET_REQUEST_MODAL'; payload: boolean }
@@ -78,8 +74,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, ...action.payload };
     case 'SET_POSTS':
       return { ...state, posts: action.payload };
-    case 'SET_USERS':
-      return { ...state, users: action.payload };
     case 'ADD_POST':
       return { ...state, posts: [action.payload, ...state.posts] };
     case 'UPDATE_POST':
@@ -125,42 +119,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
               : entry,
           ),
         };
-      } else {
-        return {
-          ...state,
-          contributions: state.contributions.map((contribution) =>
-            contribution.id === action.payload.parentId
-              ? {
-                  ...contribution,
-                  replies: [
-                    ...(contribution.replies || []),
-                    action.payload.reply,
-                  ],
-                }
-              : contribution,
-          ),
-        };
       }
+
+      return {
+        ...state,
+        contributions: state.contributions.map((contribution) =>
+          contribution.id === action.payload.parentId
+            ? {
+                ...contribution,
+                replies: [
+                  ...(contribution.replies || []),
+                  action.payload.reply,
+                ],
+              }
+            : contribution,
+        ),
+      };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
     case 'TOGGLE_THEME':
       return { ...state, theme: state.theme === 'light' ? 'dark' : 'light' };
-    case 'AWARD_BADGE':
-      return {
-        ...state,
-        user:
-          state.user && state.user.id === action.payload.userId
-            ? {
-                ...state.user,
-                badges: [...state.user.badges, action.payload.badge],
-              }
-            : state.user,
-        users: state.users.map((user) =>
-          user.id === action.payload.userId
-            ? { ...user, badges: [...user.badges, action.payload.badge] }
-            : user,
-        ),
-      };
     case 'SET_CREATE_MODAL':
       return { ...state, showCreateModal: action.payload };
     case 'SET_GIVEAWAY_MODAL':
@@ -200,7 +178,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (isMounted) {
           dispatch({ type: 'SET_USER', payload: result?.data ?? null });
         }
-      } catch (error) {
+      } catch {
         if (isMounted) {
           dispatch({ type: 'SET_USER', payload: null });
         }
@@ -246,28 +224,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Load real data from API
   useEffect(() => {
-    const loadData = async () => {
-      try{
-        const [postRes, userRes] = await Promise.all([
-          fetch('/api/posts'),
-          fetch('/api/users'),
-        ]);
-
-        if (postRes.ok) {
-          const postData = await postRes.json();
-          dispatch({ type: 'SET_POSTS', payload: Array.isArray(postData.data) ? postData.data : postData.data?.posts ?? [] });
+    const loadPosts = async () => {
+      try {
+        const postRes = await fetch('/api/posts');
+        if (!postRes.ok) {
+          throw new Error('Failed to fetch posts');
         }
 
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          dispatch({ type: 'SET_USERS', payload: userData.data ?? [] });
-        }
-
+        const postData = await postRes.json();
+        dispatch({
+          type: 'SET_POSTS',
+          payload: Array.isArray(postData.data)
+            ? postData.data
+            : postData.data?.posts ?? [],
+        });
       } catch (error) {
         console.error('Failed to load data from API', error);
       }
     };
-    loadData();
+
+    loadPosts();
   }, []);
 
   useEffect(() => {
@@ -289,10 +265,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       credentials: {
         walletAddress?: string;
         signature?: string;
+        email?: string;
         message?: string;
       } = {},
     ) => {
-      // Call Auth.js signIn
       const url = await signIn('credentials', {
         email: user.email ?? undefined,
         redirect: false,
@@ -354,7 +330,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         user: state.user!,
       };
       dispatch({ type: 'ADD_ENTRY', payload: newEntry });
-      checkAndAwardBadges(state.user?.id || '', 'entry');
     },
     makeContribution: (contributionData) => {
       const newContribution: HelpContribution = {
@@ -364,20 +339,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         user: state.user!,
       };
       dispatch({ type: 'ADD_CONTRIBUTION', payload: newContribution });
-      checkAndAwardBadges(state.user?.id || '', 'contribution');
     },
     addReply: (
       entry: Omit<Reply, 'id' | 'createdAt' | 'user' | 'burnCount'>,
     ) => {
-      const reply = {
+      const reply: Reply = {
         id: Date.now().toString(),
+        parentId: entry.parentId,
+        parentType: entry.parentType,
+        userId: state.user!.id,
         content: entry.content,
         user: state.user!,
         createdAt: new Date(),
         burnCount: 0,
       };
 
-      dispatch({ type: 'ADD_REPLY', payload: { ...entry, reply } });
+      dispatch({
+        type: 'ADD_REPLY',
+        payload: {
+          parentId: entry.parentId,
+          parentType: entry.parentType,
+          reply,
+        },
+      });
     },
     toggleTheme: () => {
       dispatch({ type: 'TOGGLE_THEME' });
@@ -393,52 +377,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     isHydrated,
   };
-
-  function checkAndAwardBadges(
-    userId: string,
-    activityType: 'entry' | 'contribution',
-  ) {
-    const user = state.users.find((u) => u.id === userId);
-    if (!user) return;
-
-    const userEntries = state.entries.filter((e) => e.userId === userId).length;
-    const userContributions = state.contributions.filter(
-      (c) => c.userId === userId,
-    ).length;
-    const totalActivity = userEntries + userContributions;
-
-    const availableBadges = [
-      { min: 1, name: 'First Step' },
-      { min: 5, name: 'Generous Giver' },
-      { min: 10, name: 'Community Hero' },
-      { min: 25, name: 'Legendary Giver' },
-      { min: 50, name: 'Giveaway Champion' },
-    ];
-
-    for (const badgeThreshold of availableBadges) {
-      if (totalActivity >= badgeThreshold.min) {
-        const alreadyHasBadge = user.badges.some(
-          (b) => b.name === badgeThreshold.name,
-        );
-        if (!alreadyHasBadge) {
-          const newBadge: Badge = {
-            id: Date.now().toString(),
-            name: badgeThreshold.name,
-            description: `Earned after ${badgeThreshold.min} giveaway/contribution activities`,
-            iconUrl: '🏆',
-            tier: null,
-            criteria: null,
-            color: 'bg-yellow-100 text-yellow-800',
-            awardedAt: new Date(),
-          };
-          dispatch({
-            type: 'AWARD_BADGE',
-            payload: { userId, badge: newBadge },
-          });
-        }
-      }
-    }
-  }
 
   return (
     <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
