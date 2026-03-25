@@ -31,7 +31,7 @@ export async function GET(
         return apiSuccess(user);
       }
     } catch (dbError) {
-      console.log('Database not available, falling back to mock data');
+      // Database error - fallback already handled above
     }
 
     return apiError('User not found', 404);
@@ -106,8 +106,7 @@ export async function PATCH(
 
       return apiSuccess(updatedUser);
     } catch (dbError) {
-      console.log('Database not available, cannot update user');
-      return apiError('Database not available', 500);
+      return apiError('Failed to update profile', 500);
     }
   } catch (error) {
     return apiError('Failed to update profile', 500);
