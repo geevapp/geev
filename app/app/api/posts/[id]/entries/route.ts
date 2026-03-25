@@ -1,4 +1,5 @@
 import { apiError, apiSuccess } from '@/lib/api-response';
+import { awardXp, XP_REWARDS } from '@/lib/xp';
 
 import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
@@ -67,23 +68,40 @@ export async function POST (
     }
 
     // Create entry
-    const entry = await prisma.entry.create({
-      data: {
-        postId,
-        userId: user.id,
-        content,
-        proofUrl: proofUrl || null,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            walletAddress: true,
-            avatarUrl: true,
+    const entry = await prisma.$transaction(async (tx) => {
+      const createdEntry = await tx.entry.create({
+        data: {
+          postId,
+          userId: user.id,
+          content,
+          proofUrl: proofUrl || null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              walletAddress: true,
+              avatarUrl: true,
+            },
           },
         },
-      },
+      });
+
+      await awardXp(
+        user.id,
+        XP_REWARDS.enterGiveaway,
+        'giveaway_entered',
+        {
+          metadata: {
+            postId,
+            entryId: createdEntry.id,
+          },
+        },
+        tx,
+      );
+
+      return createdEntry;
     });
 
     return apiSuccess(entry, 'Entry created successfully', 201);

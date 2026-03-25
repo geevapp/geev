@@ -1,9 +1,22 @@
-import { GET, POST } from '@/app/api/posts/route';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMockRequest, parseResponse } from '../helpers/api';
 
 import { createTestUser } from '../helpers/db';
 import { prisma } from '@/lib/prisma';
+
+const mockAwardXp = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/xp', () => ({
+  awardXp: mockAwardXp,
+  XP_REWARDS: {
+    createGiveawayPost: 50,
+    createHelpRequest: 20,
+    enterGiveaway: 10,
+    receiveTenLikes: 25,
+  },
+}));
+
+import { GET, POST } from '@/app/api/posts/route';
 
 describe('Posts API', () => {
   let testUser: any;
@@ -11,6 +24,18 @@ describe('Posts API', () => {
   beforeEach(async () => {
     // Reset all mocks before each test
     vi.clearAllMocks();
+    mockAwardXp.mockResolvedValue({
+      awarded: true,
+      amount: 50,
+      reason: 'giveaway_post_created',
+      xp: 50,
+      rankId: 'newcomer',
+    });
+    prisma.$transaction = vi.fn(async (callback: any) => callback(prisma as any));
+    prisma.postRequirements.create = vi.fn().mockResolvedValue({
+      id: 'requirements_123',
+      proofRequired: false,
+    });
 
     // Mock user creation for unit tests where DB is not available
     if (process.env.MOCK_DB === 'true') {
@@ -116,6 +141,67 @@ describe('Posts API', () => {
 
       expect(status).toBe(201);
       expect(data.data.title).toBe(postData.title);
+      expect(mockAwardXp).toHaveBeenCalledWith(
+        testUser.id,
+        50,
+        'giveaway_post_created',
+        expect.objectContaining({
+          metadata: {
+            postId: mockCreatedPost.id,
+            postType: 'giveaway',
+          },
+        }),
+        expect.anything(),
+      );
+    });
+
+    it('should award help-request XP when creating a request post', async () => {
+      const postData = {
+        title: 'Need help with my laptop setup',
+        description:
+          'I need community support to replace a broken laptop and keep working on my projects this month.',
+        category: 'services',
+        type: 'request',
+        slug: 'need-help-with-my-laptop-setup',
+        endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      const mockCreatedPost = {
+        id: 'post_request_123',
+        ...postData,
+        endsAt: new Date(postData.endsAt),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        user: testUser,
+        userId: testUser.id,
+      };
+
+      prisma.post.create = vi.fn().mockResolvedValue(mockCreatedPost);
+
+      const request = createMockRequest('http://localhost:3000/api/posts', {
+        method: 'POST',
+        body: postData,
+        cookies: { session: 'mock-session-token' },
+      });
+
+      vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(testUser);
+
+      const response = await POST(request);
+      const { status } = await parseResponse(response);
+
+      expect(status).toBe(201);
+      expect(mockAwardXp).toHaveBeenCalledWith(
+        testUser.id,
+        20,
+        'help_request_created',
+        expect.objectContaining({
+          metadata: {
+            postId: mockCreatedPost.id,
+            postType: 'request',
+          },
+        }),
+        expect.anything(),
+      );
     });
 
     it('should validate title length', async () => {
@@ -131,6 +217,8 @@ describe('Posts API', () => {
         method: 'POST',
         body: postData,
       });
+
+      vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(testUser);
 
       const response = await POST(request);
       const { status } = await parseResponse(response);
