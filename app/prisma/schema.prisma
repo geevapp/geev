@@ -112,6 +112,19 @@ enum HelpType {
   other
 }
 
+enum TransactionType {
+  fund
+  withdraw
+  contribution_out
+  prize_in
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+}
+
 model Activity {
   id          String       @id @default(uuid())
   userId      String
@@ -136,7 +149,7 @@ model User {
   bio           String?
   avatarUrl     String?   @map("avatar_url")
   xp            Int       @default(0)
-  // walletBalance Float    @default(0) @map("wallet_balance")
+  walletBalance Float    @default(0) @map("wallet_balance")
   emailVerified DateTime? @map("email_verified")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -156,6 +169,7 @@ model User {
   accounts          Account[]
   sessions          Session[]
   wins              PostWinner[]       @relation("PostWinner")
+  walletTransactions WalletTransaction[]
 
   @@map("users")
 }
@@ -455,4 +469,24 @@ model AnalyticsEvent {
   @@index([createdAt], name: "idx_analytics_events_created")
   @@index([userId], name: "idx_analytics_events_user")
   @@map("analytics_events")
+}
+
+model WalletTransaction {
+  id        String            @id @default(uuid())
+  userId    String            @map("user_id")
+  type      TransactionType
+  amount    Float
+  currency  String            @default("USD") @db.VarChar(10)
+  status    TransactionStatus @default(pending)
+  method    String?           @db.VarChar(50)
+  reference String?           @db.VarChar(255)
+  note      String?
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("wallet_transactions")
 }
