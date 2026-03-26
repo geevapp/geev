@@ -36,7 +36,7 @@ export default function ProfilePage() {
   const isOwnProfile = currentUser?.id === userId;
 
   const givePosts = userPosts.filter((p) => p.type === 'giveaway').length;
-  const takePosts = userPosts.filter((p) => p.type === 'help-request').length;
+  const takePosts = userPosts.filter((p) => p.type === 'request').length;
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -263,7 +263,7 @@ export default function ProfilePage() {
 
           <TabsContent value="requests" className="space-y-4">
             {userPosts
-              .filter((p) => p.type === 'help-request')
+              .filter((p) => p.type === 'request')
               .map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}

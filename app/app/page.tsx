@@ -43,7 +43,7 @@ type LandingPost = {
   id: string;
   title: string;
   description?: string | null;
-  type?: 'giveaway' | 'help-request';
+  type?: 'giveaway' | 'request';
   media?: Array<{ url?: string | null }>;
   entriesCount?: number;
   likesCount?: number;
@@ -77,7 +77,7 @@ export default function LandingPage() {
         const [leaderboardRes, giveawaysRes, requestsRes] = await Promise.all([
           fetch('/api/leaderboard?limit=3'),
           fetch('/api/posts?type=giveaway&limit=3'),
-          fetch('/api/posts?type=help-request&limit=3'),
+          fetch('/api/posts?type=request&limit=3'),
         ]);
 
         const [leaderboardJson, giveawaysJson, requestsJson] = await Promise.all([
