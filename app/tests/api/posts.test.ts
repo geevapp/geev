@@ -54,6 +54,7 @@ describe('Posts API', () => {
       // Mock prisma.post.findMany and count
       prisma.post.findMany = vi.fn().mockResolvedValue([]);
       prisma.post.count = vi.fn().mockResolvedValue(0);
+      prisma.post.findUnique = vi.fn().mockResolvedValue(null);
       // Mock prisma.post.create
       prisma.post.create = vi.fn().mockImplementation((args: any) => Promise.resolve({
         id: 'post_123',

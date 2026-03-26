@@ -267,7 +267,7 @@ model Post {
   id                String          @id @default(uuid())
   userId            String          @map("creator_id")
   type              PostType
-  slug              String
+  slug              String          @unique @db.VarChar(50)
   title             String          @db.VarChar(200)
   description       String?
   duration          Int?            @map("duration") // Duration in seconds for time-limited posts

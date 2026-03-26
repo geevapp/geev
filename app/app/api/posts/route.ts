@@ -1,23 +1,30 @@
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { awardXp, XP_REWARDS } from '@/lib/xp';
 
+import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { readJsonBody } from '@/lib/parse-json-body';
+import { sanitizePostSlug } from '@/lib/post-slug';
 
 const POST = async (request: NextRequest) => {
   try {
     const user = await getCurrentUser(request);
     if (!user) return apiError('Unauthorized', 401);
 
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return apiError('Invalid or missing JSON body', 400);
-    }
+    const parsed = await readJsonBody<Record<string, unknown>>(request);
+    if (!parsed.ok) return parsed.response;
 
-    const { title, description, type, winnerCount, endsAt, proofRequired } = body;
+    const body = parsed.data;
+    const { title, description, type, winnerCount, endsAt, proofRequired } = body as {
+      title?: string;
+      description?: string;
+      type?: string;
+      winnerCount?: unknown;
+      endsAt?: string;
+      proofRequired?: unknown;
+    };
 
     if (!title || title.length < 10 || title.length > 200) {
       return apiError('Title must be 10-200 characters', 400);
@@ -25,6 +32,16 @@ const POST = async (request: NextRequest) => {
 
     if (!description || description.length < 50) {
       return apiError('Description must be at least 50 characters', 400);
+    }
+
+    const slug = sanitizePostSlug(body.slug, title);
+
+    const existingSlug = await prisma.post.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (existingSlug) {
+      return apiError('Slug already in use', 409);
     }
 
     const post = await prisma.$transaction(async (tx) => {
@@ -39,7 +56,7 @@ const POST = async (request: NextRequest) => {
           userId: user.id,
           type,
           title,
-          slug: body.slug || title.toLowerCase().replace(/\s+/g, '-').slice(0, 50),
+          slug,
           description,
           maxWinners: winnerCount ? Number(winnerCount) : null,
           postRequirementsId: requirements.id,
@@ -89,6 +106,12 @@ const POST = async (request: NextRequest) => {
 
     return apiSuccess(post, "Post created successfully", 201);
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const target = error.meta?.target as string[] | undefined;
+      if (target?.includes('slug')) {
+        return apiError('Slug already in use', 409);
+      }
+    }
     return apiError('Failed to create post', 500);
   }
 }
