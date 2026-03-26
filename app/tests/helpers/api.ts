@@ -11,9 +11,14 @@ export function createMockRequest(
 ): NextRequest {
   const { method = 'GET', body, headers = {}, cookies = {} } = options || {};
 
+  const hdrs = new Headers(headers);
+  if (body !== undefined && !hdrs.has('Content-Type')) {
+    hdrs.set('Content-Type', 'application/json');
+  }
+
   const request = new NextRequest(url, {
     method,
-    headers: new Headers(headers),
+    headers: hdrs,
     body: body ? JSON.stringify(body) : undefined,
   });
 

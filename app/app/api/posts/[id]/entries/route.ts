@@ -4,6 +4,7 @@ import { awardXp, XP_REWARDS } from '@/lib/xp';
 import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { readJsonBody } from '@/lib/parse-json-body';
 
 /**
  * POST /api/posts/[id]/entries
@@ -18,8 +19,10 @@ export async function POST (
     if (!user) return apiError('Unauthorized', 401);
 
     const { id: postId } = await params;
-    const body = await request.json();
-    const { content, proofUrl } = body;
+    const raw = await readJsonBody<Record<string, unknown>>(request);
+    if (!raw.ok) return raw.response;
+    const body = raw.data;
+    const { content, proofUrl } = body as { content?: unknown; proofUrl?: unknown };
 
     // Validate content
     if (!content || typeof content !== 'string') {
