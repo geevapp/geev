@@ -25,6 +25,7 @@ export async function GET(
           email: true,
           avatarUrl: true,
           xp: true,
+          walletBalance: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -123,6 +124,7 @@ export async function PATCH(
           email: true,
           avatarUrl: true,
           xp: true,
+          walletBalance: true,
           createdAt: true,
           updatedAt: true,
         },
