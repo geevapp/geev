@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { readJsonBody } from "@/lib/parse-json-body";
+import { auth } from "@/lib/auth";
 
 const VALID_EVENTS = [
   "page_view",
@@ -34,12 +35,14 @@ export async function POST(request: NextRequest) {
       return apiError("Event data too large", 400);
     }
 
-    const userIdHeader = request.headers.get("x-user-id");
+    const session = await auth();
+    const userId = session?.user?.id ?? null;
+
     const userAgent = request.headers.get("user-agent");
 
     await prisma.analyticsEvent.create({
       data: {
-        userId: userIdHeader || null,
+        userId,
         eventType,
         eventData: eventData ?? {},
         pageUrl: pageUrl ?? null,

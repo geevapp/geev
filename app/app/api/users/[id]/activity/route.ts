@@ -154,7 +154,6 @@ export async function GET (
       totalPages,
     });
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('GET /api/users/[id]/activity error', error);
     return apiError('Failed to fetch activity', 500);
   }
