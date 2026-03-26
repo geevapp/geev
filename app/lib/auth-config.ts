@@ -4,6 +4,7 @@ import { JWT } from "next-auth/jwt";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { PrismaAdapter } from "@auth/prisma-adapter"
+import { Keypair } from "@stellar/stellar-sdk";
 
 // JWT payload structure
 interface UserJWT extends JWT {
@@ -29,13 +30,14 @@ async function verifyWalletSignature (
   signature: string,
   message: string
 ): Promise<boolean> {
-  // In a real implementation, you would:
-  // 1. Verify the signature using the wallet's public key
-  // 2. Check that the signed message matches what we sent
-  // 3. Validate the signature is recent (timestamp check)
-
-  // Mock validation - in production, use proper signature verification
-  return signature.length > 10; // Simple validation for demo
+  try {
+    const keypair = Keypair.fromPublicKey(walletAddress);
+    // Freighter returns base64 string for signMessage, so we parse it into Buffer to verify
+    return keypair.verify(Buffer.from(message), Buffer.from(signature, "base64"));
+  } catch (error) {
+    console.error("Invalid signature or verification failed:", error);
+    return false;
+  }
 }
 
 export const authConfig = {
