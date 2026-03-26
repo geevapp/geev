@@ -153,7 +153,7 @@ describe('Users API', () => {
       expect(data.error).toBe('Unauthorized');
     });
 
-    it('should return 403 when attempting to update another user's profile', async () => {
+    it("should return 403 when attempting to update another user's profile", async () => {
       // user1 is authenticated but targets user2's profile
       (getCurrentUser as any).mockResolvedValue(user1);
 

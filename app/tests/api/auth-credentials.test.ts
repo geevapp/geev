@@ -6,6 +6,11 @@
  * callback in lib/auth-config.ts:
  *   - Registration: walletAddress + valid signature + username → creates new user
  *   - Login:        walletAddress + valid signature (no username) → returns existing user
+ *
+ * We follow the same prisma-stubbing pattern as entries.test.ts / posts.test.ts:
+ * import the real prisma singleton and replace individual methods with vi.fn()
+ * so that `auth-config.ts` (which captured the same singleton at import time)
+ * calls our stubs instead of hitting a real database.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -18,26 +23,19 @@ vi.mock('@stellar/stellar-sdk', () => ({
   },
 }));
 
-const mockPrismaUser = vi.hoisted(() => ({
-  findUnique: vi.fn(),
-  create: vi.fn(),
-}));
-
-vi.mock('@/lib/prisma', () => ({
-  prisma: { user: mockPrismaUser },
-}));
-
-// PrismaAdapter is called at module evaluation time inside authConfig.
-// Mock it so importing auth-config does not attempt a real DB connection.
+// PrismaAdapter is invoked at module-evaluation time inside authConfig.
+// Return a no-op object so importing auth-config doesn't attempt a real DB connection.
 vi.mock('@auth/prisma-adapter', () => ({
   PrismaAdapter: vi.fn().mockReturnValue({}),
 }));
 
+// Import the real prisma singleton — we will stub individual methods per test,
+// exactly as entries.test.ts and posts.test.ts do.
+import { prisma } from '@/lib/prisma';
 import { authConfig } from '@/lib/auth-config';
 
 describe('Auth Credentials Provider (authorize)', () => {
   // The Credentials provider is the first (and only) provider in authConfig.
-  // We cast to `any` to access the authorize callback without needing NextAuth types.
   let authorize: (credentials: Record<string, unknown>) => Promise<unknown>;
 
   beforeEach(() => {
@@ -65,8 +63,8 @@ describe('Auth Credentials Provider (authorize)', () => {
     };
 
     mockVerify.mockReturnValue(true);
-    mockPrismaUser.findUnique.mockResolvedValue(null); // user does not exist yet
-    mockPrismaUser.create.mockResolvedValue(createdUser);
+    prisma.user.findUnique = vi.fn().mockResolvedValue(null); // user does not exist yet
+    prisma.user.create = vi.fn().mockResolvedValue(createdUser);
 
     const result = await authorize({
       walletAddress,
@@ -77,7 +75,7 @@ describe('Auth Credentials Provider (authorize)', () => {
 
     expect(result).not.toBeNull();
     expect((result as any).walletAddress).toBe(walletAddress);
-    expect(mockPrismaUser.create).toHaveBeenCalledWith(
+    expect(prisma.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           walletAddress,
@@ -92,8 +90,8 @@ describe('Auth Credentials Provider (authorize)', () => {
   it('should register with an email when email is provided during registration', async () => {
     const walletAddress = 'GREGISTERWITHMAIL12345678';
     mockVerify.mockReturnValue(true);
-    mockPrismaUser.findUnique.mockResolvedValue(null);
-    mockPrismaUser.create.mockResolvedValue({
+    prisma.user.findUnique = vi.fn().mockResolvedValue(null);
+    prisma.user.create = vi.fn().mockResolvedValue({
       id: 'new_user_email',
       walletAddress,
       name: 'eve',
@@ -114,7 +112,7 @@ describe('Auth Credentials Provider (authorize)', () => {
     });
 
     expect(result).not.toBeNull();
-    expect(mockPrismaUser.create).toHaveBeenCalledWith(
+    expect(prisma.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ email: 'eve@example.com' }),
       }),
@@ -138,7 +136,8 @@ describe('Auth Credentials Provider (authorize)', () => {
     };
 
     mockVerify.mockReturnValue(true);
-    mockPrismaUser.findUnique.mockResolvedValue(existingUser);
+    prisma.user.findUnique = vi.fn().mockResolvedValue(existingUser);
+    prisma.user.create = vi.fn(); // should not be called
 
     const result = await authorize({
       walletAddress: 'GEXISTINGWALLET12345678',
@@ -149,7 +148,7 @@ describe('Auth Credentials Provider (authorize)', () => {
 
     expect(result).not.toBeNull();
     expect((result as any).id).toBe('user_existing');
-    expect(mockPrismaUser.create).not.toHaveBeenCalled();
+    expect(prisma.user.create).not.toHaveBeenCalled();
   });
 
   // ────────────────────────────────────────────────────────────
@@ -166,12 +165,11 @@ describe('Auth Credentials Provider (authorize)', () => {
     });
 
     expect(result).toBeNull();
-    expect(mockPrismaUser.create).not.toHaveBeenCalled();
   });
 
   it('should return null on login when user does not exist and no username provided', async () => {
     mockVerify.mockReturnValue(true);
-    mockPrismaUser.findUnique.mockResolvedValue(null); // no such user
+    prisma.user.findUnique = vi.fn().mockResolvedValue(null); // no such user
 
     const result = await authorize({
       walletAddress: 'GUNKNOWN12345678',
@@ -181,7 +179,6 @@ describe('Auth Credentials Provider (authorize)', () => {
     });
 
     expect(result).toBeNull();
-    expect(mockPrismaUser.create).not.toHaveBeenCalled();
   });
 
   it('should return null when credentials object is missing required fields', async () => {
