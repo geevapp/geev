@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiSuccess, apiError } from "@/lib/api-response";
+import { unstable_cache } from "next/cache";
 
 interface MetricsPayload {
   period: string;
@@ -12,8 +13,9 @@ interface MetricsPayload {
   };
 }
 
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const metricsCache: Record<string, { data: MetricsPayload; expiresAt: number }> = {};
+const CACHE_TTL_SECONDS = 5 * 60; // 5 minutes
+const ALLOWED_PERIODS = ["24h", "7d", "30d"] as const;
+type AllowedPeriod = (typeof ALLOWED_PERIODS)[number];
 
 function getDateFromPeriod(period: string): Date {
   const now = Date.now();
@@ -28,17 +30,12 @@ function getDateFromPeriod(period: string): Date {
   }
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const period = searchParams.get("period") || "7d";
-
-    const cached = metricsCache[period];
-    const now = Date.now();
-    if (cached && cached.expiresAt > now) {
-      return apiSuccess(cached.data);
-    }
-
+/**
+ * Fetches analytics metrics from the database.
+ * Wrapped in unstable_cache for persistent caching across restarts and instances.
+ */
+const getCachedMetrics = unstable_cache(
+  async (period: AllowedPeriod): Promise<MetricsPayload> => {
     const dateFrom = getDateFromPeriod(period);
 
     const [activeUsersData, postsCreated, entriesSubmitted, pageViews] =
@@ -68,7 +65,7 @@ export async function GET(request: NextRequest) {
         } as any),
       ]);
 
-    const payload: MetricsPayload = {
+    return {
       period,
       metrics: {
         active_users: activeUsersData.length,
@@ -77,11 +74,29 @@ export async function GET(request: NextRequest) {
         page_views: pageViews,
       },
     };
+  },
+  ["analytics-metrics"],
+  {
+    revalidate: CACHE_TTL_SECONDS,
+    tags: ["analytics"],
+  }
+);
 
-    metricsCache[period] = {
-      data: payload,
-      expiresAt: now + CACHE_TTL_MS,
-    };
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const periodParam = searchParams.get("period") || "7d";
+
+    // Validate period to prevent unbounded cache growth and invalid queries
+    if (!ALLOWED_PERIODS.includes(periodParam as AllowedPeriod)) {
+      return apiError(
+        `Invalid period. Allowed values: ${ALLOWED_PERIODS.join(", ")}`,
+        400
+      );
+    }
+
+    const period = periodParam as AllowedPeriod;
+    const payload = await getCachedMetrics(period);
 
     return apiSuccess(payload);
   } catch (error) {
