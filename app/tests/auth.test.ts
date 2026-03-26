@@ -48,7 +48,7 @@ describe("Authentication System", () => {
     });
 
     test("POST /api/auth/logout should clear session", async () => {
-      const { POST } = await import("@/app/api/auth/logout/route");
+      const { POST } = await import("@/app/(auth)/logout/route");
       const { NextRequest } = await import("next/server");
 
       const request = new NextRequest("http://localhost/api/auth/logout", {

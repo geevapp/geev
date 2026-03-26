@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { POST } from "@/app/api/auth/logout/route";
+import { POST } from "@/app/(auth)/logout/route";
 import { NextRequest } from "next/server";
 
 describe("Logout API Route", () => {
