@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { getCurrentUser } from '@/lib/auth';
+import { readJsonBody } from '@/lib/parse-json-body';
 
 export async function GET(
   request: NextRequest,
@@ -54,7 +55,9 @@ export async function PATCH(
       return apiError('Can only update own profile', 403);
     }
 
-    const { name, username, bio, email } = await request.json();
+    const raw = await readJsonBody<Record<string, unknown>>(request);
+    if (!raw.ok) return raw.response;
+    const { name, username, bio, email } = raw.data;
 
     try {
       // --- Uniqueness checks ---
