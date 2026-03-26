@@ -3,10 +3,81 @@ import { awardXp, XP_REWARDS } from '@/lib/xp';
 
 import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
+import { randomUUID } from 'crypto';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { readJsonBody } from '@/lib/parse-json-body';
-import { sanitizePostSlug } from '@/lib/post-slug';
+import { POST_SLUG_MAX_LENGTH, sanitizePostSlug } from '@/lib/post-slug';
+
+const SLUG_SUFFIX_LENGTH = 6;
+
+function buildSlugWithSuffix(baseSlug: string, suffix: string) {
+  const maxBaseLength = POST_SLUG_MAX_LENGTH - SLUG_SUFFIX_LENGTH - 1;
+  const trimmedBase = baseSlug.slice(0, Math.max(1, maxBaseLength));
+
+  return `${trimmedBase}-${suffix}`;
+}
+
+async function generateUniquePostSlug(
+  postDelegate: Pick<typeof prisma.post, 'findUnique'>,
+  title: string,
+  requestedSlug?: string,
+) {
+  const baseSlug = sanitizePostSlug(requestedSlug, title);
+  const existingBaseSlug = await postDelegate.findUnique({
+    where: { slug: baseSlug },
+    select: { id: true },
+  });
+
+  if (!existingBaseSlug) {
+    return baseSlug;
+  }
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidate = buildSlugWithSuffix(
+      baseSlug,
+      randomUUID().replace(/-/g, '').slice(0, SLUG_SUFFIX_LENGTH),
+    );
+    const existingCandidate = await postDelegate.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+
+    if (!existingCandidate) {
+      return candidate;
+    }
+  }
+
+  return buildSlugWithSuffix(
+    baseSlug,
+    Date.now().toString(36).slice(-SLUG_SUFFIX_LENGTH).padStart(SLUG_SUFFIX_LENGTH, '0'),
+  );
+}
+
+function isSlugConstraintError(error: unknown) {
+  if (!(typeof error === 'object' && error !== null && 'code' in error)) {
+    return false;
+  }
+
+  const code = (error as { code?: string }).code;
+  if (code !== 'P2002') {
+    return false;
+  }
+
+  const metaTarget = 'meta' in error
+    ? (error as { meta?: { target?: string[] | string } }).meta?.target
+    : undefined;
+
+  if (!metaTarget) {
+    return true;
+  }
+
+  if (Array.isArray(metaTarget)) {
+    return metaTarget.includes('slug');
+  }
+
+  return metaTarget === 'slug';
+}
 
 const POST = async (request: NextRequest) => {
   try {
@@ -34,17 +105,9 @@ const POST = async (request: NextRequest) => {
       return apiError('Description must be at least 50 characters', 400);
     }
 
-    const slug = sanitizePostSlug(body.slug, title);
-
-    const existingSlug = await prisma.post.findUnique({
-      where: { slug },
-      select: { id: true },
-    });
-    if (existingSlug) {
-      return apiError('Slug already in use', 409);
-    }
-
     const post = await prisma.$transaction(async (tx) => {
+      const uniqueSlug = await generateUniquePostSlug(tx.post, title, body.slug);
+
       const requirements = await tx.postRequirements.create({
         data: {
           proofRequired: Boolean(proofRequired),
@@ -56,7 +119,7 @@ const POST = async (request: NextRequest) => {
           userId: user.id,
           type,
           title,
-          slug,
+          slug: uniqueSlug,
           description,
           maxWinners: winnerCount ? Number(winnerCount) : null,
           postRequirementsId: requirements.id,
@@ -106,11 +169,11 @@ const POST = async (request: NextRequest) => {
 
     return apiSuccess(post, "Post created successfully", 201);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      const target = error.meta?.target as string[] | undefined;
-      if (target?.includes('slug')) {
-        return apiError('Slug already in use', 409);
-      }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && isSlugConstraintError(error)) {
+      return apiError('Slug already in use', 409);
+    }
+    if (isSlugConstraintError(error)) {
+      return apiError('Slug already in use', 409);
     }
     return apiError('Failed to create post', 500);
   }
