@@ -1,8 +1,73 @@
 import { apiError, apiSuccess } from '@/lib/api-response';
 
 import { NextRequest } from 'next/server';
+import { randomUUID } from 'crypto';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
+const SLUG_MAX_LENGTH = 50;
+const SLUG_SUFFIX_LENGTH = 6;
+
+function slugify(value: string) {
+  const normalized = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-')
+    .slice(0, SLUG_MAX_LENGTH);
+
+  return normalized || 'post';
+}
+
+function buildSlugWithSuffix(baseSlug: string, suffix: string) {
+  const maxBaseLength = SLUG_MAX_LENGTH - SLUG_SUFFIX_LENGTH - 1;
+  const trimmedBase = baseSlug.slice(0, Math.max(1, maxBaseLength));
+
+  return `${trimmedBase}-${suffix}`;
+}
+
+async function generateUniquePostSlug(title: string, requestedSlug?: string) {
+  const normalizedRequestedSlug = typeof requestedSlug === 'string' ? requestedSlug.trim() : '';
+  const baseSlug = slugify(normalizedRequestedSlug || title);
+  const existingBaseSlug = await prisma.post.findFirst({
+    where: { slug: baseSlug },
+    select: { id: true },
+  });
+
+  if (!existingBaseSlug) {
+    return baseSlug;
+  }
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const candidate = buildSlugWithSuffix(
+      baseSlug,
+      randomUUID().replace(/-/g, '').slice(0, SLUG_SUFFIX_LENGTH),
+    );
+    const existingCandidate = await prisma.post.findFirst({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+
+    if (!existingCandidate) {
+      return candidate;
+    }
+  }
+
+  return buildSlugWithSuffix(
+    baseSlug,
+    Date.now().toString(36).slice(-SLUG_SUFFIX_LENGTH).padStart(SLUG_SUFFIX_LENGTH, '0'),
+  );
+}
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    typeof error === 'object'
+    && error !== null
+    && 'code' in error
+    && (error as { code?: string }).code === 'P2002'
+  );
+}
 
 const POST = async (request: NextRequest) => {
   try {
@@ -26,6 +91,8 @@ const POST = async (request: NextRequest) => {
       return apiError('Description must be at least 50 characters', 400);
     }
 
+    const uniqueSlug = await generateUniquePostSlug(title, body.slug);
+
     const requirements = await prisma.postRequirements.create({
       data: {
         proofRequired: Boolean(proofRequired),
@@ -37,7 +104,7 @@ const POST = async (request: NextRequest) => {
         userId: user.id,
         type,
         title,
-        slug: body.slug || title.toLowerCase().replace(/\s+/g, '-').slice(0, 50),
+        slug: uniqueSlug,
         description,
         maxWinners: winnerCount ? Number(winnerCount) : null,
         postRequirementsId: requirements.id,
@@ -56,6 +123,13 @@ const POST = async (request: NextRequest) => {
 
     return apiSuccess(post, "Post created successfully", 201);
   } catch (error) {
+    if (isUniqueConstraintError(error)) {
+      return apiError(
+        'A post with a conflicting slug already exists. Please retry your request.',
+        409,
+      );
+    }
+
     return apiError('Failed to create post', 500);
   }
 }
