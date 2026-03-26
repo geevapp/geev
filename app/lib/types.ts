@@ -39,7 +39,7 @@ export interface Activity {
 
 export interface Post {
   id: string
-  type: "giveaway" | "help-request"
+  type: "giveaway" | "request"
   userId: string
   author: User
   title: string

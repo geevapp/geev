@@ -64,7 +64,7 @@ const response = await fetch("/api/posts", {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          type: "help-request",
+          type: "request",
           title: formData.title,
           description: formData.description,
           status: "active",
