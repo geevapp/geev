@@ -1,7 +1,5 @@
 'use client';
 
-import { signOut, useSession } from 'next-auth/react';
-
 import { AppFooter } from '@/components/app-footer';
 import { DesktopSidebar } from '@/components/desktop-sidebar';
 import { DevUserSwitcher } from './dev-user-switcher';
@@ -21,8 +19,6 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { user } = useAppContext();
-  const session = useSession();
-  console.log(session);
   const path = usePathname();
   const isMobile = useMobile();
   const noNavPages = ['/', '/register', '/login'];

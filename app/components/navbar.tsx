@@ -14,6 +14,7 @@ import { LogOut, Moon, Settings, Sun, User, Wallet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { NotificationBell } from '@/components/NotificationBell';
 import { UserRankBadge } from '@/components/user-rank-badge';
 import { useAppContext } from '@/contexts/app-context';
 import { useRouter } from 'next/navigation';
@@ -49,7 +50,6 @@ export function Navbar() {
           {user && (
             <div className="flex items-center space-x-3">
               {/* Notification Bell */}
-              <import { NotificationBell } from './NotificationBell'; />
               <NotificationBell />
               {/* Wallet Balance */}
               {(user.walletBalance ?? 0) > 0 && (
