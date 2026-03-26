@@ -1,5 +1,7 @@
 use crate::types::{DataKey, Error, HelpRequest, HelpRequestStatus};
-use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, Symbol};
+use soroban_sdk::{
+    contract, contractimpl, panic_with_error, symbol_short, token, Address, Env, Symbol,
+};
 
 #[contract]
 pub struct MutualAidContract;
@@ -92,8 +94,17 @@ impl MutualAidContract {
         env.storage().persistent().set(&request_key, &request);
 
         env.events().publish(
-            (Symbol::new(&env, "DonationReceived"), request_id, donor),
+            (
+                Symbol::new(&env, "DonationReceived"),
+                request_id,
+                donor.clone(),
+            ),
             (amount,),
+        );
+
+        env.events().publish(
+            (symbol_short!("aid"), symbol_short!("donate"), request_id),
+            (donor, amount),
         );
     }
 

@@ -6,8 +6,10 @@ use crate::profile::{ProfileContract, ProfileContractClient};
 use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger},
-    token, Address, Env, String,
+    testutils::{Address as _, Events as _, Ledger},
+    token, vec,
+    xdr::ToXdr,
+    Address, Env, IntoVal, String, Val, Vec,
 };
 
 #[test]
@@ -302,6 +304,59 @@ fn test_donation_reaches_goal() {
         assert_eq!(request.raised_amount, goal);
         assert_eq!(request.status, HelpRequestStatus::FullyFunded);
     });
+}
+
+#[test]
+fn test_donation_emits_contributor_tracking_event() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let donor = Address::generate(&env);
+
+    token_admin_client.mint(&donor, &1000);
+
+    let request_id: u64 = 42;
+    let goal = 500;
+    let donation = 125;
+
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: mock_token.clone(),
+            goal,
+            raised_amount: 0,
+            status: HelpRequestStatus::Open,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    contract_client.donate(&donor, &request_id, &donation);
+
+    let events = env.events().all();
+    let expected_topics =
+        (symbol_short!("aid"), symbol_short!("donate"), request_id).into_val(&env);
+    let expected_data: Vec<Val> = vec![&env, donor.clone().into_val(&env), donation.into_val(&env)];
+    let expected_data_xdr = expected_data.to_xdr(&env);
+
+    assert!(events.iter().any(|(event_contract, topics, data)| {
+        event_contract == contract_id
+            && topics == expected_topics
+            && data.to_xdr(&env) == expected_data_xdr
+    }));
 }
 
 #[test]
