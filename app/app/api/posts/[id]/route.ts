@@ -26,6 +26,30 @@ const GET = async (
                         interactions: true,
                     },
                 },
+                entries: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                avatarUrl: true,
+                                username: true,
+                            }
+                        }
+                    }
+                },
+                winners: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                avatarUrl: true,
+                                username: true,
+                            }
+                        }
+                    }
+                },
             },
         });
 
@@ -67,16 +91,20 @@ const PATCH = async (
             return apiError('Forbidden', 403);
         }
 
-        if (post._count.entries > 0) {
-            return apiError('Cannot edit post with entries', 400);
+        const isOnlyStatusUpdate = body.status !== undefined && Object.keys(body).every(k => k === 'status');
+
+        if (post._count.entries > 0 && !isOnlyStatusUpdate) {
+            return apiError('Cannot edit post details with entries', 400);
         }
+
+        const updateData: any = {};
+        if (body.title !== undefined) updateData.title = body.title;
+        if (body.description !== undefined) updateData.description = body.description;
+        if (body.status !== undefined) updateData.status = body.status;
 
         const updatedPost = await prisma.post.update({
             where: { id },
-            data: {
-                title: body.title,
-                description: body.description,
-            },
+            data: updateData,
         });
 
         return apiSuccess(updatedPost);

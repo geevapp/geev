@@ -1,4 +1,5 @@
 import { apiError, apiSuccess } from '@/lib/api-response';
+import { awardXp, XP_REWARDS } from '@/lib/xp';
 
 import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
@@ -66,24 +67,63 @@ export async function POST (
       return apiError('You have already entered this giveaway', 400);
     }
 
+
     // Create entry
-    const entry = await prisma.entry.create({
-      data: {
-        postId,
-        userId: user.id,
-        content,
-        proofUrl: proofUrl || null,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            walletAddress: true,
-            avatarUrl: true,
+    const entry = await prisma.$transaction(async (tx) => {
+      const createdEntry = await tx.entry.create({
+        data: {
+          postId,
+          userId: user.id,
+          content,
+          proofUrl: proofUrl || null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              walletAddress: true,
+              avatarUrl: true,
+            },
           },
         },
-      },
+      });
+
+      await awardXp(
+        user.id,
+        XP_REWARDS.enterGiveaway,
+        'giveaway_entered',
+        {
+          metadata: {
+            postId,
+            entryId: createdEntry.id,
+          },
+        },
+        tx,
+      );
+
+      // Notify post owner, but ignore if notifications table is missing
+      if (post.userId) {
+        try {
+          await tx.notification.create({
+            data: {
+              userId: post.userId,
+              type: 'giveaway_entry',
+              message: `${user.name} entered your giveaway`,
+              link: `/post/${postId}`,
+            },
+          });
+        } catch (err: any) {
+          if (err?.code === 'P2021' && String(err?.meta?.modelName).toLowerCase() === 'notification') {
+            // Table does not exist, skip notification
+            // Optionally log: console.warn('Notification table missing, skipping notification.');
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      return createdEntry;
     });
 
     return apiSuccess(entry, 'Entry created successfully', 201);

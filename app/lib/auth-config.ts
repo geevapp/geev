@@ -35,7 +35,6 @@ async function verifyWalletSignature (
   // 3. Validate the signature is recent (timestamp check)
 
   // Mock validation - in production, use proper signature verification
-  console.log(`Verifying signature for wallet: ${walletAddress}`);
   return signature.length > 10; // Simple validation for demo
 }
 

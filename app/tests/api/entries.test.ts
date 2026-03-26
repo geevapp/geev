@@ -6,12 +6,32 @@ import { createTestEntry, createTestPost, createTestUser } from '../helpers/db';
 import { DELETE as DeleteEntry } from '@/app/api/entries/[id]/route';
 import { prisma } from '@/lib/prisma';
 
+const mockAwardXp = vi.hoisted(() => vi.fn());
+
+vi.mock('@/lib/xp', () => ({
+  awardXp: mockAwardXp,
+  XP_REWARDS: {
+    createGiveawayPost: 50,
+    createHelpRequest: 20,
+    enterGiveaway: 10,
+    receiveTenLikes: 25,
+  },
+}));
+
 describe('Entry API Endpoints', () => {
   let user1: any, user2: any, user3: any, post: any, requestPost: any;
 
   beforeEach(async () => {
     // Reset all mocks before each test
     vi.clearAllMocks();
+    mockAwardXp.mockResolvedValue({
+      awarded: true,
+      amount: 10,
+      reason: 'giveaway_entered',
+      xp: 10,
+      rankId: 'newcomer',
+    });
+    prisma.$transaction = vi.fn(async (callback: any) => callback(prisma as any));
 
     // Always use mock data objects - no database calls in beforeEach
     user1 = {
@@ -127,6 +147,18 @@ describe('Entry API Endpoints', () => {
       expect(data.data.userId).toBe(user2.id);
       expect(data.data.postId).toBe(post.id);
       expect(data.message).toBe('Entry created successfully');
+      expect(mockAwardXp).toHaveBeenCalledWith(
+        user2.id,
+        10,
+        'giveaway_entered',
+        expect.objectContaining({
+          metadata: {
+            postId: post.id,
+            entryId: mockEntry.id,
+          },
+        }),
+        expect.anything(),
+      );
     });
 
     it('should create an entry without proofUrl', async () => {

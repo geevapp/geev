@@ -10,7 +10,6 @@ import {
   Zap,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { mockPosts, mockUsers } from '@/lib/mock-data';
 import { useEffect, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -20,10 +19,43 @@ import Link from 'next/link';
 import { useAppContext } from '@/contexts/app-context';
 import { useRouter } from 'next/navigation';
 
+type LandingUser = {
+  id: string;
+  name: string;
+  username?: string;
+  avatarUrl?: string;
+  avatar_url?: string;
+  isVerified?: boolean;
+  is_verified?: boolean;
+  followersCount?: number;
+  followers_count?: number;
+  postsCount?: number;
+  post_count?: number;
+  badges?: unknown[];
+  _count?: {
+    followers?: number;
+    posts?: number;
+    badges?: number;
+  };
+};
+
+type LandingPost = {
+  id: string;
+  title: string;
+  description?: string | null;
+  type?: 'giveaway' | 'help-request';
+  media?: Array<{ url?: string | null }>;
+  entriesCount?: number;
+  likesCount?: number;
+};
+
 export default function LandingPage() {
   const { user } = useAppContext();
   const router = useRouter();
   const [scrollY, setScrollY] = useState(0);
+  const [topGivers, setTopGivers] = useState<LandingUser[]>([]);
+  const [trendingGiveaways, setTrendingGiveaways] = useState<LandingPost[]>([]);
+  const [trendingRequests, setTrendingRequests] = useState<LandingPost[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -37,29 +69,80 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchLandingData = async () => {
+      try {
+        const [leaderboardRes, giveawaysRes, requestsRes] = await Promise.all([
+          fetch('/api/leaderboard?limit=3'),
+          fetch('/api/posts?type=giveaway&limit=3'),
+          fetch('/api/posts?type=help-request&limit=3'),
+        ]);
+
+        const [leaderboardJson, giveawaysJson, requestsJson] = await Promise.all([
+          leaderboardRes.json(),
+          giveawaysRes.json(),
+          requestsRes.json(),
+        ]);
+
+        if (isCancelled) return;
+
+        const leaderboardUsers = Array.isArray(leaderboardJson?.data?.leaderboard)
+          ? leaderboardJson.data.leaderboard
+          : [];
+        const giveawaysPosts = Array.isArray(giveawaysJson?.data?.posts)
+          ? giveawaysJson.data.posts
+          : [];
+        const requestPosts = Array.isArray(requestsJson?.data?.posts)
+          ? requestsJson.data.posts
+          : [];
+
+        setTopGivers(
+          leaderboardUsers.slice(0, 3).map((giver: LandingUser) => ({
+            ...giver,
+            avatarUrl: giver.avatarUrl ?? giver.avatar_url,
+            username:
+              giver.username ||
+              (giver.name
+                ? giver.name.toLowerCase().replace(/\s+/g, '')
+                : `user-${giver.id.slice(0, 6)}`),
+            isVerified: Boolean(giver.isVerified ?? giver.is_verified),
+            _count: {
+              followers:
+                giver._count?.followers ??
+                giver.followersCount ??
+                giver.followers_count ??
+                0,
+              posts:
+                giver._count?.posts ?? giver.postsCount ?? giver.post_count ?? 0,
+              badges: giver._count?.badges ?? giver.badges?.length ?? 0,
+            },
+          })),
+        );
+        setTrendingGiveaways(giveawaysPosts.slice(0, 3));
+        setTrendingRequests(requestPosts.slice(0, 3));
+      } catch (error) {
+        console.error('Failed to load landing page data:', error);
+      }
+    };
+
+    fetchLandingData();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
   if (user) {
     return null;
   }
 
   const getFollowerCount = (u: any) =>
-    u?._count?.followers ?? u?.followersCount ?? 0;
-  const getPostCount = (u: any) => u?._count?.posts ?? u?.postsCount ?? 0;
+    u?._count?.followers ?? u?.followersCount ?? u?.followers_count ?? 0;
+  const getPostCount = (u: any) =>
+    u?._count?.posts ?? u?.postsCount ?? u?.post_count ?? 0;
   const getBadgeCount = (u: any) => u?._count?.badges ?? u?.badges?.length ?? 0;
-
-  // Get top givers (users with highest followers)
-  const topGivers = mockUsers
-    .slice(0, 3)
-    .sort((a, b) => getFollowerCount(b) - getFollowerCount(a));
-
-  // Get trending giveaways
-  const trendingGiveaways = mockPosts
-    .filter((p) => p.type === 'giveaway')
-    .slice(0, 3);
-
-  // Get trending requests
-  const trendingRequests = mockPosts
-    .filter((p) => p.type === 'help-request')
-    .slice(0, 3);
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950">
@@ -267,7 +350,11 @@ export default function LandingPage() {
                   <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:border-orange-500 dark:hover:border-orange-500 transition-colors cursor-pointer">
                     <div
                       className="aspect-square bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center bg-cover"
-                      style={{ backgroundImage: `url(${post.media?.[0].url})` }}
+                      style={
+                        post.media?.[0]?.url
+                          ? { backgroundImage: `url(${post.media[0].url})` }
+                          : undefined
+                      }
                     >
                       <Gift className="w-12 h-12 text-orange-600 opacity-50" />
                     </div>
@@ -310,7 +397,11 @@ export default function LandingPage() {
                   <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:border-orange-500 dark:hover:border-orange-500 transition-colors cursor-pointer">
                     <div
                       className="aspect-square bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center bg-cover"
-                      style={{ backgroundImage: `url(${post.media?.[0].url})` }}
+                      style={
+                        post.media?.[0]?.url
+                          ? { backgroundImage: `url(${post.media[0].url})` }
+                          : undefined
+                      }
                     >
                       <Heart className="w-12 h-12 text-red-600 opacity-50" />
                     </div>

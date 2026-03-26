@@ -3,7 +3,7 @@ import type { User as BaseUser, Badge as Basebadge, Rank } from "@prisma/client"
 import { SignInResponse } from "next-auth/react"
 
 export type User = BaseUser & {
-  walletBalance?: number
+  walletBalance: number
   rank: Rank
   badges: Badge[]
   _count: {
@@ -93,6 +93,20 @@ export interface Entry {
   parentId?: string
 }
 
+export interface WalletTransaction {
+  id: string
+  userId: string
+  type: "fund" | "withdraw" | "contribution_out" | "prize_in"
+  amount: number
+  currency: string
+  status: "pending" | "completed" | "failed"
+  method?: string | null
+  reference?: string | null
+  note?: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface HelpContribution {
   id: string
   postId: string
@@ -134,7 +148,6 @@ export interface AppState {
   burns: Set<string>
   user: User | null
   posts: Post[]
-  users: User[]
   entries: Entry[]
   contributions: HelpContribution[]
   comments: Comment[]

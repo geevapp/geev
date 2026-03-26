@@ -35,7 +35,7 @@ export function PaymentModal({
   description,
   onSuccess,
 }: PaymentModalProps) {
-  const { user } = useAppContext();
+  const { user, setCurrentUser } = useAppContext();
   const [paymentMethod, setPaymentMethod] = useState("wallet");
   const [isProcessing, setIsProcessing] = useState(false);
   const [cardDetails, setCardDetails] = useState({
@@ -51,12 +51,23 @@ export function PaymentModal({
     setIsProcessing(true);
 
     try {
-      // Simulate payment processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (paymentMethod === "wallet") {
+        if (!canPayWithWallet) throw new Error("Insufficient wallet balance");
 
-      if (paymentMethod === "wallet" && !canPayWithWallet) {
-        throw new Error("Insufficient wallet balance");
+        const res = await fetch("/api/wallet/withdraw", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount, method: "card", note: title }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Payment failed");
+
+        if (user) {
+          setCurrentUser({ ...user, walletBalance: data.data.balance });
+        }
       }
+      // card payments: integrate a payment provider here
 
       toast("Payment successful!", {
         description: `$${amount.toFixed(2)} has been processed successfully.`,

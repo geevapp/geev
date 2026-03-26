@@ -48,6 +48,9 @@ export function Navbar() {
           {/* User Menu */}
           {user && (
             <div className="flex items-center space-x-3">
+              {/* Notification Bell */}
+              <import { NotificationBell } from './NotificationBell'; />
+              <NotificationBell />
               {/* Wallet Balance */}
               {(user.walletBalance ?? 0) > 0 && (
                 <Link href="/wallet">

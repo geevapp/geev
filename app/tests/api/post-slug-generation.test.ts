@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockPrisma = vi.hoisted(() => ({
+  $transaction: vi.fn(),
   post: {
     findFirst: vi.fn(),
     create: vi.fn(),
@@ -11,6 +12,7 @@ const mockPrisma = vi.hoisted(() => ({
 }));
 
 const mockGetCurrentUser = vi.hoisted(() => vi.fn());
+const mockAwardXp = vi.hoisted(() => vi.fn());
 
 vi.mock('next/server', () => ({
   NextRequest: class MockNextRequest extends Request {
@@ -26,6 +28,14 @@ vi.mock('@/lib/prisma', () => ({
 
 vi.mock('@/lib/auth', () => ({
   getCurrentUser: mockGetCurrentUser,
+}));
+
+vi.mock('@/lib/xp', () => ({
+  awardXp: mockAwardXp,
+  XP_REWARDS: {
+    createGiveawayPost: 50,
+    createHelpRequest: 20,
+  },
 }));
 
 import { prisma } from '@/lib/prisma';
@@ -60,6 +70,14 @@ describe('POST /api/posts slug generation', () => {
     vi.clearAllMocks();
 
     mockGetCurrentUser.mockResolvedValue(testUser);
+    mockAwardXp.mockResolvedValue({
+      awarded: true,
+      amount: 50,
+      reason: 'giveaway_post_created',
+      xp: 50,
+      rankId: 'newcomer',
+    });
+    prisma.$transaction.mockImplementation(async (callback: any) => callback(prisma));
     prisma.post.findFirst.mockResolvedValue(null);
     prisma.postRequirements.create.mockResolvedValue({
       id: 'requirements_123',

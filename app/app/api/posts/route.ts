@@ -1,4 +1,5 @@
 import { apiError, apiSuccess } from '@/lib/api-response';
+import { awardXp, XP_REWARDS } from '@/lib/xp';
 
 import { NextRequest } from 'next/server';
 import { randomUUID } from 'crypto';
@@ -27,10 +28,14 @@ function buildSlugWithSuffix(baseSlug: string, suffix: string) {
   return `${trimmedBase}-${suffix}`;
 }
 
-async function generateUniquePostSlug(title: string, requestedSlug?: string) {
+async function generateUniquePostSlug(
+  postDelegate: Pick<typeof prisma.post, 'findFirst'>,
+  title: string,
+  requestedSlug?: string,
+) {
   const normalizedRequestedSlug = typeof requestedSlug === 'string' ? requestedSlug.trim() : '';
   const baseSlug = slugify(normalizedRequestedSlug || title);
-  const existingBaseSlug = await prisma.post.findFirst({
+  const existingBaseSlug = await postDelegate.findFirst({
     where: { slug: baseSlug },
     select: { id: true },
   });
@@ -44,7 +49,7 @@ async function generateUniquePostSlug(title: string, requestedSlug?: string) {
       baseSlug,
       randomUUID().replace(/-/g, '').slice(0, SLUG_SUFFIX_LENGTH),
     );
-    const existingCandidate = await prisma.post.findFirst({
+    const existingCandidate = await postDelegate.findFirst({
       where: { slug: candidate },
       select: { id: true },
     });
@@ -91,34 +96,66 @@ const POST = async (request: NextRequest) => {
       return apiError('Description must be at least 50 characters', 400);
     }
 
-    const uniqueSlug = await generateUniquePostSlug(title, body.slug);
+    const post = await prisma.$transaction(async (tx) => {
+      const uniqueSlug = await generateUniquePostSlug(tx.post, title, body.slug);
 
-    const requirements = await prisma.postRequirements.create({
-      data: {
-        proofRequired: Boolean(proofRequired),
-      },
-    });
+      const requirements = await tx.postRequirements.create({
+        data: {
+          proofRequired: Boolean(proofRequired),
+        },
+      });
 
-    const post = await prisma.post.create({
-      data: {
-        userId: user.id,
-        type,
-        title,
-        slug: uniqueSlug,
-        description,
-        maxWinners: winnerCount ? Number(winnerCount) : null,
-        postRequirementsId: requirements.id,
-        endsAt: new Date(endsAt),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
+      const createdPost = await tx.post.create({
+        data: {
+          userId: user.id,
+          type,
+          title,
+          slug: uniqueSlug,
+          description,
+          maxWinners: winnerCount ? Number(winnerCount) : null,
+          postRequirementsId: requirements.id,
+          endsAt: new Date(endsAt),
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
           },
         },
-      },
+      });
+
+      if (type === 'giveaway') {
+        await awardXp(
+          user.id,
+          XP_REWARDS.createGiveawayPost,
+          'giveaway_post_created',
+          {
+            metadata: {
+              postId: createdPost.id,
+              postType: type,
+            },
+          },
+          tx,
+        );
+      } else if (type === 'request') {
+        await awardXp(
+          user.id,
+          XP_REWARDS.createHelpRequest,
+          'help_request_created',
+          {
+            metadata: {
+              postId: createdPost.id,
+              postType: type,
+            },
+          },
+          tx,
+        );
+      }
+
+      return createdPost;
     });
 
     return apiSuccess(post, "Post created successfully", 201);
