@@ -12,6 +12,8 @@ export async function GET(
     const { id } = await params;
 
     try {
+      const currentUser = await getCurrentUser(request);
+
       const user = await prisma.user.findUnique({
         where: { id },
         select: {
@@ -25,11 +27,30 @@ export async function GET(
           xp: true,
           createdAt: true,
           updatedAt: true,
+          _count: {
+            select: {
+              followers: true,
+              followings: true,
+            }
+          }
         },
       });
 
       if (user) {
-        return apiSuccess(user);
+        let isFollowing = false;
+        if (currentUser) {
+          const follow = await prisma.follow.findUnique({
+            where: {
+              userId_followingId: {
+                userId: currentUser.id,
+                followingId: id,
+              }
+            }
+          });
+          isFollowing = !!follow;
+        }
+
+        return apiSuccess({ ...user, isFollowing });
       }
     } catch (dbError) {
       // Database error - fallback already handled above
