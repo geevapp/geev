@@ -1,41 +1,30 @@
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { awardXp, XP_REWARDS } from '@/lib/xp';
 
+import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { readJsonBody } from '@/lib/parse-json-body';
+import { POST_SLUG_MAX_LENGTH, sanitizePostSlug } from '@/lib/post-slug';
 
-const SLUG_MAX_LENGTH = 50;
 const SLUG_SUFFIX_LENGTH = 6;
 
-function slugify(value: string) {
-  const normalized = value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-+/g, '-')
-    .slice(0, SLUG_MAX_LENGTH);
-
-  return normalized || 'post';
-}
-
 function buildSlugWithSuffix(baseSlug: string, suffix: string) {
-  const maxBaseLength = SLUG_MAX_LENGTH - SLUG_SUFFIX_LENGTH - 1;
+  const maxBaseLength = POST_SLUG_MAX_LENGTH - SLUG_SUFFIX_LENGTH - 1;
   const trimmedBase = baseSlug.slice(0, Math.max(1, maxBaseLength));
 
   return `${trimmedBase}-${suffix}`;
 }
 
 async function generateUniquePostSlug(
-  postDelegate: Pick<typeof prisma.post, 'findFirst'>,
+  postDelegate: Pick<typeof prisma.post, 'findUnique'>,
   title: string,
   requestedSlug?: string,
 ) {
-  const normalizedRequestedSlug = typeof requestedSlug === 'string' ? requestedSlug.trim() : '';
-  const baseSlug = slugify(normalizedRequestedSlug || title);
-  const existingBaseSlug = await postDelegate.findFirst({
+  const baseSlug = sanitizePostSlug(requestedSlug, title);
+  const existingBaseSlug = await postDelegate.findUnique({
     where: { slug: baseSlug },
     select: { id: true },
   });
@@ -49,7 +38,7 @@ async function generateUniquePostSlug(
       baseSlug,
       randomUUID().replace(/-/g, '').slice(0, SLUG_SUFFIX_LENGTH),
     );
-    const existingCandidate = await postDelegate.findFirst({
+    const existingCandidate = await postDelegate.findUnique({
       where: { slug: candidate },
       select: { id: true },
     });
@@ -65,13 +54,29 @@ async function generateUniquePostSlug(
   );
 }
 
-function isUniqueConstraintError(error: unknown) {
-  return (
-    typeof error === 'object'
-    && error !== null
-    && 'code' in error
-    && (error as { code?: string }).code === 'P2002'
-  );
+function isSlugConstraintError(error: unknown) {
+  if (!(typeof error === 'object' && error !== null && 'code' in error)) {
+    return false;
+  }
+
+  const code = (error as { code?: string }).code;
+  if (code !== 'P2002') {
+    return false;
+  }
+
+  const metaTarget = 'meta' in error
+    ? (error as { meta?: { target?: string[] | string } }).meta?.target
+    : undefined;
+
+  if (!metaTarget) {
+    return true;
+  }
+
+  if (Array.isArray(metaTarget)) {
+    return metaTarget.includes('slug');
+  }
+
+  return metaTarget === 'slug';
 }
 
 const POST = async (request: NextRequest) => {
@@ -79,14 +84,18 @@ const POST = async (request: NextRequest) => {
     const user = await getCurrentUser(request);
     if (!user) return apiError('Unauthorized', 401);
 
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return apiError('Invalid or missing JSON body', 400);
-    }
+    const parsed = await readJsonBody<Record<string, unknown>>(request);
+    if (!parsed.ok) return parsed.response;
 
-    const { title, description, type, winnerCount, endsAt, proofRequired } = body;
+    const body = parsed.data;
+    const { title, description, type, winnerCount, endsAt, proofRequired } = body as {
+      title?: string;
+      description?: string;
+      type?: string;
+      winnerCount?: unknown;
+      endsAt?: string;
+      proofRequired?: unknown;
+    };
 
     if (!title || title.length < 10 || title.length > 200) {
       return apiError('Title must be 10-200 characters', 400);
@@ -160,13 +169,12 @@ const POST = async (request: NextRequest) => {
 
     return apiSuccess(post, "Post created successfully", 201);
   } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return apiError(
-        'A post with a conflicting slug already exists. Please retry your request.',
-        409,
-      );
+    if (error instanceof Prisma.PrismaClientKnownRequestError && isSlugConstraintError(error)) {
+      return apiError('Slug already in use', 409);
     }
-
+    if (isSlugConstraintError(error)) {
+      return apiError('Slug already in use', 409);
+    }
     return apiError('Failed to create post', 500);
   }
 }

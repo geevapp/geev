@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { readJsonBody } from '@/lib/parse-json-body';
 
 const fundSchema = z.object({
     amount: z.number().positive('Amount must be greater than 0'),
@@ -15,8 +16,9 @@ export async function POST(request: NextRequest) {
         const currentUser = await getCurrentUser(request);
         if (!currentUser) return apiError('Unauthorized', 401);
 
-        const body = await request.json();
-        const parsed = fundSchema.safeParse(body);
+        const raw = await readJsonBody(request);
+        if (!raw.ok) return raw.response;
+        const parsed = fundSchema.safeParse(raw.data);
         if (!parsed.success) {
             return apiError(parsed.error.errors[0].message, 400);
         }

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockPrisma = vi.hoisted(() => ({
   $transaction: vi.fn(),
   post: {
-    findFirst: vi.fn(),
+    findUnique: vi.fn(),
     create: vi.fn(),
   },
   postRequirements: {
@@ -44,6 +44,9 @@ import { POST } from '@/app/api/posts/route';
 function createMockRequest(url: string, body: unknown) {
   return new Request(url, {
     method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
     body: JSON.stringify(body),
   });
 }
@@ -78,7 +81,7 @@ describe('POST /api/posts slug generation', () => {
       rankId: 'newcomer',
     });
     prisma.$transaction.mockImplementation(async (callback: any) => callback(prisma));
-    prisma.post.findFirst.mockResolvedValue(null);
+    prisma.post.findUnique.mockResolvedValue(null);
     prisma.postRequirements.create.mockResolvedValue({
       id: 'requirements_123',
       proofRequired: false,
@@ -102,7 +105,7 @@ describe('POST /api/posts slug generation', () => {
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    prisma.post.findFirst
+    prisma.post.findUnique
       .mockResolvedValueOnce({ id: 'existing_post' })
       .mockResolvedValueOnce(null);
 
@@ -138,6 +141,6 @@ describe('POST /api/posts slug generation', () => {
     const { status, data } = await parseResponse(response);
 
     expect(status).toBe(409);
-    expect(data.error).toBe('A post with a conflicting slug already exists. Please retry your request.');
+    expect(data.error).toBe('Slug already in use');
   });
 });

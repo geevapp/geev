@@ -2,6 +2,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { readJsonBody } from "@/lib/parse-json-body";
 
 export const POST = async (
     request: NextRequest,
@@ -12,7 +13,9 @@ export const POST = async (
         if (!user) return apiError('Unauthorized', 401);
 
         const { id } = await params;
-        const body = await request.json();
+        const raw = await readJsonBody<Record<string, unknown>>(request);
+        if (!raw.ok) return raw.response;
+        const body = raw.data;
 
         const post = await prisma.post.findUnique({
             where: { id },
