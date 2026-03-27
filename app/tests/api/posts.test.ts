@@ -54,15 +54,15 @@ describe("Posts API", () => {
       prisma.user.create = vi.fn().mockResolvedValue(testUser);
       prisma.post.findMany = vi.fn().mockResolvedValue([]);
       prisma.post.count = vi.fn().mockResolvedValue(0);
-      prisma.post.create = vi.fn().mockImplementation((args: any) =>
-        Promise.resolve({
-          id: "post_123",
-          ...args.data,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          creator: testUser,
-        }),
-      );
+      prisma.post.findUnique = vi.fn().mockResolvedValue(null);
+      // Mock prisma.post.create
+      prisma.post.create = vi.fn().mockImplementation((args: any) => Promise.resolve({
+        id: 'post_123',
+        ...args.data,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        creator: testUser
+      }));
     } else {
       testUser = await createTestUser();
     }

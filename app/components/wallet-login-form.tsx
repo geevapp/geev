@@ -12,9 +12,10 @@ import { signIn, signOut, useSession } from "next-auth/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
+import { isConnected, signMessage as freighterSignMessage } from "@stellar/freighter-api";
 
 /**
  * Wallet-based login and registration form
@@ -41,12 +42,47 @@ export function WalletLoginForm({
   const [signature, setSignature] = useState("");
   const [message, setMessage] = useState("");
 
-  // Generate a mock signature for demo purposes
-  const generateMockSignature = () => {
-    // In a real app, this would come from the wallet provider
-    const mockSignature = "0x" + Math.random().toString(36).substring(2, 30);
-    setSignature(mockSignature);
-    return mockSignature;
+  // Generate actual signature using Freighter
+  const handleSignMessage = async () => {
+    if (!walletAddress) {
+      showToast("Please enter your wallet address first", "error");
+      return;
+    }
+
+    try {
+      // Check if Freighter is available
+      const connected = await isConnected();
+      if (!connected) {
+        showToast("Freighter wallet is not installed or not connected", "error");
+        return;
+      }
+
+      const msg = message || generateSignMessage();
+      
+      let signedMsg;
+      try {
+        signedMsg = await freighterSignMessage(msg, {
+          networkPassphrase: "Test SDF Network ; September 2015" // fallback or configurable
+        });
+      } catch (err) {
+        // Fallback for cases where it doesn't take options or simple reject
+        signedMsg = await freighterSignMessage(msg);
+      }
+
+      if (signedMsg) {
+        if (typeof signedMsg === "string") {
+          setSignature(signedMsg);
+        } else if (typeof signedMsg === "object" && typeof (signedMsg as any).signature === "string") {
+          setSignature((signedMsg as any).signature);
+        } else {
+          setSignature(signedMsg.toString());
+        }
+        showToast("Message signed successfully", "success");
+      }
+    } catch (error) {
+      console.error("Signing error:", error);
+      showToast("Error signing the message", "error");
+    }
   };
 
   // Generate sign message
@@ -185,7 +221,7 @@ export function WalletLoginForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={generateMockSignature}
+                onClick={handleSignMessage}
               >
                 <Key className="h-4 w-4" />
               </Button>
@@ -278,7 +314,7 @@ export function WalletLoginForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={generateMockSignature}
+                onClick={handleSignMessage}
               >
                 <Key className="h-4 w-4" />
               </Button>

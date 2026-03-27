@@ -135,7 +135,7 @@ export function TimelineFeed() {
         onSelectType={handleCreatePost}
       />
       <CreateGiveawayModal
-        open={showGiveawayModal}
+        open={true}
         onOpenChange={setShowGiveawayModal} // Use context method
       />
       <CreateRequestModal

@@ -12,13 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Moon, Settings, Sun, User, Wallet } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { UserRankBadge } from "@/components/user-rank-badge";
-import { useAppContext } from "@/contexts/app-context";
-import { useRouter } from "next/navigation";
-import { NotificationBell } from "./NotificationBell";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { NotificationBell } from '@/components/NotificationBell';
+import { UserRankBadge } from '@/components/user-rank-badge';
+import { useAppContext } from '@/contexts/app-context';
+import { useRouter } from 'next/navigation';
 
 export function Navbar() {
   const { user, logout, theme, toggleTheme } = useAppContext();

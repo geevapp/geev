@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { getCurrentUser } from '@/lib/auth';
+import { readJsonBody } from '@/lib/parse-json-body';
 
 export async function GET(
   request: NextRequest,
@@ -11,6 +12,8 @@ export async function GET(
     const { id } = await params;
 
     try {
+      const currentUser = await getCurrentUser(request);
+
       const user = await prisma.user.findUnique({
         where: { id },
         select: {
@@ -22,13 +25,33 @@ export async function GET(
           email: true,
           avatarUrl: true,
           xp: true,
+          walletBalance: true,
           createdAt: true,
           updatedAt: true,
+          _count: {
+            select: {
+              followers: true,
+              followings: true,
+            }
+          }
         },
       });
 
       if (user) {
-        return apiSuccess(user);
+        let isFollowing = false;
+        if (currentUser) {
+          const follow = await prisma.follow.findUnique({
+            where: {
+              userId_followingId: {
+                userId: currentUser.id,
+                followingId: id,
+              }
+            }
+          });
+          isFollowing = !!follow;
+        }
+
+        return apiSuccess({ ...user, isFollowing });
       }
     } catch (dbError) {
       // Database error - fallback already handled above
@@ -54,7 +77,9 @@ export async function PATCH(
       return apiError('Can only update own profile', 403);
     }
 
-    const { name, username, bio, email } = await request.json();
+    const raw = await readJsonBody<Record<string, unknown>>(request);
+    if (!raw.ok) return raw.response;
+    const { name, username, bio, email } = raw.data;
 
     try {
       // --- Uniqueness checks ---
@@ -99,6 +124,7 @@ export async function PATCH(
           email: true,
           avatarUrl: true,
           xp: true,
+          walletBalance: true,
           createdAt: true,
           updatedAt: true,
         },

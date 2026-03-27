@@ -47,10 +47,21 @@ describe("Authentication System", () => {
        // Skipped
     });
 
-    test.skip("POST /api/auth/logout should clear session", async () => {
-      // Skipped
-    });
+    test("POST /api/auth/logout should clear session", async () => {
+      const { POST } = await import("@/app/(auth)/logout/route");
+      const { NextRequest } = await import("next/server");
 
+      const request = new NextRequest("http://localhost/api/auth/logout", {
+        method: "POST",
+      });
+
+      const response = await POST(request);
+      const cookies = response.cookies.getAll();
+
+      expect(cookies.some(c => c.name === "auth-token")).toBe(true);
+      expect(cookies.some(c => c.name === "next-auth.session-token")).toBe(true);
+      expect(response.status).toBe(200);
+    });
     test.skip("GET /api/auth/session should return 401 without token", async () => {
       // Skipped
     });

@@ -28,6 +28,10 @@ export async function GET (request: NextRequest) {
         name: true,
         avatarUrl: true,
         xp: true,
+        rank: true,
+        badges: {
+          include: { badge: true },
+        },
         _count: {
           select: {
             posts: dateFilter
@@ -46,36 +50,27 @@ export async function GET (request: NextRequest) {
       skip: (page - 1) * limit,
     });
 
-    // Get user badges and calculate contributions
-    const leaderboard = await Promise.all(
-      users.map(async (user) => {
-        const userBadges = await prisma.userBadge.findMany({
-          where: { userId: user.id },
-          include: { badge: true },
-        });
+    const tierOrder = { bronze: 1, silver: 2, gold: 3, platinum: 4 };
 
-        const badges = userBadges.map(ub => ub.badge).sort((a, b) => {
-          const tierOrder = { bronze: 1, silver: 2, gold: 3, platinum: 4 };
-          return (tierOrder[b.tier as keyof typeof tierOrder] || 0) - (tierOrder[a.tier as keyof typeof tierOrder] || 0);
-        });
+    const leaderboard = users.map((user) => {
+      const badges = user.badges
+        .map((ub) => ub.badge)
+        .sort((a, b) =>
+          (tierOrder[b.tier as keyof typeof tierOrder] || 0) -
+          (tierOrder[a.tier as keyof typeof tierOrder] || 0)
+        );
 
-        return {
-          id: user.id,
-          name: user.name,
-          avatar_url: user.avatarUrl,
-          xp: user.xp,
-          post_count: user._count.posts,
-          entry_count: user._count.entries,
-          total_contributions: user._count.posts + user._count.entries,
-          badges,
-        };
-      }),
-    );
-
-    // Sort by XP and fall back to total contributions for ties.
-    leaderboard.sort((a, b) => {
-      if (b.xp !== a.xp) return b.xp - a.xp;
-      return b.total_contributions - a.total_contributions;
+      return {
+        id: user.id,
+        name: user.name,
+        avatar_url: user.avatarUrl,
+        xp: user.xp,
+        rank: user.rank,
+        post_count: user._count.posts,
+        entry_count: user._count.entries,
+        total_contributions: user._count.posts + user._count.entries,
+        badges,
+      };
     });
 
     return apiSuccess({

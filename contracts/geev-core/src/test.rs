@@ -6,8 +6,8 @@ use crate::profile::{ProfileContract, ProfileContractClient};
 use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger},
-    token, Address, Env, String,
+    testutils::{Address as _, Events as _, Ledger},
+    token, Address, Env, IntoVal, String, Symbol,
 };
 
 #[test]
@@ -223,6 +223,7 @@ fn test_donation_flow() {
             goal,
             raised_amount: 0,
             status: HelpRequestStatus::Open,
+            is_verified: false,
         };
         env.storage()
             .persistent()
@@ -285,6 +286,7 @@ fn test_donation_reaches_goal() {
             goal,
             raised_amount: 0,
             status: HelpRequestStatus::Open,
+            is_verified: false,
         };
         env.storage()
             .persistent()
@@ -302,6 +304,54 @@ fn test_donation_reaches_goal() {
         assert_eq!(request.raised_amount, goal);
         assert_eq!(request.status, HelpRequestStatus::FullyFunded);
     });
+}
+
+#[test]
+fn test_donation_emits_contributor_tracking_event() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let donor = Address::generate(&env);
+
+    token_admin_client.mint(&donor, &1000);
+
+    let request_id: u64 = 42;
+    let goal = 500;
+    let donation = 125;
+
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: mock_token.clone(),
+            goal,
+            raised_amount: 0,
+            status: HelpRequestStatus::Open,
+            is_verified: false,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    contract_client.donate(&donor, &request_id, &donation);
+
+    let events = env.events().all();
+    assert!(events.iter().any(|(event_contract, topics, _data)| {
+        event_contract == contract_id
+            && topics == (Symbol::new(&env, "donation_received"),).into_val(&env)
+    }));
 }
 
 #[test]
@@ -360,6 +410,7 @@ fn test_donation_to_fully_funded_request_fails() {
             goal,
             raised_amount: goal,
             status: HelpRequestStatus::FullyFunded,
+            is_verified: false,
         };
         env.storage()
             .persistent()
@@ -401,6 +452,7 @@ fn test_donation_with_invalid_amount_fails() {
             goal,
             raised_amount: 0,
             status: HelpRequestStatus::Open,
+            is_verified: false,
         };
         env.storage()
             .persistent()
@@ -672,6 +724,7 @@ fn test_refund_flow() {
             goal,
             raised_amount: 0,
             status: HelpRequestStatus::Open,
+            is_verified: false,
         };
         env.storage()
             .persistent()
@@ -1089,4 +1142,76 @@ fn test_withdraw_fees_fails_non_admin() {
 
     // DO NOT initialize admin - should panic
     giveaway_client.withdraw_fees(&token);
+}
+
+#[test]
+fn test_toggle_request_verification() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(AdminContract, ());
+    let contract_client = AdminContractClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let creator = Address::generate(&env);
+    let token = Address::generate(&env);
+    let request_id: u64 = 42;
+
+    // Initialize admin
+    env.as_contract(&contract_id, || {
+        env.storage().instance().set(&DataKey::Admin, &admin);
+    });
+
+    // Seed a help request with is_verified = false
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: token.clone(),
+            goal: 1000,
+            raised_amount: 0,
+            status: HelpRequestStatus::Open,
+            is_verified: false,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    // Toggle to verified
+    contract_client.toggle_request_verification(&request_id);
+
+    env.as_contract(&contract_id, || {
+        let request: HelpRequest = env
+            .storage()
+            .persistent()
+            .get(&DataKey::HelpRequest(request_id))
+            .unwrap();
+        assert!(request.is_verified);
+    });
+
+    // Toggle back to unverified
+    contract_client.toggle_request_verification(&request_id);
+
+    env.as_contract(&contract_id, || {
+        let request: HelpRequest = env
+            .storage()
+            .persistent()
+            .get(&DataKey::HelpRequest(request_id))
+            .unwrap();
+        assert!(!request.is_verified);
+    });
+}
+
+#[test]
+#[should_panic]
+fn test_toggle_request_verification_fails_non_admin() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(AdminContract, ());
+    let contract_client = AdminContractClient::new(&env, &contract_id);
+
+    // DO NOT initialize admin - should panic
+    contract_client.toggle_request_verification(&1u64);
 }

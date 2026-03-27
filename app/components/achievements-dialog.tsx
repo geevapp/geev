@@ -44,7 +44,6 @@ export function AchievementsDialog({
                 >
                   <div className="text-2xl flex-shrink-0">
                     {badge.iconUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={badge.iconUrl}
                         alt={badge.name}
