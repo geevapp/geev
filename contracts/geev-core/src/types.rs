@@ -64,6 +64,7 @@ pub struct HelpRequest {
     pub goal: i128,
     pub raised_amount: i128,
     pub status: HelpRequestStatus,
+    pub is_verified: bool,
 }
 
 #[derive(Clone)]
