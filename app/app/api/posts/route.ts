@@ -1,13 +1,13 @@
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { awardXp, XP_REWARDS } from "@/lib/xp";
 
-import { Prisma } from '@prisma/client';
-import { NextRequest } from 'next/server';
-import { randomUUID } from 'crypto';
-import { getCurrentUser } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { readJsonBody } from '@/lib/parse-json-body';
-import { POST_SLUG_MAX_LENGTH, sanitizePostSlug } from '@/lib/post-slug';
+import { Prisma } from "@prisma/client";
+import { NextRequest } from "next/server";
+import { randomUUID } from "crypto";
+import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { readJsonBody } from "@/lib/parse-json-body";
+import { POST_SLUG_MAX_LENGTH, sanitizePostSlug } from "@/lib/post-slug";
 
 const SLUG_SUFFIX_LENGTH = 6;
 
@@ -19,11 +19,12 @@ function buildSlugWithSuffix(baseSlug: string, suffix: string) {
 }
 
 async function generateUniquePostSlug(
-  postDelegate: Pick<typeof prisma.post, 'findUnique'>,
+  postDelegate: Pick<typeof prisma.post, "findUnique">,
   title: string,
   requestedSlug?: string,
 ) {
   const baseSlug = sanitizePostSlug(requestedSlug, title);
+
   const existingBaseSlug = await postDelegate.findUnique({
     where: { slug: baseSlug },
     select: { id: true },
@@ -36,8 +37,9 @@ async function generateUniquePostSlug(
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const candidate = buildSlugWithSuffix(
       baseSlug,
-      randomUUID().replace(/-/g, '').slice(0, SLUG_SUFFIX_LENGTH),
+      randomUUID().replace(/-/g, "").slice(0, SLUG_SUFFIX_LENGTH),
     );
+
     const existingCandidate = await postDelegate.findUnique({
       where: { slug: candidate },
       select: { id: true },
@@ -50,33 +52,37 @@ async function generateUniquePostSlug(
 
   return buildSlugWithSuffix(
     baseSlug,
-    Date.now().toString(36).slice(-SLUG_SUFFIX_LENGTH).padStart(SLUG_SUFFIX_LENGTH, '0'),
+    Date.now()
+      .toString(36)
+      .slice(-SLUG_SUFFIX_LENGTH)
+      .padStart(SLUG_SUFFIX_LENGTH, "0"),
   );
 }
 
 function isSlugConstraintError(error: unknown) {
-  if (!(typeof error === 'object' && error !== null && 'code' in error)) {
+  if (!(typeof error === "object" && error !== null && "code" in error)) {
     return false;
   }
 
   const code = (error as { code?: string }).code;
-  if (code !== 'P2002') {
+  if (code !== "P2002") {
     return false;
   }
 
-  const metaTarget = 'meta' in error
-    ? (error as { meta?: { target?: string[] | string } }).meta?.target
-    : undefined;
+  const metaTarget =
+    "meta" in error
+      ? (error as { meta?: { target?: string[] | string } }).meta?.target
+      : undefined;
 
   if (!metaTarget) {
     return true;
   }
 
   if (Array.isArray(metaTarget)) {
-    return metaTarget.includes('slug');
+    return metaTarget.includes("slug");
   }
 
-  return metaTarget === 'slug';
+  return metaTarget === "slug";
 }
 
 const POST = async (request: NextRequest) => {
@@ -88,14 +94,16 @@ const POST = async (request: NextRequest) => {
     if (!parsed.ok) return parsed.response;
 
     const body = parsed.data;
-    const { title, description, type, winnerCount, endsAt, proofRequired } = body as {
-      title?: string;
-      description?: string;
-      type?: string;
-      winnerCount?: unknown;
-      endsAt?: string;
-      proofRequired?: unknown;
-    };
+
+    const { title, description, type, winnerCount, endsAt, proofRequired } =
+      body as {
+        title?: string;
+        description?: string;
+        type?: string;
+        winnerCount?: unknown;
+        endsAt?: string;
+        proofRequired?: unknown;
+      };
 
     if (!title || title.length < 10 || title.length > 200) {
       return apiError("Title must be 10-200 characters", 400);
@@ -106,32 +114,23 @@ const POST = async (request: NextRequest) => {
     }
 
     const post = await prisma.$transaction(async (tx) => {
-      const uniqueSlug = await generateUniquePostSlug(tx.post, title, body.slug);
+      // ✅ Correct slug generation (ONLY THIS)
+      const uniqueSlug = await generateUniquePostSlug(
+        tx.post,
+        title,
+        body.slug,
+      );
 
       const requirements = await tx.postRequirements.create({
         data: { proofRequired: Boolean(proofRequired) },
       });
-
-      // Generate base slug
-      let slug = (body.slug || title)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-") // replace non-alphanumeric chars with dash
-        .replace(/^-|-$/g, ""); // remove leading/trailing dashes
-
-      // Check if slug exists and add 6-char random suffix if needed
-      let existingPost = await tx.post.findUnique({ where: { slug } });
-      while (existingPost) {
-        const suffix = Math.random().toString(36).substring(2, 8); // 6 chars
-        slug = `${slug}-${suffix}`;
-        existingPost = await tx.post.findUnique({ where: { slug } });
-      }
 
       const createdPost = await tx.post.create({
         data: {
           userId: user.id,
           type,
           title,
-          slug: slug, // use the unique slug here
+          slug: uniqueSlug,
           description,
           maxWinners: winnerCount ? Number(winnerCount) : null,
           postRequirementsId: requirements.id,
@@ -149,7 +148,12 @@ const POST = async (request: NextRequest) => {
           user.id,
           XP_REWARDS.createGiveawayPost,
           "giveaway_post_created",
-          { metadata: { postId: createdPost.id, postType: type } },
+          {
+            metadata: {
+              postId: createdPost.id,
+              postType: type,
+            },
+          },
           tx,
         );
       } else if (type === "request") {
@@ -157,7 +161,12 @@ const POST = async (request: NextRequest) => {
           user.id,
           XP_REWARDS.createHelpRequest,
           "help_request_created",
-          { metadata: { postId: createdPost.id, postType: type } },
+          {
+            metadata: {
+              postId: createdPost.id,
+              postType: type,
+            },
+          },
           tx,
         );
       }
@@ -167,13 +176,16 @@ const POST = async (request: NextRequest) => {
 
     return apiSuccess(post, "Post created successfully", 201);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && isSlugConstraintError(error)) {
-      return apiError('Slug already in use', 409);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      isSlugConstraintError(error)
+    ) {
+      return apiError("Slug already in use", 409);
     }
     if (isSlugConstraintError(error)) {
-      return apiError('Slug already in use', 409);
+      return apiError("Slug already in use", 409);
     }
-    return apiError('Failed to create post', 500);
+    return apiError("Failed to create post", 500);
   }
 };
 
@@ -189,7 +201,6 @@ const GET = async (request: NextRequest) => {
 
     const where: any = {};
 
-    // Search filter
     if (q) {
       where.OR = [
         { title: { contains: q, mode: "insensitive" } },
@@ -197,12 +208,10 @@ const GET = async (request: NextRequest) => {
       ];
     }
 
-    // Category filter
     if (category) {
       where.category = category;
     }
 
-    // Sorting
     let orderBy: any = [{ createdAt: "desc" }];
     if (sort === "popular") {
       orderBy = [{ likes: "desc" }, { entries: "desc" }];
