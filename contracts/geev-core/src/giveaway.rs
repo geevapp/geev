@@ -1,10 +1,11 @@
 use crate::types::{DataKey, Error, Giveaway, GiveawayStatus};
 use crate::utils::with_reentrancy_guard;
-use soroban_sdk::{Address, Env, String, contract, contractevent, contractimpl, panic_with_error, token};
+use soroban_sdk::{
+    contract, contractevent, contractimpl, panic_with_error, token, Address, Env, String,
+};
 
 #[contract]
 pub struct GiveawayContract;
-
 
 #[contractevent]
 pub struct GiveawayCreated {
@@ -13,7 +14,7 @@ pub struct GiveawayCreated {
     creator: Address,
     token_address: Address,
     total_amount: i128,
-    end_time: u64
+    end_time: u64,
 }
 
 #[contractimpl]
@@ -63,8 +64,9 @@ impl GiveawayContract {
             creator,
             token_address: token,
             total_amount: amount,
-            end_time
-        }.publish(&env);
+            end_time,
+        }
+        .publish(&env);
 
         giveaway_id
     }
