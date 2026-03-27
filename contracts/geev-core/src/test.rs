@@ -338,7 +338,7 @@ fn test_donation_emits_contributor_tracking_event() {
             goal,
             raised_amount: 0,
             status: HelpRequestStatus::Open,
-            is_verified: false
+            is_verified: false,
         };
         env.storage()
             .persistent()

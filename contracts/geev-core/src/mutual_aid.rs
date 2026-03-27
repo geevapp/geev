@@ -1,7 +1,5 @@
 use crate::types::{DataKey, Error, HelpRequest, HelpRequestStatus};
-use soroban_sdk::{
-    contract, contractevent, contractimpl, panic_with_error, token, Address, Env,
-};
+use soroban_sdk::{contract, contractevent, contractimpl, panic_with_error, token, Address, Env};
 
 #[contract]
 pub struct MutualAidContract;
