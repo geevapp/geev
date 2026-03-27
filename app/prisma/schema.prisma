@@ -533,3 +533,120 @@ model UsedChallenge {
   @@index([usedAt])
   @@map("used_challenges")
 }
+
+/**
+ * IndexerState tracks the last processed ledger sequence
+ * Ensures idempotency and prevents duplicate processing on restart
+ */
+model IndexerState {
+  id              String   @id @default("singleton")
+  lastLedgerSeq   Int      @map("last_ledger_seq")
+  contractId      String   @map("contract_id") @db.VarChar(70)
+  network         String   @default("testnet") @db.VarChar(20)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("indexer_state")
+}
+
+/**
+ * On-chain Giveaway data synced from Soroban contract
+ */
+model OnChainGiveaway {
+  id                String    @id @default(uuid())
+  giveawayId        BigInt    @unique @map("giveaway_id")
+  creatorAddress    String    @map("creator_address") @db.VarChar(70)
+  tokenAddress      String    @map("token_address") @db.VarChar(70)
+  amount            Decimal   @db.Decimal(30, 7)
+  title             String    @db.VarChar(255)
+  participantCount  Int       @default(0) @map("participant_count")
+  endTime           DateTime  @map("end_time")
+  status            GiveawayOnChainStatus @default(ACTIVE)
+  winnerAddress     String?   @map("winner_address") @db.VarChar(70)
+  txHash            String?   @map("tx_hash") @db.VarChar(128)
+  ledgerSeq         Int       @map("ledger_seq")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([giveawayId])
+  @@index([creatorAddress])
+  @@index([status])
+  @@index([ledgerSeq])
+  @@map("on_chain_giveaways")
+}
+
+enum GiveawayOnChainStatus {
+  ACTIVE
+  CLAIMABLE
+  COMPLETED
+}
+
+/**
+ * On-chain Help Request data synced from Soroban contract
+ */
+model OnChainHelpRequest {
+  id              String                @id @default(uuid())
+  requestId       BigInt                @unique @map("request_id")
+  creatorAddress  String                @map("creator_address") @db.VarChar(70)
+  tokenAddress    String                @map("token_address") @db.VarChar(70)
+  goal            Decimal               @db.Decimal(30, 7)
+  raisedAmount    Decimal               @default(0) @db.Decimal(30, 7) @map("raised_amount")
+  status          HelpRequestOnChainStatus @default(OPEN)
+  txHash          String?               @map("tx_hash") @db.VarChar(128)
+  ledgerSeq       Int                   @map("ledger_seq")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  donations       OnChainDonation[]
+
+  @@index([requestId])
+  @@index([creatorAddress])
+  @@index([status])
+  @@index([ledgerSeq])
+  @@map("on_chain_help_requests")
+}
+
+enum HelpRequestOnChainStatus {
+  OPEN
+  FULLY_FUNDED
+  CLOSED
+  CANCELLED
+}
+
+/**
+ * On-chain Donation data synced from Soroban contract
+ */
+model OnChainDonation {
+  id              String   @id @default(uuid())
+  donationId      String   @unique @map("donation_id") @db.VarChar(128)
+  requestId       BigInt   @map("request_id")
+  donorAddress    String   @map("donor_address") @db.VarChar(70)
+  amount          Decimal  @db.Decimal(30, 7)
+  txHash          String   @map("tx_hash") @db.VarChar(128)
+  ledgerSeq       Int      @map("ledger_seq")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  helpRequest     OnChainHelpRequest @relation(fields: [requestId], references: [requestId], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([donorAddress])
+  @@index([ledgerSeq])
+  @@map("on_chain_donations")
+}
+
+/**
+ * Processed events tracking for idempotency
+ * Prevents duplicate processing of the same blockchain event
+ */
+model ProcessedEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique @map("event_id") @db.VarChar(128)
+  eventType   String   @map("event_type") @db.VarChar(50)
+  txHash      String   @map("tx_hash") @db.VarChar(128)
+  ledgerSeq   Int      @map("ledger_seq")
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@index([eventId])
+  @@index([eventType])
+  @@index([ledgerSeq])
+  @@map("processed_events")
+}
