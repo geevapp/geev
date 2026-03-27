@@ -1,7 +1,7 @@
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { awardXp, XP_REWARDS } from '@/lib/xp';
 
-// Prisma import removed for value-level compatibility
+import { Prisma } from '@prisma/client';
 import { NextRequest } from 'next/server';
 import { randomUUID } from 'crypto';
 import { getCurrentUser } from '@/lib/auth';
@@ -87,16 +87,14 @@ const POST = async (request: NextRequest) => {
     const parsed = await readJsonBody<Record<string, unknown>>(request);
     if (!parsed.ok) return parsed.response;
 
-    const body = (parsed.data as any);
-    const { title, description, type, winnerCount, endsAt, proofRequired, media, slug } = body as {
+    const body = parsed.data;
+    const { title, description, type, winnerCount, endsAt, proofRequired } = body as {
       title?: string;
       description?: string;
       type?: string;
       winnerCount?: unknown;
       endsAt?: string;
       proofRequired?: unknown;
-      media?: Array<{ type: 'image' | 'video', url: string, thumbnail?: string }>;
-      slug?: string;
     };
 
     if (!title || title.length < 10 || title.length > 200) {
@@ -107,8 +105,8 @@ const POST = async (request: NextRequest) => {
       return apiError('Description must be at least 50 characters', 400);
     }
 
-    const post = await prisma.$transaction(async (tx: any) => {
-      const uniqueSlug = await generateUniquePostSlug(tx.post, title, slug);
+    const post = await prisma.$transaction(async (tx) => {
+      const uniqueSlug = await generateUniquePostSlug(tx.post, title, body.slug);
 
       const requirements = await tx.postRequirements.create({
         data: {
@@ -119,13 +117,13 @@ const POST = async (request: NextRequest) => {
       const createdPost = await tx.post.create({
         data: {
           userId: user.id,
-          type: type as any,
+          type,
           title,
           slug: uniqueSlug,
           description,
           maxWinners: winnerCount ? Number(winnerCount) : null,
           postRequirementsId: requirements.id,
-          endsAt: endsAt ? new Date(endsAt) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days
+          endsAt: new Date(endsAt),
         },
         include: {
           user: {
@@ -137,22 +135,6 @@ const POST = async (request: NextRequest) => {
           },
         },
       });
-
-      // Handle media attachments
-      if (media && Array.isArray(media) && media.length > 0) {
-        await Promise.all(
-          media.map((item) =>
-            tx.postMedia.create({
-              data: {
-                postId: createdPost.id,
-                type: item.type as 'image' | 'video',
-                url: item.url,
-                thumbnail: item.thumbnail,
-              },
-            })
-          )
-        );
-      }
 
       if (type === 'giveaway') {
         await awardXp(
@@ -186,14 +168,13 @@ const POST = async (request: NextRequest) => {
     });
 
     return apiSuccess(post, "Post created successfully", 201);
-  } catch (error: any) {
-    if (error?.code === 'P2002' && isSlugConstraintError(error)) {
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && isSlugConstraintError(error)) {
       return apiError('Slug already in use', 409);
     }
     if (isSlugConstraintError(error)) {
       return apiError('Slug already in use', 409);
     }
-    console.error('Post creation error:', error);
     return apiError('Failed to create post', 500);
   }
 }

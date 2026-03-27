@@ -1,114 +1,158 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Upload, X, ImageIcon, Video, FileText, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 import type { PostMedia } from "@/lib/types"
 import { validateMedia } from "@/lib/media-utils"
 import { uploadFile } from "@/lib/storage"
-import { toast } from "sonner"
+
+// ── Constants ─────────────────────────────────────────────────
+const MAX_IMAGE_SIZE = 10  * 1024 * 1024  // 10 MB
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024  // 100 MB
+const ALLOWED_IMAGE  = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+const ALLOWED_VIDEO  = ["video/mp4", "video/webm", "video/quicktime"]
+
+// ── Types ─────────────────────────────────────────────────────
+
+// Extends PostMedia with transient UI state that never leaves this component.
+interface ExtendedPostMedia extends PostMedia {
+  isUploading?: boolean
+  error?:       string
+}
 
 interface MediaUploadProps {
-  onMediaChange: (media: PostMedia[]) => void
-  maxFiles?: number
+  onMediaChange:  (media: PostMedia[]) => void
+  maxFiles?:      number
   acceptedTypes?: string[]
 }
 
-interface ExtendedPostMedia extends PostMedia {
-  isUploading?: boolean
-  error?: string
-}
+// ── Component ─────────────────────────────────────────────────
 
-export function MediaUpload({ onMediaChange, maxFiles = 5, acceptedTypes = ["image/*", "video/*"] }: MediaUploadProps) {
-  const [media, setMedia] = useState<ExtendedPostMedia[]>([])
+export function MediaUpload({
+  onMediaChange,
+  maxFiles      = 5,
+  acceptedTypes = ["image/*", "video/*"],
+}: MediaUploadProps) {
+  const [media,      setMedia]      = useState<ExtendedPostMedia[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Upload handler ─────────────────────────────────────────
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files) return
 
-    const fileArray = Array.from(files)
-    
-    // Quick check before processing anywhere
     if (media.length >= maxFiles) {
-      toast.error("Limit reached", { description: `You can only upload up to ${maxFiles} files.` })
+      toast.error("Limit reached", {
+        description: `You can only upload up to ${maxFiles} files.`,
+      })
       return
     }
 
-    for (const file of fileArray) {
-      // Check limit again for each file in case multiple were dropped
-      if (media.length >= maxFiles) break
+    const candidates = Array.from(files).slice(0, maxFiles - media.length)
 
-      // 1. Validation (Size + Magic Bytes)
+    for (const file of candidates) {
+      // 1. Magic-byte + type validation via shared util
       const validation = await validateMedia(file)
       if (!validation.isValid) {
         toast.error(`Invalid file: ${file.name}`, { description: validation.error })
         continue
       }
 
-      // 2. Create placeholder item
-      const id = `${Date.now()}-${file.name}`
-      const isImage = file.type.startsWith("image/")
-      
-      const newMediaItem: ExtendedPostMedia = {
-        id,
-        type: isImage ? "image" : "video",
-        url: URL.createObjectURL(file), // Temporary preview
-        thumbnail: isImage ? URL.createObjectURL(file) : undefined,
+      // 2. Additional size checks using the constants
+      const isImage = ALLOWED_IMAGE.includes(file.type)
+      const isVideo = ALLOWED_VIDEO.includes(file.type)
+      const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
+      const label   = isVideo ? "100 MB" : "10 MB"
+
+      if (file.size > maxSize) {
+        toast.error("File too large", {
+          description: `${file.name} exceeds the ${label} limit.`,
+        })
+        continue
+      }
+
+      // 3. Add placeholder so the grid updates immediately
+      const tempId = `${Date.now()}-${file.name}`
+
+      const placeholder: ExtendedPostMedia = {
+        id:          tempId,
+        type:        isImage ? "image" : "video",
+        url:         URL.createObjectURL(file),   // temporary preview
+        thumbnail:   isImage ? URL.createObjectURL(file) : undefined,
         isUploading: true,
       }
 
       setMedia((prev) => {
-        const updated = [...prev, newMediaItem]
+        const updated = [...prev, placeholder]
         onMediaChange(updated)
         return updated
       })
 
-      // 3. Upload to simulated cloud storage
+      // 4. Real upload via /api/uploads (S3-backed)
       try {
-        const uploadResult = await uploadFile(file)
-        
+        const form = new FormData()
+        form.append("file",   file)
+        form.append("folder", isVideo ? "videos" : "images")
+
+        const res = await fetch("/api/uploads", { method: "POST", body: form })
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({})) as { error?: string }
+          throw new Error(body.error ?? "Upload failed")
+        }
+
+        const { url, key } = await res.json() as { url: string; key: string }
+
+        // Replace placeholder with permanent CDN-backed item
         setMedia((prev) => {
-          const updated = prev.map((item) => 
-            item.id === id 
-              ? { ...item, url: uploadResult.url, thumbnail: uploadResult.thumbnail, isUploading: false }
-              : item
+          const updated = prev.map((item) =>
+            item.id === tempId
+              ? { ...item, url, thumbnail: isImage ? url : undefined, isUploading: false }
+              : item,
           )
           onMediaChange(updated)
           return updated
         })
-      } catch (error) {
-        toast.error("Upload failed", { description: `Failed to upload ${file.name}.` })
-        setMedia((prev) => prev.filter((item) => item.id !== id))
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Please try again."
+        toast.error("Upload failed", { description: message })
+        // Remove the failed placeholder
+        setMedia((prev) => {
+          const updated = prev.filter((item) => item.id !== tempId)
+          onMediaChange(updated)
+          return updated
+        })
       }
     }
   }
 
+  // ── Remove ─────────────────────────────────────────────────
+
   const removeMedia = (id: string) => {
-    const updatedMedia = media.filter((item) => item.id !== id)
-    setMedia(updatedMedia)
-    onMediaChange(updatedMedia)
+    setMedia((prev) => {
+      const updated = prev.filter((item) => item.id !== id)
+      onMediaChange(updated)
+      return updated
+    })
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
+  // ── Drag-and-drop ──────────────────────────────────────────
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDragOver  = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true)  }
+  const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false) }
+  const handleDrop      = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-    handleFileSelect(e.dataTransfer.files)
+    void handleFileSelect(e.dataTransfer.files)
   }
+
+  // ── Helpers ────────────────────────────────────────────────
 
   const getFileIcon = (type: string) => {
     if (type === "image") return <ImageIcon className="w-4 h-4" />
@@ -116,9 +160,11 @@ export function MediaUpload({ onMediaChange, maxFiles = 5, acceptedTypes = ["ima
     return <FileText className="w-4 h-4" />
   }
 
+  // ── Render ─────────────────────────────────────────────────
+
   return (
     <div className="space-y-4">
-      {/* Upload Area */}
+      {/* Upload area */}
       <Card
         className={`border-2 border-dashed transition-colors cursor-pointer ${
           isDragging
@@ -136,12 +182,12 @@ export function MediaUpload({ onMediaChange, maxFiles = 5, acceptedTypes = ["ima
             Drag and drop media files here, or click to browse
           </p>
           <p className="text-xs text-gray-500">
-            Images (max 10MB) • Videos (max 50MB) • Max {maxFiles} files
+            Images up to 10 MB · Videos up to 100 MB · Max {maxFiles} files
           </p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-3 bg-transparent" 
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3 bg-transparent"
             disabled={media.length >= maxFiles}
             type="button"
           >
@@ -156,11 +202,11 @@ export function MediaUpload({ onMediaChange, maxFiles = 5, acceptedTypes = ["ima
         type="file"
         multiple
         accept={acceptedTypes.join(",")}
-        onChange={(e) => handleFileSelect(e.target.files)}
+        onChange={(e) => void handleFileSelect(e.target.files)}
         className="hidden"
       />
 
-      {/* Media Preview */}
+      {/* Preview grid */}
       {media.length > 0 && (
         <div className="space-y-3">
           <h4 className="text-sm font-medium">
@@ -171,40 +217,48 @@ export function MediaUpload({ onMediaChange, maxFiles = 5, acceptedTypes = ["ima
               <Card key={item.id} className="relative group overflow-hidden">
                 <CardContent className="p-2">
                   <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 rounded overflow-hidden flex items-center justify-center">
+                    {/* Upload overlay */}
                     {item.isUploading && (
                       <div className="absolute inset-0 z-10 bg-black/40 flex flex-col items-center justify-center text-white p-2">
                         <Loader2 className="w-6 h-6 animate-spin mb-1" />
-                        <span className="text-[10px] font-medium">Uploading...</span>
+                        <span className="text-[10px] font-medium">Uploading…</span>
                       </div>
                     )}
-                    
+
                     {item.type === "image" ? (
                       <img
                         src={item.url || "/placeholder.svg"}
                         alt="Upload preview"
-                        className={`w-full h-full object-cover transition-opacity ${item.isUploading ? "opacity-50" : "opacity-100"}`}
+                        className={`w-full h-full object-cover transition-opacity ${
+                          item.isUploading ? "opacity-50" : "opacity-100"
+                        }`}
                       />
                     ) : (
-                      <div className={`w-full h-full flex items-center justify-center ${item.isUploading ? "opacity-50" : "opacity-100"}`}>
+                      <div className={`w-full h-full flex items-center justify-center ${
+                        item.isUploading ? "opacity-50" : "opacity-100"
+                      }`}>
                         <Video className="w-8 h-8 text-gray-400" />
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center justify-between mt-2">
                     <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                      {getFileIcon(item.type)}
-                      <span className="ml-1 capitalize">{item.type}</span>
+                      {item.isUploading
+                        ? <Loader2 className="w-3 h-3 animate-spin" />
+                        : getFileIcon(item.type)
+                      }
+                      <span className="ml-1 capitalize">
+                        {item.isUploading ? "Uploading…" : item.type}
+                      </span>
                     </Badge>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeMedia(item.id)
-                      }}
-                      className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500 transition-colors"
                       type="button"
+                      disabled={item.isUploading}
+                      onClick={(e) => { e.stopPropagation(); removeMedia(item.id) }}
+                      className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                     >
                       <X className="w-3 h-3" />
                     </Button>
