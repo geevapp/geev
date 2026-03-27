@@ -86,11 +86,7 @@ impl AdminContract {
             .get(&request_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
 
-        if request.is_verified {
-            request.is_verified = false;
-        } else {
-            request.is_verified = true;
-        }
+        request.is_verified = !request.is_verified;
 
         env.storage().persistent().set(&request_key, &request);
         RequestVerificationChanged {

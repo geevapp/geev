@@ -26,7 +26,7 @@ impl GiveawayContract {
         }
 
         let token_client = token::Client::new(&env, &token);
-        token_client.transfer(&creator, &env.current_contract_address(), &amount);
+        token_client.transfer(&creator, env.current_contract_address(), &amount);
 
         let giveaway_id = Self::generate_id(&env);
         let end_time = env.ledger().timestamp() + duration_seconds;

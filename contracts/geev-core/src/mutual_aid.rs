@@ -97,7 +97,7 @@ impl MutualAidContract {
 
         let token_client = token::Client::new(&env, &request.token);
 
-        token_client.transfer(&donor, &env.current_contract_address(), &amount);
+        token_client.transfer(&donor, env.current_contract_address(), &amount);
 
         // ✅ Track individual donation for refund logic
         let donation_key = DataKey::Donation(request_id, donor.clone());
