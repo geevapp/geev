@@ -1,52 +1,58 @@
-'use client';
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import Image from 'next/image';
-import { MediaUpload, type UploadedMedia } from './media-upload';
+"use client"
+
+import { useState } from "react"
+import { useSession } from "next-auth/react"
+import Image from "next/image"
+import { MediaUpload } from "./media-upload"
+import type { PostMedia } from "@/lib/types"
 
 interface AvatarUploadProps {
-  currentAvatarUrl?: string | null;
-  onSuccess?: (newUrl: string) => void;
+  currentAvatarUrl?: string | null
+  onSuccess?: (newUrl: string) => void
 }
 
 export function AvatarUpload({ currentAvatarUrl, onSuccess }: AvatarUploadProps) {
-  const { data: session, update: updateSession } = useSession();
-  const [avatarUrl, setAvatarUrl]   = useState(currentAvatarUrl ?? null);
-  const [saving,    setSaving]      = useState(false);
-  const [error,     setError]       = useState<string | null>(null);
-  const [success,   setSuccess]     = useState(false);
+  const { data: session, update: updateSession } = useSession()
+  const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl ?? null)
+  const [saving,    setSaving]    = useState(false)
+  const [error,     setError]     = useState<string | null>(null)
+  const [success,   setSuccess]   = useState(false)
 
-  const handleUpload = async (media: UploadedMedia) => {
-    if (!session?.user?.id) return;
-    setSaving(true);
-    setError(null);
-    setSuccess(false);
+  // MediaUpload fires onMediaChange once the file is uploaded to S3.
+  // media[0].url is a permanent CDN URL at this point — never a blob.
+  const handleMediaChange = async (media: PostMedia[]) => {
+    const item = media[0]
+    if (!item?.url || !session?.user?.id) return
+
+    setSaving(true)
+    setError(null)
+    setSuccess(false)
 
     try {
       const res = await fetch(`/api/users/${session.user.id}`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ avatarUrl: media.url }),
-      });
+        body:    JSON.stringify({ avatarUrl: item.url }),
+      })
 
       if (!res.ok) {
-        const body = await res.json() as { error?: string };
-        throw new Error(body.error ?? 'Failed to save avatar');
+        const body = await res.json() as { message?: string }
+        throw new Error(body.message ?? 'Failed to save avatar')
       }
 
-      setAvatarUrl(media.url);
-      setSuccess(true);
+      setAvatarUrl(item.url)
+      setSuccess(true)
 
-      // Update the NextAuth session so the avatar updates in the nav
-      await updateSession({ user: { ...session.user, image: media.url } });
+      // Refresh the NextAuth session so the avatar updates in the nav immediately
+      await updateSession({ user: { ...session.user, image: item.url } })
 
-      onSuccess?.(media.url);
+      onSuccess?.(item.url)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save avatar');
+      setError(err instanceof Error ? err.message : 'Failed to save avatar')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -68,22 +74,14 @@ export function AvatarUpload({ currentAvatarUrl, onSuccess }: AvatarUploadProps)
       </div>
 
       <MediaUpload
-        folder="avatars"
-        accept="image"
-        onUpload={handleUpload}
-        onError={setError}
-      >
-        <button
-          type="button"
-          disabled={saving}
-          className="rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 transition-colors"
-        >
-          {saving ? 'Saving…' : 'Change Avatar'}
-        </button>
-      </MediaUpload>
+        onMediaChange={handleMediaChange}
+        maxFiles={1}
+        acceptedTypes={["image/*"]}
+      />
 
+      {saving  && <p className="text-sm text-gray-500">Saving…</p>}
       {error   && <p className="text-sm text-red-600">{error}</p>}
       {success && <p className="text-sm text-green-600">Avatar updated!</p>}
     </div>
-  );
+  )
 }
