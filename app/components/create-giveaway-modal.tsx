@@ -356,8 +356,12 @@ const response = await fetch("/api/posts", {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? "Creating..." : "Create Giveaway"}
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || media.some((m: any) => m.isUploading)} 
+              className="flex-1"
+            >
+              {isSubmitting ? "Creating..." : media.some((m: any) => m.isUploading) ? "Uploading Media..." : "Create Giveaway"}
             </Button>
           </div>
         </form>

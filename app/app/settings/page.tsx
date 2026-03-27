@@ -13,6 +13,7 @@ import {
   Bell,
   Camera,
   CreditCard,
+  Loader2,
   Moon,
   Shield,
   Sun,
@@ -30,12 +31,14 @@ import { useAppContext } from '@/contexts/app-context';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { uploadAvatar } from '@/lib/storage';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const { user, logout, toggleTheme, theme, setCurrentUser } = useAppContext();
   const router = useRouter();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -103,6 +106,31 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAvatarChange = async (file: File) => {
+    if (!user?.id) return;
+
+    setIsSaving(true);
+    try {
+      const avatarUrl = await uploadAvatar(file);
+      
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update avatar');
+
+      const data = await response.json();
+      setCurrentUser({ ...user, avatarUrl: data.data.avatarUrl });
+      toast.success('Avatar updated successfully');
+    } catch (error) {
+      toast.error('Failed to update avatar');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteAccount = () => {
     if (
       confirm(
@@ -142,22 +170,46 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
             {/* Avatar */}
             <div className="flex items-center gap-4">
-              <Avatar className="w-20 h-20">
-                <AvatarImage
-                  src={user?.avatarUrl || '/placeholder.svg'}
-                  alt={user?.name}
+              <div className="relative group">
+                <Avatar className="w-20 h-20 transition-opacity group-hover:opacity-50">
+                  <AvatarImage
+                    src={user?.avatarUrl || '/placeholder.svg'}
+                    alt={user?.name}
+                  />
+                  <AvatarFallback className="text-lg">
+                    {user?.name
+                      ? user.name.split(' ').map((n: string) => n[0]).join('')
+                      : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                {isSaving && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isSaving}
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Change Avatar
+                </Button>
+                <input
+                  type="file"
+                  ref={avatarInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarChange(file);
+                  }}
                 />
-                <AvatarFallback className="text-lg">
-                  {user?.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')}
-                </AvatarFallback>
-              </Avatar>
-              <Button variant="outline" size="sm">
-                <Camera className="w-4 h-4 mr-2" />
-                Change Avatar
-              </Button>
+                <p className="text-[10px] text-gray-500">Max 10MB • PNG, JPG, GIF</p>
+              </div>
             </div>
 
             {/* Form Fields */}
