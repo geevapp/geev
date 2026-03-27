@@ -14,16 +14,50 @@ import {
   Operation,
   Networks,
   BASE_FEE,
-  Server,
+  Account,
 } from "@stellar/stellar-sdk";
 
-// Configuration
-const SERVER_KEYPAIR = Keypair.fromSecret(
-  process.env.STELLAR_SERVER_SECRET ||
-    "SBSW2XWCHXLQ4OZIQ2Q3TQ3DJC23LK3LQ3LQ3LQ3LQ3LQ3LQ3LQ3LQ3L"
-);
+// Lazy-loaded server keypair to avoid errors during module initialization in tests
+let _serverKeypair: Keypair | null = null;
+let _serverKeyError: Error | null = null;
 
-const SERVER_PUBLIC_KEY = SERVER_KEYPAIR.publicKey();
+function getServerKeypair(): Keypair {
+  if (_serverKeyError) {
+    throw _serverKeyError;
+  }
+  if (!_serverKeypair) {
+    const secret = process.env.STELLAR_SERVER_SECRET;
+    if (!secret) {
+      _serverKeyError = new Error(
+        "STELLAR_SERVER_SECRET environment variable is required for SEP-10 authentication"
+      );
+      throw _serverKeyError;
+    }
+    try {
+      _serverKeypair = Keypair.fromSecret(secret);
+    } catch (error) {
+      _serverKeyError = error instanceof Error 
+        ? error 
+        : new Error("Invalid STELLAR_SERVER_SECRET");
+      throw _serverKeyError;
+    }
+  }
+  return _serverKeypair;
+}
+
+/**
+ * Check if SEP-10 is properly configured
+ */
+export function isSEP10Configured(): boolean {
+  try {
+    getServerKeypair();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+
 
 // Challenge expiration time in seconds (15 minutes as per SEP-10 recommendation)
 const CHALLENGE_EXPIRATION_SECONDS = 15 * 60;
@@ -73,15 +107,17 @@ export function generateChallenge(
   // 2. Sequence number = 0
   // 3. Time bounds set
   // 4. A manage_data operation with the client's public key as the source
-  const transaction = new TransactionBuilder(
-    new Server("https://horizon.stellar.org"),
-    {
-      fee: BASE_FEE,
-      networkPassphrase: Networks.PUBLIC,
-    }
-  )
+  const serverKeypair = getServerKeypair();
+  const serverPublicKey = serverKeypair.publicKey();
+  
+  // Create a dummy account with sequence number 0 for the challenge
+  const serverAccount = new Account(serverPublicKey, "0");
+  
+  const transaction = new TransactionBuilder(serverAccount, {
+    fee: BASE_FEE,
+    networkPassphrase: Networks.PUBLIC,
+  })
     .setTimeout(CHALLENGE_EXPIRATION_SECONDS)
-    .setSourceAccount(SERVER_PUBLIC_KEY)
     .addOperation(
       Operation.manageData({
         name: `${homeDomain} auth`,
@@ -93,14 +129,14 @@ export function generateChallenge(
       Operation.manageData({
         name: "web_auth_domain",
         value: WEB_AUTH_DOMAIN,
-        source: SERVER_PUBLIC_KEY,
+        source: serverPublicKey,
       })
     )
     .setTimebounds(minTime, maxTime)
     .build();
 
   // Sign the transaction with the server's key
-  transaction.sign(SERVER_KEYPAIR);
+  transaction.sign(serverKeypair);
 
   return {
     transactionXDR: transaction.toXDR(),
@@ -133,8 +169,11 @@ export function verifyChallenge(
       Networks.PUBLIC
     ) as Transaction;
 
+    const serverKeypair = getServerKeypair();
+    const serverPublicKey = serverKeypair.publicKey();
+
     // 1. Verify the transaction source is the server
-    if (transaction.source !== SERVER_PUBLIC_KEY) {
+    if (transaction.source !== serverPublicKey) {
       return { valid: false, error: "Invalid transaction source" };
     }
 
@@ -187,9 +226,9 @@ export function verifyChallenge(
     }
 
     // 6. Verify the transaction is signed by the server
-    const serverSignatureValid = transaction.signatures.some((sig) => {
+    const serverSignatureValid = transaction.signatures.some((sig: any) => {
       try {
-        return SERVER_KEYPAIR.verify(
+        return serverKeypair.verify(
           transaction.hash(),
           sig.signature()
         );
@@ -204,7 +243,7 @@ export function verifyChallenge(
 
     // 7. Verify the transaction is signed by the client
     const clientKeypair = Keypair.fromPublicKey(clientPublicKey);
-    const clientSignatureValid = transaction.signatures.some((sig) => {
+    const clientSignatureValid = transaction.signatures.some((sig: any) => {
       try {
         return clientKeypair.verify(transaction.hash(), sig.signature());
       } catch {
@@ -218,7 +257,7 @@ export function verifyChallenge(
 
     // 8. Verify web_auth_domain if present (optional check for additional security)
     const webAuthOp = operations.find(
-      (op) => op.type === "manageData" && op.name === "web_auth_domain"
+      (op: any) => op.type === "manageData" && op.name === "web_auth_domain"
     );
     if (webAuthOp && webAuthOp.value) {
       const authDomain = Buffer.from(webAuthOp.value).toString();
@@ -268,7 +307,7 @@ export function extractClientPublicKey(signedXDR: string): string | null {
  * Get the server's public key
  */
 export function getServerPublicKey(): string {
-  return SERVER_PUBLIC_KEY;
+  return getServerKeypair().publicKey();
 }
 
 /**

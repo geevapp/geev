@@ -5,7 +5,16 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { Keypair } from "@stellar/stellar-sdk";
-import { verifyChallenge } from "@/lib/sep10";
+
+// Lazy import SEP-10 functions to avoid initialization errors during tests
+let _verifyChallenge: typeof import("@/lib/sep10").verifyChallenge | null = null;
+async function getVerifyChallenge() {
+  if (!_verifyChallenge) {
+    const sep10 = await import("@/lib/sep10");
+    _verifyChallenge = sep10.verifyChallenge;
+  }
+  return _verifyChallenge;
+}
 
 // JWT payload structure
 interface UserJWT extends JWT {
@@ -67,6 +76,7 @@ async function verifySEP10Transaction(
     }
 
     // Step 2: Verify the signed challenge transaction
+    const verifyChallenge = await getVerifyChallenge();
     const verificationResult = verifyChallenge(signedXDR, walletAddress);
 
     if (!verificationResult.valid) {
