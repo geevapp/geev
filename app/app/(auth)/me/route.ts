@@ -3,6 +3,14 @@ import { apiError, apiSuccess } from '@/lib/api-response';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+/**
+ * Fetches the current user profile.
+ * 
+ * @deprecated This endpoint is legacy. For new implementations, use Auth.js `auth()` 
+ * directly in server components or the Auth.js session hooks in client components.
+ * 
+ * @returns A Response with user profile data
+ */
 export async function GET () {
     try {
         const session = await auth();
@@ -60,7 +68,12 @@ export async function GET () {
             })),
         };
 
-        return apiSuccess(normalizedUser, 'OK', 200);
+        const response = apiSuccess(normalizedUser, 'OK', 200);
+        
+        // Add RFC 299 deprecation warning
+        response.headers.set("Warning", '299 - "Deprecated: This endpoint is legacy. Use Auth.js instead."');
+        
+        return response;
     } catch (error) {
         return apiError('Failed to fetch current user', 500);
     }

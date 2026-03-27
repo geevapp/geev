@@ -40,6 +40,17 @@ The backend is integrated into the Next.js application using API Routes.
 - [PROJECT SUMMARY](https://docs.google.com/document/d/1ZEfrbVF_rjJ3GrLYeTxTboRL15dT0kaVyioXrdPpmMU)
 - [FEATURE SPECIFICATIONS](https://docs.google.com/document/d/1qRyFhhAqBgZU8NtrVmMk6HV2qSi0nb_K3sxrgPaKymI)
 
+
+## Logout Behavior
+
+The `/api/auth/logout` route is deprecated.
+
+Use:
+- `signOut()` from next-auth/react (client-side)
+- `POST /api/auth/signout` (server-side)
+
+This ensures proper session invalidation.
+
 ## Getting Started
 
 ### Frontend Application
