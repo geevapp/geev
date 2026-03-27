@@ -112,13 +112,26 @@ const POST = async (request: NextRequest) => {
         data: { proofRequired: Boolean(proofRequired) },
       });
 
+      // Generate base slug
+      let slug = (body.slug || title)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-") // replace non-alphanumeric chars with dash
+        .replace(/^-|-$/g, ""); // remove leading/trailing dashes
+
+      // Check if slug exists and add 6-char random suffix if needed
+      let existingPost = await tx.post.findUnique({ where: { slug } });
+      while (existingPost) {
+        const suffix = Math.random().toString(36).substring(2, 8); // 6 chars
+        slug = `${slug}-${suffix}`;
+        existingPost = await tx.post.findUnique({ where: { slug } });
+      }
+
       const createdPost = await tx.post.create({
         data: {
           userId: user.id,
           type,
           title,
-          slug:
-            body.slug || title.toLowerCase().replace(/\s+/g, "-").slice(0, 50),
+          slug: slug, // use the unique slug here
           description,
           maxWinners: winnerCount ? Number(winnerCount) : null,
           postRequirementsId: requirements.id,
@@ -168,22 +181,15 @@ const GET = async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const status = searchParams.get("status");
-    const type = searchParams.get("type");
-
-    // ← NEW: search & filters
-    const q = searchParams.get("q"); // search query
+    const q = searchParams.get("q");
     const category = searchParams.get("category");
-    const sort = searchParams.get("sort"); // "popular" or "recent"
+    const sort = searchParams.get("sort");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
 
-    // Build Prisma where clause
     const where: any = {};
-    if (status) where.status = status;
-    if (type) where.type = type;
-    if (category) where.category = category;
 
+    // Search filter
     if (q) {
       where.OR = [
         { title: { contains: q, mode: "insensitive" } },
@@ -191,10 +197,15 @@ const GET = async (request: NextRequest) => {
       ];
     }
 
-    // Build orderBy
-    let orderBy: any = { createdAt: "desc" };
+    // Category filter
+    if (category) {
+      where.category = category;
+    }
+
+    // Sorting
+    let orderBy: any = [{ createdAt: "desc" }];
     if (sort === "popular") {
-      orderBy = [{ likes: "desc" }, { entries: "desc" }, { createdAt: "desc" }];
+      orderBy = [{ likes: "desc" }, { entries: "desc" }];
     }
 
     const [posts, total] = await Promise.all([
@@ -204,7 +215,13 @@ const GET = async (request: NextRequest) => {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          user: { select: { id: true, name: true, avatarUrl: true } },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
         },
       }),
       prisma.post.count({ where }),
