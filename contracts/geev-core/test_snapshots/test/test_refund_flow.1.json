@@ -324,7 +324,15 @@
                         "symbol": "id"
                       },
                       "val": {
-                        "u64": 10
+                        "u64": "10"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "is_verified"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     },
                     {

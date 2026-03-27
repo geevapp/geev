@@ -401,7 +401,15 @@
                         "symbol": "id"
                       },
                       "val": {
-                        "u64": 1
+                        "u64": "1"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "is_verified"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     },
                     {

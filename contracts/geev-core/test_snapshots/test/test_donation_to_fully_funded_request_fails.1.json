@@ -179,7 +179,15 @@
                         "symbol": "id"
                       },
                       "val": {
-                        "u64": 3
+                        "u64": "3"
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "is_verified"
+                      },
+                      "val": {
+                        "bool": false
                       }
                     },
                     {
