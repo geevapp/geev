@@ -9,6 +9,7 @@ pub struct GiveawayContract;
 #[contractevent]
 pub struct GiveawayCreated {
     giveaway_id: u64,
+    #[topic]
     creator: Address,
     token_address: Address,
     total_amount: i128,
