@@ -76,8 +76,11 @@ Authenticate existing user with wallet
 }
 ```
 
-### POST /api/auth/logout
-End user session
+### POST /api/auth/logout (DEPRECATED)
+End user session by clearing all authentication cookies.
+
+> [!WARNING]
+> **This endpoint is legacy.** For new implementations, use Auth.js `signOut()` or the Auth.js signout endpoint directly (`POST /api/auth/signout`).
 
 **Response:**
 ```json
