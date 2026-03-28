@@ -7,7 +7,7 @@ use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
     testutils::{Address as _, Events as _, Ledger},
-    token, Address, Env, IntoVal, String, Symbol,
+    token, vec, Address, Env, IntoVal, String, Symbol,
 };
 
 #[test]
@@ -60,6 +60,17 @@ fn test_giveaway_flow() {
     let winner = contract_client.pick_winner(&target_giveaway_id);
 
     assert!(winner == user1 || winner == user2);
+
+    let events = env.events().all();
+    let expected_topics = vec![
+        &env,
+        symbol_short!("giveaway"),
+        symbol_short!("winner"),
+        winner.into_val(&env),
+    ];
+    assert!(events.iter().any(|(event_contract, topics, _data)| {
+        event_contract == contract_id && topics == expected_topics.into_val(&env)
+    }));
 }
 
 #[test]
