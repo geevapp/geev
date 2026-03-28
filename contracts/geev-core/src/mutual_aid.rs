@@ -11,11 +11,15 @@ pub struct HelpRequestPosted {
     goal: i128,
 }
 
-#[contractevent]
+/// Emitted after a donation is escrowed and request totals are updated. Topics are
+/// `aid`, `donate`, and `request_id`; data is `[donor, amount_donated, new_total_raised]`.
+#[contractevent(topics = ["aid", "donate"], data_format = "vec")]
 pub struct DonationReceived {
+    #[topic]
     request_id: u64,
     donor: Address,
-    amount: i128,
+    amount_donated: i128,
+    new_total_raised: i128,
 }
 
 #[contractevent]
@@ -124,7 +128,8 @@ impl MutualAidContract {
         DonationReceived {
             request_id,
             donor,
-            amount,
+            amount_donated: amount,
+            new_total_raised: new_raised,
         }
         .publish(&env);
     }
