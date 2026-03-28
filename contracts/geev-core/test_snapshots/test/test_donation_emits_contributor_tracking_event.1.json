@@ -731,34 +731,25 @@
           "v0": {
             "topics": [
               {
-                "symbol": "donation_received"
+                "symbol": "aid"
+              },
+              {
+                "symbol": "donate"
+              },
+              {
+                "u64": "42"
               }
             ],
             "data": {
-              "map": [
+              "vec": [
                 {
-                  "key": {
-                    "symbol": "amount"
-                  },
-                  "val": {
-                    "i128": "125"
-                  }
+                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
                 },
                 {
-                  "key": {
-                    "symbol": "donor"
-                  },
-                  "val": {
-                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
-                  }
+                  "i128": "125"
                 },
                 {
-                  "key": {
-                    "symbol": "request_id"
-                  },
-                  "val": {
-                    "u64": "42"
-                  }
+                  "i128": "125"
                 }
               ]
             }
