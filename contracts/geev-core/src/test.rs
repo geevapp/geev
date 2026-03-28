@@ -348,10 +348,11 @@ fn test_donation_emits_contributor_tracking_event() {
     contract_client.donate(&donor, &request_id, &donation);
 
     let events = env.events().all();
+    // Each topic must be `Val` so `vec!` does not infer `Symbol` for the whole list (CI / newer SDK).
     let expected_topics = vec![
         &env,
-        symbol_short!("aid"),
-        symbol_short!("donate"),
+        symbol_short!("aid").into_val(&env),
+        symbol_short!("donate").into_val(&env),
         request_id.into_val(&env),
     ];
     assert!(events.iter().any(|(event_contract, topics, _data)| {
