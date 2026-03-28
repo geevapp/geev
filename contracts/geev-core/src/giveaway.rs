@@ -17,6 +17,17 @@ pub struct GiveawayCreated {
     end_time: u64,
 }
 
+/// Emitted when a winner is definitively selected (`pick_winner`). Topics are fixed
+/// `giveaway`, `winner`, plus the winner address; data is `[giveaway_id, prize_amount]`
+/// as a Vec for downstream indexing (e.g. FCM).
+#[contractevent(topics = ["giveaway", "winner"], data_format = "vec")]
+pub struct GiveawayWinnerSelected {
+    #[topic]
+    winner: Address,
+    giveaway_id: u64,
+    prize_amount: i128,
+}
+
 #[contractimpl]
 impl GiveawayContract {
     pub fn create_giveaway(
@@ -132,7 +143,15 @@ impl GiveawayContract {
 
         giveaway.winner = Some(winner_address.clone());
         giveaway.status = GiveawayStatus::Claimable;
+        let prize_amount = giveaway.amount;
         env.storage().persistent().set(&giveaway_key, &giveaway);
+
+        GiveawayWinnerSelected {
+            winner: winner_address.clone(),
+            giveaway_id,
+            prize_amount,
+        }
+        .publish(&env);
 
         winner_address
     }
