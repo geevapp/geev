@@ -1,3 +1,4 @@
+import { GET, POST } from "@/app/api/posts/route";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockRequest, parseResponse } from "../helpers/api";
 
@@ -16,7 +17,6 @@ vi.mock("@/lib/xp", () => ({
   },
 }));
 
-import { GET, POST } from "@/app/api/posts/route";
 
 describe("Posts API", () => {
   let testUser: any;
@@ -34,6 +34,7 @@ describe("Posts API", () => {
     prisma.$transaction = vi.fn(async (callback: any) =>
       callback(prisma as any),
     );
+    prisma.post.findUnique = vi.fn().mockResolvedValue(null);
     prisma.postRequirements.create = vi.fn().mockResolvedValue({
       id: "requirements_123",
       proofRequired: false,
@@ -54,7 +55,6 @@ describe("Posts API", () => {
       prisma.user.create = vi.fn().mockResolvedValue(testUser);
       prisma.post.findMany = vi.fn().mockResolvedValue([]);
       prisma.post.count = vi.fn().mockResolvedValue(0);
-      prisma.post.findUnique = vi.fn().mockResolvedValue(null);
       // Mock prisma.post.create
       prisma.post.create = vi.fn().mockImplementation((args: any) => Promise.resolve({
         id: 'post_123',

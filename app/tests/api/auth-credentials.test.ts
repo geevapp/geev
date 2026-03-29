@@ -12,7 +12,12 @@
  * so that `auth-config.ts` (which captured the same singleton at import time)
  * calls our stubs instead of hitting a real database.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { authConfig } from '@/lib/auth-config';
+// Import the real prisma singleton — we will stub individual methods per test,
+// exactly as entries.test.ts and posts.test.ts do.
+import { prisma } from '@/lib/prisma';
 
 const mockVerify = vi.hoisted(() => vi.fn());
 const mockFromPublicKey = vi.hoisted(() => vi.fn());
@@ -29,10 +34,11 @@ vi.mock('@auth/prisma-adapter', () => ({
   PrismaAdapter: vi.fn().mockReturnValue({}),
 }));
 
-// Import the real prisma singleton — we will stub individual methods per test,
-// exactly as entries.test.ts and posts.test.ts do.
-import { prisma } from '@/lib/prisma';
-import { authConfig } from '@/lib/auth-config';
+
+const VALID_WALLET_ADDRESS = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+const SECOND_VALID_WALLET_ADDRESS = 'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB';
+const NONCE = 'abcdef1234567890';
+const SIGN_MESSAGE = `Please sign this message to authenticate with Geev.\nNonce: ${NONCE}`;
 
 describe('Auth Credentials Provider (authorize)', () => {
   // The Credentials provider is the first (and only) provider in authConfig.
@@ -41,6 +47,17 @@ describe('Auth Credentials Provider (authorize)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFromPublicKey.mockReturnValue({ verify: mockVerify });
+    (prisma as any).authNonce ??= {};
+    (prisma as any).authNonce.findUnique = vi.fn().mockResolvedValue({
+      nonce: NONCE,
+      used: false,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    (prisma as any).authNonce.update = vi.fn().mockResolvedValue({
+      nonce: NONCE,
+      used: true,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
     authorize = (authConfig.providers[0] as any).options.authorize;
   });
 
@@ -49,7 +66,7 @@ describe('Auth Credentials Provider (authorize)', () => {
   // ────────────────────────────────────────────────────────────
 
   it('should register a new user when valid signature and username are provided', async () => {
-    const walletAddress = 'GVALIDWALLETREGISTRATION1234567';
+    const walletAddress = VALID_WALLET_ADDRESS;
     const createdUser = {
       id: 'new_user_1',
       walletAddress,
@@ -69,7 +86,7 @@ describe('Auth Credentials Provider (authorize)', () => {
     const result = await authorize({
       walletAddress,
       signature: 'dmFsaWRzaWduYXR1cmU=',
-      message: 'Please sign this message to authenticate with Geev.',
+      message: SIGN_MESSAGE,
       username: 'alice',
     });
 
@@ -88,7 +105,7 @@ describe('Auth Credentials Provider (authorize)', () => {
   });
 
   it('should register with an email when email is provided during registration', async () => {
-    const walletAddress = 'GREGISTERWITHMAIL12345678';
+    const walletAddress = SECOND_VALID_WALLET_ADDRESS;
     mockVerify.mockReturnValue(true);
     prisma.user.findUnique = vi.fn().mockResolvedValue(null);
     prisma.user.create = vi.fn().mockResolvedValue({
@@ -106,7 +123,7 @@ describe('Auth Credentials Provider (authorize)', () => {
     const result = await authorize({
       walletAddress,
       signature: 'dmFsaWRzaWduYXR1cmU=',
-      message: 'sign-this',
+      message: SIGN_MESSAGE,
       username: 'eve',
       email: 'eve@example.com',
     });
@@ -126,7 +143,7 @@ describe('Auth Credentials Provider (authorize)', () => {
   it('should return user on successful login with an existing account', async () => {
     const existingUser = {
       id: 'user_existing',
-      walletAddress: 'GEXISTINGWALLET12345678',
+      walletAddress: VALID_WALLET_ADDRESS,
       name: 'Bob',
       username: 'bob',
       email: 'bob@example.com',
@@ -140,9 +157,9 @@ describe('Auth Credentials Provider (authorize)', () => {
     prisma.user.create = vi.fn(); // should not be called
 
     const result = await authorize({
-      walletAddress: 'GEXISTINGWALLET12345678',
+      walletAddress: VALID_WALLET_ADDRESS,
       signature: 'dmFsaWRzaWduYXR1cmU=',
-      message: 'sign-this',
+      message: SIGN_MESSAGE,
       // no username → login, not registration
     });
 
@@ -159,9 +176,9 @@ describe('Auth Credentials Provider (authorize)', () => {
     mockFromPublicKey.mockReturnValue({ verify: vi.fn().mockReturnValue(false) });
 
     const result = await authorize({
-      walletAddress: 'GVALIDWALLET123',
+      walletAddress: VALID_WALLET_ADDRESS,
       signature: 'bad-sig',
-      message: 'sign-this',
+      message: SIGN_MESSAGE,
     });
 
     expect(result).toBeNull();
@@ -172,9 +189,9 @@ describe('Auth Credentials Provider (authorize)', () => {
     prisma.user.findUnique = vi.fn().mockResolvedValue(null); // no such user
 
     const result = await authorize({
-      walletAddress: 'GUNKNOWN12345678',
+      walletAddress: SECOND_VALID_WALLET_ADDRESS,
       signature: 'dmFsaWRzaWduYXR1cmU=',
-      message: 'sign-this',
+      message: SIGN_MESSAGE,
       // no username → attempted login, not registration
     });
 
