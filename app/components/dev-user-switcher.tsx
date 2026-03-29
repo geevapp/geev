@@ -9,12 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { login, logout } from '@/lib/mock-auth';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { User } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 /**
  * DevUserSwitcher Component
@@ -31,8 +31,10 @@ import { useState } from 'react';
  */
 export function DevUserSwitcher() {
   const { user, login: contextLogin, logout: contextLogout } = useAppContext();
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [mockAuthUsers, setMockAuthUsers] = useState([] as User[]);
+  const [hasLoadedUsers, setHasLoadedUsers] = useState(false);
 
   // Only render in development mode
   if (
@@ -42,16 +44,33 @@ export function DevUserSwitcher() {
     return null;
   }
 
-  if (!mockAuthUsers?.length) {
-    fetch(`${location.origin}/api/mock-users`)
+  useEffect(() => {
+    if (hasLoadedUsers) return;
+
+    let isMounted = true;
+
+    fetch('/api/dev-users')
       .then((res) => res.json())
-      .then((data) => setMockAuthUsers(data.data))
-      .catch((err) => console.error('Failed to fetch mock users:', err));
-  }
+      .then((data) => {
+        if (isMounted) {
+          setMockAuthUsers(data?.data ?? []);
+          setHasLoadedUsers(true);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.error('Failed to fetch dev users:', err);
+          setHasLoadedUsers(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasLoadedUsers]);
 
   const handleUserSwitch = async (userId: string) => {
     if (userId === 'logout') {
-      logout();
       await contextLogout();
       return;
     }
@@ -62,12 +81,17 @@ export function DevUserSwitcher() {
       const walletAddress = selectedUser.walletAddress || '0x0';
       const timestamp = new Date().toISOString();
 
-      await contextLogin(selectedUser, {
+      const result = await contextLogin(selectedUser, {
         walletAddress,
         email: selectedUser.email ?? `${walletAddress}@example.com`, // Fallback email for mock users
         signature: '0x' + Math.random().toString(36).substring(2, 30),
         message: `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}`,
       });
+
+      if (!result?.error) {
+        router.push('/feed');
+        router.refresh();
+      }
     }
   };
 
@@ -99,7 +123,7 @@ export function DevUserSwitcher() {
               DEV
             </div>
             {!isExpanded && user && (
-              <span className="text-sm text-gray-300 truncate max-w-[120px]">
+              <span className="text-sm text-gray-300 truncate max-w-30">
                 @{user.username}
               </span>
             )}
@@ -195,7 +219,7 @@ export function DevUserSwitcher() {
             {/* Dev Info */}
             <div className="pt-2 border-t border-gray-700">
               <p className="text-[10px] text-gray-500 text-center">
-                Dev mode only • Auth persists in localStorage
+                Dev mode only • Auth uses Prisma users
               </p>
             </div>
           </div>

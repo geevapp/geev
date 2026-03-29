@@ -1,13 +1,16 @@
+import { apiError, apiSuccess } from '@/lib/api-response';
+import { awardXp, XP_REWARDS } from '@/lib/xp';
+
 import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { apiSuccess, apiError } from '@/lib/api-response';
 import { getCurrentUser } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { readJsonBody } from '@/lib/parse-json-body';
 
 /**
  * POST /api/posts/[id]/entries
  * Submit an entry to a giveaway post
  */
-export async function POST(
+export async function POST (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
@@ -16,8 +19,10 @@ export async function POST(
     if (!user) return apiError('Unauthorized', 401);
 
     const { id: postId } = await params;
-    const body = await request.json();
-    const { content, proofUrl } = body;
+    const raw = await readJsonBody<Record<string, unknown>>(request);
+    if (!raw.ok) return raw.response;
+    const body = raw.data;
+    const { content, proofUrl } = body as { content?: unknown; proofUrl?: unknown };
 
     // Validate content
     if (!content || typeof content !== 'string') {
@@ -31,7 +36,7 @@ export async function POST(
     // Check if post exists and is open
     const post = await prisma.post.findUnique({
       where: { id: postId },
-      select: { id: true, status: true, creatorId: true, type: true },
+      select: { id: true, status: true, userId: true, type: true },
     });
 
     if (!post) {
@@ -47,7 +52,7 @@ export async function POST(
     }
 
     // Prevent creators from entering their own posts
-    if (post.creatorId === user.id) {
+    if (post.userId === user.id) {
       return apiError('You cannot enter your own giveaway', 403);
     }
 
@@ -65,24 +70,63 @@ export async function POST(
       return apiError('You have already entered this giveaway', 400);
     }
 
+
     // Create entry
-    const entry = await prisma.entry.create({
-      data: {
-        postId,
-        userId: user.id,
-        content,
-        proofUrl: proofUrl || null,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            walletAddress: true,
-            avatarUrl: true,
+    const entry = await prisma.$transaction(async (tx) => {
+      const createdEntry = await tx.entry.create({
+        data: {
+          postId,
+          userId: user.id,
+          content,
+          proofUrl: proofUrl || null,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              walletAddress: true,
+              avatarUrl: true,
+            },
           },
         },
-      },
+      });
+
+      await awardXp(
+        user.id,
+        XP_REWARDS.enterGiveaway,
+        'giveaway_entered',
+        {
+          metadata: {
+            postId,
+            entryId: createdEntry.id,
+          },
+        },
+        tx,
+      );
+
+      // Notify post owner, but ignore if notifications table is missing
+      if (post.userId) {
+        try {
+          await tx.notification.create({
+            data: {
+              userId: post.userId,
+              type: 'giveaway_entry',
+              message: `${user.name} entered your giveaway`,
+              link: `/post/${postId}`,
+            },
+          });
+        } catch (err: any) {
+          if (err?.code === 'P2021' && String(err?.meta?.modelName).toLowerCase() === 'notification') {
+            // Table does not exist, skip notification
+            // Optionally log: console.warn('Notification table missing, skipping notification.');
+          } else {
+            throw err;
+          }
+        }
+      }
+
+      return createdEntry;
     });
 
     return apiSuccess(entry, 'Entry created successfully', 201);
@@ -96,7 +140,7 @@ export async function POST(
  * GET /api/posts/[id]/entries
  * Get all entries for a post with pagination
  */
-export async function GET(
+export async function GET (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {

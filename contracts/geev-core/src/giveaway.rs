@@ -1,9 +1,32 @@
 use crate::types::{DataKey, Error, Giveaway, GiveawayStatus};
 use crate::utils::with_reentrancy_guard;
-use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, String};
+use soroban_sdk::{
+    contract, contractevent, contractimpl, panic_with_error, token, Address, Env, String,
+};
 
 #[contract]
 pub struct GiveawayContract;
+
+#[contractevent]
+pub struct GiveawayCreated {
+    giveaway_id: u64,
+    #[topic]
+    creator: Address,
+    token_address: Address,
+    total_amount: i128,
+    end_time: u64,
+}
+
+/// Emitted when a winner is definitively selected (`pick_winner`). Topics are fixed
+/// `giveaway`, `winner`, plus the winner address; data is `[giveaway_id, prize_amount]`
+/// as a Vec for downstream indexing (e.g. FCM).
+#[contractevent(topics = ["giveaway", "winner"], data_format = "vec")]
+pub struct GiveawayWinnerSelected {
+    #[topic]
+    winner: Address,
+    giveaway_id: u64,
+    prize_amount: i128,
+}
 
 #[contractimpl]
 impl GiveawayContract {
@@ -26,15 +49,15 @@ impl GiveawayContract {
         }
 
         let token_client = token::Client::new(&env, &token);
-        token_client.transfer(&creator, &env.current_contract_address(), &amount);
+        token_client.transfer(&creator, env.current_contract_address(), &amount);
 
         let giveaway_id = Self::generate_id(&env);
         let end_time = env.ledger().timestamp() + duration_seconds;
 
         let giveaway = Giveaway {
             id: giveaway_id,
-            creator,
-            token,
+            creator: creator.clone(),
+            token: token.clone(),
             amount,
             title,
             participant_count: 0,
@@ -46,6 +69,15 @@ impl GiveawayContract {
         env.storage()
             .persistent()
             .set(&DataKey::Giveaway(giveaway_id), &giveaway);
+
+        GiveawayCreated {
+            giveaway_id,
+            creator,
+            token_address: token,
+            total_amount: amount,
+            end_time,
+        }
+        .publish(&env);
 
         giveaway_id
     }
@@ -111,7 +143,15 @@ impl GiveawayContract {
 
         giveaway.winner = Some(winner_address.clone());
         giveaway.status = GiveawayStatus::Claimable;
+        let prize_amount = giveaway.amount;
         env.storage().persistent().set(&giveaway_key, &giveaway);
+
+        GiveawayWinnerSelected {
+            winner: winner_address.clone(),
+            giveaway_id,
+            prize_amount,
+        }
+        .publish(&env);
 
         winner_address
     }

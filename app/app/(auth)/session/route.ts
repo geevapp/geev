@@ -3,6 +3,15 @@ import { getTokenFromRequest, verifyToken } from "@/lib/jwt";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * Checks for an active session.
+ * 
+ * @deprecated This endpoint is legacy. For new implementations, use Auth.js `auth()` 
+ * or `useSession()` instead.
+ * 
+ * @param request - The incoming Request object
+ * @returns A NextResponse with session data
+ */
 export async function GET (request: Request) {
   try {
     // Get token from cookies
@@ -44,6 +53,11 @@ export async function GET (request: Request) {
       },
       token: {
         expiresAt: new Date(payload.exp * 1000).toISOString(),
+      },
+    }, {
+      headers: {
+        // RFC 299: Miscellaneous persistent warning
+        "Warning": '299 - "Deprecated: This endpoint is legacy. Use Auth.js session instead."',
       },
     });
   } catch (error: any) {

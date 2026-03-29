@@ -1,48 +1,53 @@
-"use client";
+'use client';
 
-import {
-  ArrowLeft,
-  Bell,
-  Camera,
-  CreditCard,
-  Moon,
-  Shield,
-  Sun,
-  Trash2,
-  Wallet,
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from '@/components/ui/card';
+import {
+  ArrowLeft,
+  Bell,
+  Camera,
+  CreditCard,
+  Loader2,
+  Moon,
+  Shield,
+  Sun,
+  Trash2,
+  Wallet,
+} from 'lucide-react';
 
-import { AuthGuard } from "@/components/auth-guard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import Link from "next/link";
-import type React from "react";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import { useAppContext } from "@/contexts/app-context";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { AuthGuard } from '@/components/auth-guard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { useAppContext } from '@/contexts/app-context';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { useState, useRef } from 'react';
+import { uploadAvatar } from '@/lib/storage';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
-  const { user, logout, toggleTheme, theme } = useAppContext();
+  const { user, logout, toggleTheme, theme, setCurrentUser } = useAppContext();
   const router = useRouter();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
-    name: user?.name || "",
-    username: user?.username || "",
-    bio: user?.bio || "",
-    email: user?.email || "",
+    name: user?.name || '',
+    username: user?.username || '',
+    bio: user?.bio || '',
+    email: user?.email || '',
   });
+
+  const [isSaving, setIsSaving] = useState(false);
 
   const [notifications, setNotifications] = useState({
     email: true,
@@ -59,23 +64,83 @@ export default function SettingsPage() {
     });
   };
 
-  const handleSaveProfile = () => {
-    // Mock save functionality
-    toast("Profile updated", {
-      description: "Your profile has been saved successfully.",
-    });
+  const handleSaveProfile = async () => {
+    if (!user?.id) return;
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          username: formData.username,
+          bio: formData.bio,
+          email: formData.email,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error('Failed to save', {
+          description: data.error || 'Something went wrong. Please try again.',
+        });
+        return;
+      }
+
+      // Merge the returned fields back into the current user object so every
+      // part of the UI (navbar, profile page) reflects the change immediately
+      // without requiring a full page reload.
+      setCurrentUser({ ...user, ...data.data });
+
+      toast.success('Profile updated', {
+        description: 'Your profile has been saved successfully.',
+      });
+    } catch {
+      toast.error('Network error', {
+        description: 'Could not reach the server. Please check your connection.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAvatarChange = async (file: File) => {
+    if (!user?.id) return;
+
+    setIsSaving(true);
+    try {
+      const avatarUrl = await uploadAvatar(file);
+      
+      const response = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update avatar');
+
+      const data = await response.json();
+      setCurrentUser({ ...user, avatarUrl: data.data.avatarUrl });
+      toast.success('Avatar updated successfully');
+    } catch (error) {
+      toast.error('Failed to update avatar');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteAccount = () => {
     if (
       confirm(
-        "Are you sure you want to delete your account? This action cannot be undone.",
+        'Are you sure you want to delete your account? This action cannot be undone.',
       )
     ) {
       logout();
-      router.push("/");
-      toast.error("Account deleted", {
-        description: "Your account has been permanently deleted.",
+      router.push('/');
+      toast.error('Account deleted', {
+        description: 'Your account has been permanently deleted.',
       });
     }
   };
@@ -105,22 +170,46 @@ export default function SettingsPage() {
           <CardContent className="space-y-6">
             {/* Avatar */}
             <div className="flex items-center gap-4">
-              <Avatar className="w-20 h-20">
-                <AvatarImage
-                  src={user?.avatar || "/placeholder.svg"}
-                  alt={user?.name}
+              <div className="relative group">
+                <Avatar className="w-20 h-20 transition-opacity group-hover:opacity-50">
+                  <AvatarImage
+                    src={user?.avatarUrl || '/placeholder.svg'}
+                    alt={user?.name}
+                  />
+                  <AvatarFallback className="text-lg">
+                    {user?.name
+                      ? user.name.split(' ').map((n: string) => n[0]).join('')
+                      : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                {isSaving && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={isSaving}
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Change Avatar
+                </Button>
+                <input
+                  type="file"
+                  ref={avatarInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAvatarChange(file);
+                  }}
                 />
-                <AvatarFallback className="text-lg">
-                  {user?.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-              <Button variant="outline" size="sm">
-                <Camera className="w-4 h-4 mr-2" />
-                Change Avatar
-              </Button>
+                <p className="text-[10px] text-gray-500">Max 10MB • PNG, JPG, GIF</p>
+              </div>
             </div>
 
             {/* Form Fields */}
@@ -169,7 +258,9 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <Button onClick={handleSaveProfile}>Save Changes</Button>
+            <Button onClick={handleSaveProfile} disabled={isSaving}>
+              {isSaving ? 'Saving…' : 'Save Changes'}
+            </Button>
           </CardContent>
         </Card>
 
@@ -188,7 +279,7 @@ export default function SettingsPage() {
                 <div>
                   <div className="font-medium">Wallet Balance</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    ${user?.walletBalance?.toFixed(2) || "0.00"} available
+                    $0.00 available
                   </div>
                 </div>
               </div>
@@ -227,7 +318,7 @@ export default function SettingsPage() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {theme === "dark" ? (
+                {theme === 'dark' ? (
                   <Moon className="w-5 h-5" />
                 ) : (
                   <Sun className="w-5 h-5" />
@@ -240,7 +331,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <Switch
-                checked={theme === "dark"}
+                checked={theme === 'dark'}
                 onCheckedChange={toggleTheme}
               />
             </div>

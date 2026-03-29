@@ -1,8 +1,39 @@
 use crate::types::{DataKey, Error, HelpRequest, HelpRequestStatus};
-use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, Symbol};
+use soroban_sdk::{contract, contractevent, contractimpl, panic_with_error, token, Address, Env};
 
 #[contract]
 pub struct MutualAidContract;
+
+#[contractevent]
+pub struct HelpRequestPosted {
+    request_id: u64,
+    creator: Address,
+    goal: i128,
+}
+
+/// Emitted after a donation is escrowed and request totals are updated. Topics are
+/// `aid`, `donate`, and `request_id`; data is `[donor, amount_donated, new_total_raised]`.
+#[contractevent(topics = ["aid", "donate"], data_format = "vec")]
+pub struct DonationReceived {
+    #[topic]
+    request_id: u64,
+    donor: Address,
+    amount_donated: i128,
+    new_total_raised: i128,
+}
+
+#[contractevent]
+pub struct RefundClaimed {
+    request_id: u64,
+    donor: Address,
+    amount: i128,
+}
+
+#[contractevent]
+pub struct RequestCancelled {
+    request_id: u64,
+    creator: Address,
+}
 
 #[contractimpl]
 impl MutualAidContract {
@@ -32,14 +63,17 @@ impl MutualAidContract {
             goal,
             raised_amount: 0, // ✅ bucket starts empty — no funds locked
             status: HelpRequestStatus::Open,
+            is_verified: false,
         };
 
         env.storage().persistent().set(&request_key, &request);
 
-        env.events().publish(
-            (Symbol::new(&env, "HelpRequestPosted"), request_id, creator),
-            (goal,),
-        );
+        HelpRequestPosted {
+            request_id,
+            creator,
+            goal,
+        }
+        .publish(&env);
 
         request_id
     }
@@ -67,7 +101,7 @@ impl MutualAidContract {
 
         let token_client = token::Client::new(&env, &request.token);
 
-        token_client.transfer(&donor, &env.current_contract_address(), &amount);
+        token_client.transfer(&donor, env.current_contract_address(), &amount);
 
         // ✅ Track individual donation for refund logic
         let donation_key = DataKey::Donation(request_id, donor.clone());
@@ -91,10 +125,13 @@ impl MutualAidContract {
 
         env.storage().persistent().set(&request_key, &request);
 
-        env.events().publish(
-            (Symbol::new(&env, "DonationReceived"), request_id, donor),
-            (amount,),
-        );
+        DonationReceived {
+            request_id,
+            donor,
+            amount_donated: amount,
+            new_total_raised: new_raised,
+        }
+        .publish(&env);
     }
 
     pub fn claim_refund(env: Env, donor: Address, request_id: u64) {
@@ -124,10 +161,12 @@ impl MutualAidContract {
         // Reset donation amount to prevent double refund
         env.storage().persistent().set(&donation_key, &0i128);
 
-        env.events().publish(
-            (Symbol::new(&env, "RefundClaimed"), request_id, donor),
-            (amount,),
-        );
+        RefundClaimed {
+            request_id,
+            donor,
+            amount,
+        }
+        .publish(&env);
     }
 
     pub fn cancel_request(env: Env, creator: Address, request_id: u64) {
@@ -151,9 +190,10 @@ impl MutualAidContract {
         request.status = HelpRequestStatus::Cancelled;
         env.storage().persistent().set(&request_key, &request);
 
-        env.events().publish(
-            (Symbol::new(&env, "RequestCancelled"), request_id),
-            (creator,),
-        );
+        RequestCancelled {
+            request_id,
+            creator,
+        }
+        .publish(&env);
     }
 }

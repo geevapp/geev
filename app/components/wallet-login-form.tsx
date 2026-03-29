@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   Card,
@@ -6,70 +6,117 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Copy, Key, Mail, User, Wallet } from 'lucide-react';
-import { signIn, signOut, useSession } from 'next-auth/react';
+} from "@/components/ui/card";
+import { Copy, Key, Mail, User, Wallet } from "lucide-react";
+import { signIn, signOut, useSession } from "next-auth/react";
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { useAppContext } from '@/contexts/app-context';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { isConnected, signMessage as freighterSignMessage } from "@stellar/freighter-api";
 
 /**
  * Wallet-based login and registration form
  */
 export function WalletLoginForm({
-  authType = 'login',
+  authType = "login",
 }: {
-  authType?: 'login' | 'register';
+  authType?: "login" | "register";
 }) {
   const router = useRouter();
   // Simple toast simulation
   const showToast = (
     message: string,
-    type: 'success' | 'error' = 'success',
+    type: "success" | "error" = "success",
   ) => {
     return toast[type](message);
   };
-  const { login: contextLogin } = useAppContext();
   const { data: session, status } = useSession();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [signature, setSignature] = useState('');
-  const [message, setMessage] = useState('');
+  const [walletAddress, setWalletAddress] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [signature, setSignature] = useState("");
+  const [message, setMessage] = useState("");
 
-  // Generate a mock signature for demo purposes
-  const generateMockSignature = () => {
-    // In a real app, this would come from the wallet provider
-    const mockSignature = '0x' + Math.random().toString(36).substring(2, 30);
-    setSignature(mockSignature);
-    return mockSignature;
+  // Generate actual signature using Freighter
+  const handleSignMessage = async () => {
+    if (!walletAddress) {
+      showToast("Please enter your wallet address first", "error");
+      return;
+    }
+
+    try {
+      // Check if Freighter is available
+      const connected = await isConnected();
+      if (!connected) {
+        showToast("Freighter wallet is not installed or not connected", "error");
+        return;
+      }
+
+      const msg = message || await generateSignMessage();
+      
+      let signedMsg;
+      try {
+        signedMsg = await freighterSignMessage(msg, {
+          networkPassphrase: "Test SDF Network ; September 2015" // fallback or configurable
+        });
+      } catch (err) {
+        // Fallback for cases where it doesn't take options or simple reject
+        signedMsg = await freighterSignMessage(msg);
+      }
+
+      if (signedMsg) {
+        if (typeof signedMsg === "string") {
+          setSignature(signedMsg);
+        } else if (typeof signedMsg === "object" && typeof (signedMsg as any).signature === "string") {
+          setSignature((signedMsg as any).signature);
+        } else {
+          setSignature(signedMsg.toString());
+        }
+        showToast("Message signed successfully", "success");
+      }
+    } catch (error) {
+      console.error("Signing error:", error);
+      showToast("Error signing the message", "error");
+    }
   };
 
-  // Generate sign message
-  const generateSignMessage = () => {
-    const timestamp = new Date().toISOString();
-    const msg = `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}`;
-    setMessage(msg);
-    return msg;
+  // Fetch a server-issued nonce
+  const generateSignMessage = async () => {
+    if (!walletAddress) {
+      showToast("Please enter your wallet address first", "error");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/nonce");
+      if (!response.ok) throw new Error("Failed to fetch nonce");
+      
+      const { nonce } = await response.json();
+      const msg = `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nNonce: ${nonce}`;
+      setMessage(msg);
+      return msg;
+    } catch (error) {
+      console.error("Error generating nonce:", error);
+      showToast("Could not generate a secure nonce. Please try again.", "error");
+    }
   };
+
 
   const handleLogin = async () => {
     if (!walletAddress || !signature || !message) {
-      showToast('Please fill in all required fields', 'error');
+      showToast("Please fill in all required fields", "error");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // Try NextAuth login first
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         walletAddress,
         signature,
         message,
@@ -77,35 +124,15 @@ export function WalletLoginForm({
       });
 
       if (result?.ok && !result.error) {
-        showToast('Successfully logged in!', 'success');
-        router.push('/feed');
+        showToast("Successfully logged in!", "success");
+        router.push("/feed");
         return;
       }
 
-      // Fallback to custom API endpoint
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          signature,
-          message,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Update app context with user data
-        await contextLogin(data.user);
-        showToast('Successfully logged in!', 'success');
-        router.push('/feed');
-      } else {
-        showToast(data.error || 'Login failed', 'error');
-      }
+      showToast(result?.error || "Login failed", "error");
     } catch (error) {
-      console.error('Login error:', error);
-      showToast('Login failed. Please try again.', 'error');
+      console.error("Login error:", error);
+      showToast("Login failed. Please try again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -113,38 +140,31 @@ export function WalletLoginForm({
 
   const handleRegister = async () => {
     if (!walletAddress || !username || !signature || !message) {
-      showToast('Please fill in all required fields', 'error');
+      showToast("Please fill in all required fields", "error");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          signature,
-          message,
-          username,
-          email: email || undefined,
-        }),
+      const result = await signIn("credentials", {
+        walletAddress,
+        signature,
+        message,
+        username,
+        email: email || undefined,
+        redirect: false,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Update app context with user data
-        await contextLogin(data.user);
-        showToast('Account created successfully!', 'success');
-        router.push('/feed');
+      if (result?.ok && !result.error) {
+        showToast("Account created successfully!", "success");
+        router.push("/feed");
       } else {
-        showToast(data.error || 'Registration failed', 'error');
+        showToast(result?.error || "Registration failed", "error");
       }
     } catch (error) {
-      console.error('Registration error:', error);
-      showToast('Registration failed. Please try again.', 'error');
+      console.error("Registration error:", error);
+      showToast("Registration failed. Please try again.", "error");
     } finally {
       setIsLoading(false);
     }
@@ -154,19 +174,16 @@ export function WalletLoginForm({
     try {
       await signOut({ redirect: false });
 
-      // Also call custom logout endpoint
-      await fetch('/api/auth/logout', { method: 'POST' });
-
-      showToast('Successfully logged out!', 'success');
-      router.push('/login');
+      showToast("Successfully logged out!", "success");
+      router.push("/login");
     } catch (error) {
-      console.error('Logout error:', error);
-      showToast('Logout failed', 'error');
+      console.error("Logout error:", error);
+      showToast("Logout failed", "error");
     }
   };
 
   // If user is already logged in
-  if (status === 'authenticated' || session) {
+  if (status === "authenticated" || session) {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader>
@@ -178,7 +195,7 @@ export function WalletLoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={() => router.push('/feed')} className="w-full">
+          <Button onClick={() => router.push("/feed")} className="w-full">
             Go to Feed
           </Button>
           <Button variant="outline" onClick={handleLogout} className="w-full">
@@ -191,14 +208,14 @@ export function WalletLoginForm({
 
   return (
     <div className="w-full mx-auto">
-      {authType === 'login' && (
+      {authType === "login" && (
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Wallet Address</label>
             <div className="relative">
               <Wallet className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="0x..."
+                placeholder="G..."
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 className="pl-10"
@@ -218,7 +235,7 @@ export function WalletLoginForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={generateMockSignature}
+                onClick={handleSignMessage}
               >
                 <Key className="h-4 w-4" />
               </Button>
@@ -231,7 +248,7 @@ export function WalletLoginForm({
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="flex min-h-[80px] w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-0"
+                className="flex min-h-20 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-0"
                 placeholder="Message to sign..."
               />
               <Button
@@ -239,7 +256,7 @@ export function WalletLoginForm({
                 variant="outline"
                 size="sm"
                 className="absolute top-2 right-2"
-                onClick={generateSignMessage}
+                onClick={() => generateSignMessage()}
               >
                 Generate
               </Button>
@@ -249,22 +266,22 @@ export function WalletLoginForm({
           <Button
             onClick={handleLogin}
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
+            className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
           >
             <Wallet className="w-4 h-4 mr-2" />
-            {isLoading ? 'Logging in...' : 'Login'}
+            {isLoading ? "Logging in..." : "Login"}
           </Button>
         </div>
       )}
 
-      {authType === 'register' && (
+      {authType === "register" && (
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Wallet Address</label>
             <div className="relative">
               <Wallet className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="0x..."
+                placeholder="G..."
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 className="pl-10"
@@ -311,7 +328,7 @@ export function WalletLoginForm({
               <Button
                 type="button"
                 variant="outline"
-                onClick={generateMockSignature}
+                onClick={handleSignMessage}
               >
                 <Key className="h-4 w-4" />
               </Button>
@@ -324,7 +341,7 @@ export function WalletLoginForm({
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                className="flex min-h-[80px] w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex min-h-20 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 placeholder="Message to sign..."
               />
               <Button
@@ -332,7 +349,7 @@ export function WalletLoginForm({
                 variant="outline"
                 size="sm"
                 className="absolute top-2 right-2"
-                onClick={generateSignMessage}
+                onClick={() => generateSignMessage()}
               >
                 Generate
               </Button>
@@ -342,10 +359,10 @@ export function WalletLoginForm({
           <Button
             onClick={handleRegister}
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
+            className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
           >
             <Wallet className="w-4 h-4 mr-2" />
-            {isLoading ? 'Creating account...' : 'Create Account'}
+            {isLoading ? "Creating account..." : "Create Account"}
           </Button>
         </div>
       )}

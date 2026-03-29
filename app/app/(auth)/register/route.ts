@@ -22,6 +22,15 @@ async function verifyWalletSignature (
   return signature.length > 10; // Simple validation for demo
 }
 
+/**
+ * Handles user registration with wallet signature.
+ * 
+ * @deprecated This endpoint is legacy. For new implementations, use Auth.js 
+ * or the Auth.js signin endpoint directly (POST /api/auth/signin).
+ * 
+ * @param request - The incoming Request object
+ * @returns A NextResponse confirming successful registration and setting session cookie
+ */
 export async function POST (request: Request) {
   try {
     const body = await request.json();
@@ -101,6 +110,11 @@ export async function POST (request: Request) {
         joinDate: user.createdAt,
       },
       token,
+    }, {
+      headers: {
+        // RFC 299: Miscellaneous persistent warning
+        "Warning": '299 - "Deprecated: This endpoint is legacy. Use Auth.js signIn instead."',
+      },
     });
 
     // Set secure cookie

@@ -1,7 +1,9 @@
 import { apiError, apiSuccess } from "@/lib/api-response";
+
+import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { NextRequest } from "next/server";
+import { readJsonBody } from "@/lib/parse-json-body";
 
 const GET = async (
     request: NextRequest,
@@ -12,7 +14,7 @@ const GET = async (
         const post = await prisma.post.findUnique({
             where: { id },
             include: {
-                creator: {
+                user: {
                     select: {
                         id: true,
                         name: true,
@@ -24,6 +26,30 @@ const GET = async (
                         entries: true,
                         interactions: true,
                     },
+                },
+                entries: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                avatarUrl: true,
+                                username: true,
+                            }
+                        }
+                    }
+                },
+                winners: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                avatarUrl: true,
+                                username: true,
+                            }
+                        }
+                    }
                 },
             },
         });
@@ -47,7 +73,9 @@ const PATCH = async (
         if (!user) return apiError('Unauthorized', 401);
 
         const { id } = await params;
-        const body = await request.json();
+        const raw = await readJsonBody<Record<string, unknown>>(request);
+        if (!raw.ok) return raw.response;
+        const body = raw.data;
 
         const post = await prisma.post.findUnique({
             where: { id },
@@ -62,20 +90,24 @@ const PATCH = async (
             return apiError('Post not found', 404);
         }
 
-        if (post.creatorId !== user.id) {
+        if (post.userId !== user.id) {
             return apiError('Forbidden', 403);
         }
 
-        if (post._count.entries > 0) {
-            return apiError('Cannot edit post with entries', 400);
+        const isOnlyStatusUpdate = body.status !== undefined && Object.keys(body).every(k => k === 'status');
+
+        if (post._count.entries > 0 && !isOnlyStatusUpdate) {
+            return apiError('Cannot edit post details with entries', 400);
         }
+
+        const updateData: any = {};
+        if (body.title !== undefined) updateData.title = body.title;
+        if (body.description !== undefined) updateData.description = body.description;
+        if (body.status !== undefined) updateData.status = body.status;
 
         const updatedPost = await prisma.post.update({
             where: { id },
-            data: {
-                title: body.title,
-                description: body.description,
-            },
+            data: updateData,
         });
 
         return apiSuccess(updatedPost);
@@ -107,7 +139,7 @@ const DELETE = async (
             return apiError('Post not found', 404);
         }
 
-        if (post.creatorId !== user.id) {
+        if (post.userId !== user.id) {
             return apiError('Forbidden', 403);
         }
 
