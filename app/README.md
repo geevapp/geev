@@ -1,3 +1,31 @@
+## Notification System
+
+This app now includes a notification system for key user events:
+
+- Someone enters your giveaway (post owner notified)
+- You win a giveaway (winner notified) *(to be enabled when winner selection logic is implemented)*
+- Someone contributes to your help request *(to be enabled when help contribution logic is implemented)*
+- A post you follow is closed *(to be enabled when post close logic is implemented)*
+- You receive a new badge or rank up *(to be enabled when badge/rank logic is implemented)*
+
+**API Endpoints:**
+- `GET /api/notifications` (paginated, filter by isRead)
+- `PATCH /api/notifications/[id]/read`
+
+**Frontend:**
+- Unread notification badge in Navbar
+- `/notifications` page to view all notifications
+
+**How to add new triggers:**
+Use the `createNotification` utility in `lib/notifications.ts` in any backend handler to send a notification for new events.
+
+**Migration:**
+If you have DB access, run:
+```bash
+npx prisma migrate dev --name add_notification_model
+```
+If you do not have DB access, a maintainer should run the above command after merging this PR.
+
 # Geev App (Next.js)
 
 Geev is a decentralized social platform built on the Stellar blockchain that enables users to create giveaways, post help requests, and participate in community-driven mutual aid.

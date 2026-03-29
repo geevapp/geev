@@ -9,6 +9,7 @@ import { AchievementsDialog } from '@/components/achievements-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { FollowListDialog } from '@/components/follow-list-dialog';
 import { PostCard } from '@/components/post-card';
 import { UserRankBadge } from '@/components/user-rank-badge';
 import { useAppContext } from '@/contexts/app-context';
@@ -21,6 +22,13 @@ export default function ProfilePage() {
   const [profileUser, setProfileUser] = useState<any>(null);
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [showFollowList, setShowFollowList] = useState<{ open: boolean; type: 'followers' | 'following' }>({
+    open: false,
+    type: 'followers',
+  });
 
   const userId = params.userId as string;
   //const profileUser = users.find((u) => u.id === userId);
@@ -41,6 +49,9 @@ export default function ProfilePage() {
         if (userRes.ok) {
           const userData = await userRes.json();
           setProfileUser(userData.data);
+          setIsFollowing(!!userData.data.isFollowing);
+          setFollowerCount(userData.data._count?.followers || 0);
+          setFollowingCount(userData.data._count?.followings || 0);
         }
 
         if (postsRes.ok) {
@@ -55,14 +66,23 @@ export default function ProfilePage() {
     if (userId) loadProfile();
   }, [userId]);
 
+  const handleFollowToggle = async () => {
+    if (!currentUser) return;
 
+    const newIsFollowing = !isFollowing;
+    setIsFollowing(newIsFollowing);
+    setFollowerCount((prev) => (newIsFollowing ? prev + 1 : prev - 1));
 
-
-
-
-
-
-  if (!profileUser) {
+    try {
+      const method = newIsFollowing ? 'POST' : 'DELETE';
+      const res = await fetch(`/api/users/${userId}/follow`, { method });
+      if (!res.ok) throw new Error('Failed to toggle follow status');
+    } catch (error) {
+      console.error(error);
+      setIsFollowing(!newIsFollowing);
+      setFollowerCount((prev) => (newIsFollowing ? prev - 1 : prev + 1));
+    }
+  };  if (!profileUser) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -92,7 +112,7 @@ export default function ProfilePage() {
                   <AvatarFallback className="text-2xl font-bold">
                     {profileUser.name
                       .split(' ')
-                      .map((n) => n[0])
+                      .map((n: string) => n[0])
                       .join('')}
                   </AvatarFallback>
                 </Avatar>
@@ -132,17 +152,23 @@ export default function ProfilePage() {
               </p>
 
               <div className="flex justify-center gap-8 text-sm">
-                <button className="flex flex-col items-center hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                <button
+                  onClick={() => setShowFollowList({ open: true, type: 'followers' })}
+                  className="flex flex-col items-center hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                >
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                    {profileUser._count?.followers || 0}
+                    {followerCount}
                   </span>
                   <span className="text-gray-600 dark:text-gray-400">
                     Followers
                   </span>
                 </button>
-                <button className="flex flex-col items-center hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                <button
+                  onClick={() => setShowFollowList({ open: true, type: 'following' })}
+                  className="flex flex-col items-center hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                >
                   <span className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                    {profileUser._count?.followings || 0}
+                    {followingCount}
                   </span>
                   <span className="text-gray-600 dark:text-gray-400">
                     Following
@@ -188,7 +214,15 @@ export default function ProfilePage() {
               </div>
 
               {/* Follow Button for Other Users */}
-              {!isOwnProfile && <Button className="mt-2">Follow</Button>}
+              {!isOwnProfile && (
+                <Button 
+                  className="mt-2" 
+                  variant={isFollowing ? "outline" : "default"}
+                  onClick={handleFollowToggle}
+                >
+                  {isFollowing ? 'Unfollow' : 'Follow'}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -242,6 +276,13 @@ export default function ProfilePage() {
         onOpenChange={setShowAchievements}
         badges={profileUser.badges}
         userName={profileUser.name}
+      />
+
+      <FollowListDialog
+        open={showFollowList.open}
+        onOpenChange={(open) => setShowFollowList((prev) => ({ ...prev, open }))}
+        userId={userId}
+        type={showFollowList.type}
       />
     </div>
   );

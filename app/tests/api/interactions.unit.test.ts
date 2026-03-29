@@ -3,20 +3,42 @@ import { POST as likePost, DELETE as unlikePost } from '@/app/api/posts/[id]/lik
 import { POST as burnPost, DELETE as unburnPost } from '@/app/api/posts/[id]/burn/route';
 import { GET as getStats } from '@/app/api/posts/[id]/stats/route';
 
+const mockAwardXp = vi.hoisted(() => vi.fn());
+
 // Mock dependencies
-const mockPrisma = vi.hoisted(() => ({
-  interaction: {
-    upsert: vi.fn(),
-    count: vi.fn(),
-    deleteMany: vi.fn(),
-  },
-  entry: {
-    count: vi.fn(),
-  }
-}));
+const mockPrisma = vi.hoisted(() => {
+  const prisma = {
+    $transaction: vi.fn(),
+    interaction: {
+      upsert: vi.fn(),
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+    },
+    entry: {
+      count: vi.fn(),
+    },
+    post: {
+      findUnique: vi.fn(),
+    },
+  };
+
+  prisma.$transaction.mockImplementation(async (callback: any) => callback(prisma));
+
+  return prisma;
+});
 
 vi.mock('@/lib/prisma', () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock('@/lib/xp', () => ({
+  awardXp: mockAwardXp,
+  XP_REWARDS: {
+    createGiveawayPost: 50,
+    createHelpRequest: 20,
+    enterGiveaway: 10,
+    receiveTenLikes: 25,
+  },
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -38,10 +60,22 @@ describe('Interactions API (Unit)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (getCurrentUser as any).mockResolvedValue(mockUser);
+    mockAwardXp.mockResolvedValue({
+      awarded: true,
+      amount: 25,
+      reason: 'post_received_10_likes',
+      xp: 25,
+      rankId: 'newcomer',
+    });
+    mockPrisma.$transaction.mockImplementation(async (callback: any) => callback(mockPrisma));
   });
 
   describe('Like API', () => {
     it('should like a post', async () => {
+      mockPrisma.post.findUnique.mockResolvedValue({
+        id: postId,
+        userId: 'author-1',
+      });
       mockPrisma.interaction.upsert.mockResolvedValue({});
       mockPrisma.interaction.count.mockResolvedValue(10);
 
@@ -69,6 +103,15 @@ describe('Interactions API (Unit)', () => {
           type: 'like',
         },
       });
+      expect(mockAwardXp).toHaveBeenCalledWith(
+        'author-1',
+        25,
+        'post_received_10_likes',
+        expect.objectContaining({
+          dedupeKey: `post_10_likes:${postId}`,
+        }),
+        expect.anything(),
+      );
     });
 
     it('should return 401 if not authorized', async () => {
@@ -76,6 +119,15 @@ describe('Interactions API (Unit)', () => {
       const request = createRequest('POST');
       const response = await likePost(request as any, { params });
       expect(response.status).toBe(401);
+    });
+
+    it('should return 404 when liking a missing post', async () => {
+      mockPrisma.post.findUnique.mockResolvedValue(null);
+
+      const request = createRequest('POST');
+      const response = await likePost(request as any, { params });
+
+      expect(response.status).toBe(404);
     });
 
     it('should unlike a post', async () => {

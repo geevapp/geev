@@ -45,9 +45,7 @@ export async function GET (
         xp: user.xp || 0,
       });
     } catch (dbError) {
-      console.log('Database not available, falling back to mock data');
-      // Fallback stats calculation
-      return apiError('Database not available', 500);
+      return apiError('Failed to fetch stats', 500);
     }
 
   } catch (error) {
