@@ -200,6 +200,15 @@ export const authConfig = {
 
           // If user doesn't exist and this is a registration attempt, create user
           if (!user && username) {
+            // Check if username is already taken
+            const existingUsername = await prisma.user.findUnique({
+              where: { username },
+            });
+
+            if (existingUsername) {
+              throw new Error("Username already taken");
+            }
+
             user = await prisma.user.create({
               data: {
                 walletAddress,
