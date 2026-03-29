@@ -18,7 +18,7 @@ vi.mock('@/lib/prisma', () => ({
   prisma: { user: mockPrismaUser },
 }));
 
-import { GET } from '@/app/api/auth/me/route';
+import { GET } from '@/app/(auth)/me/route';
 
 describe('GET /api/auth/me', () => {
   beforeEach(() => {
