@@ -37,22 +37,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install dependencies
-        run: |
-          if [ -e yarn.lock ]; then
-            yarn install --no-frozen-lockfile
-          elif [ -e pnpm-lock.yaml ]; then
-            pnpm install --no-frozen-lockfile
-          elif [ -e package-lock.json ]; then
-            npm ci
-          else
-            npm i
-          fi
+        run: pnpm install --no-frozen-lockfile
 
       - name: Generate Prisma Client
         run: |
