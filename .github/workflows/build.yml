@@ -2,12 +2,16 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
   build:
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/geev_test
+      JWT_SECRET: test-secret-key
+      NODE_ENV: test
     runs-on: ubuntu-latest
 
     defaults:
@@ -20,7 +24,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: geev_build
+          POSTGRES_DB: geev_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -29,72 +33,58 @@ jobs:
         ports:
           - 5432:5432
 
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/geev_build
-      JWT_SECRET: build-secret-key-for-ci
-      NODE_ENV: production
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
-
-      - name: Create .env file for CI
-        run: |
-          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/geev_build" > .env
-          echo "JWT_SECRET=build-secret-key-for-ci" >> .env
-          echo "NODE_ENV=production" >> .env
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: npm ci
 
       - name: Generate Prisma Client
         run: npx prisma generate
 
       - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/geev_test
         run: npx prisma migrate deploy
 
       - name: Seed database with badges
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/geev_test
         run: npx prisma db seed
 
-      - name: Lint codebase
-        run: pnpm run lint
+      - name: Run ESLint
+        run: npm run lint
 
-      - name: Build application
-        run: pnpm run build
+      - name: Build Next.js application
+        run: npm run build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
-          name: geev-app-build
+          name: build-files
           path: app/.next
-          retention-days: 7
+          retention-days: 1
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+    if: github.ref == 'refs/heads/main'
+
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: geev-app-build
+          name: build-files
           path: app/.next
 
       - name: Deploy to production
         run: |
-          echo "Configure your deployment script here"
-          echo "For Vercel: vercel --prod"
-          echo "For Netlify: netlify deploy --prod"
-          echo "For AWS/Railway/Render: Add your deployment commands"
-        working-directory: app
+          echo "Deployment step would go here"
+          echo "Configure for your deployment target (Vercel, Netlify, AWS, etc.)"
