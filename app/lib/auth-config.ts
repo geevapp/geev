@@ -44,14 +44,43 @@ async function verifyWalletSignature (
   message: string
 ): Promise<boolean> {
   try {
+    // Step 1: Verify cryptography
     const keypair = Keypair.fromPublicKey(walletAddress);
     // Freighter returns base64 string for signMessage, so we parse it into Buffer to verify
-    return keypair.verify(Buffer.from(message), Buffer.from(signature, "base64"));
+    const isValidSignature = keypair.verify(Buffer.from(message), Buffer.from(signature, "base64"));
+    
+    if (!isValidSignature) return false;
+
+    // Step 2: Verify and consume nonce to prevent replay attacks
+    const nonceMatch = message.match(/Nonce: ([a-f0-9]+)/);
+    if (!nonceMatch) {
+      console.error("No nonce found in message");
+      return false;
+    }
+
+    const nonce = nonceMatch[1];
+    const authNonce = await prisma.authNonce.findUnique({
+      where: { nonce },
+    });
+
+    if (!authNonce || authNonce.used || authNonce.expiresAt < new Date()) {
+      console.error("Invalid, used, or expired nonce");
+      return false;
+    }
+
+    // Consume the nonce
+    await prisma.authNonce.update({
+      where: { nonce },
+      data: { used: true },
+    });
+
+    return true;
   } catch (error) {
     console.error("Invalid signature or verification failed:", error);
     return false;
   }
 }
+
 
 /**
  * SEP-10 transaction verification with replay attack prevention
@@ -116,7 +145,7 @@ export const authConfig = {
         // Parse credentials with support for both legacy and SEP-10 authentication
         const parsedCredentials = z
           .object({
-            walletAddress: z.string().min(1),
+            walletAddress: z.string().regex(/^G[A-Z2-7]{55}$/, "Invalid Stellar address (must start with G and be 56 characters long)"),
             // Legacy authentication fields
             signature: z.string().optional().nullable(),
             message: z.string().optional().nullable(),
@@ -233,6 +262,6 @@ export const authConfig = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  secret: process.env.NEXTAUTH_SECRET || "your-secret-key-change-in-production",
+  secret: process.env.NEXTAUTH_SECRET,
   trustHost: true,
 } satisfies NextAuthConfig;

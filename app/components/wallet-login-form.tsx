@@ -57,7 +57,7 @@ export function WalletLoginForm({
         return;
       }
 
-      const msg = message || generateSignMessage();
+      const msg = message || await generateSignMessage();
       
       let signedMsg;
       try {
@@ -85,13 +85,27 @@ export function WalletLoginForm({
     }
   };
 
-  // Generate sign message
-  const generateSignMessage = () => {
-    const timestamp = new Date().toISOString();
-    const msg = `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nTimestamp: ${timestamp}`;
-    setMessage(msg);
-    return msg;
+  // Fetch a server-issued nonce
+  const generateSignMessage = async () => {
+    if (!walletAddress) {
+      showToast("Please enter your wallet address first", "error");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/nonce");
+      if (!response.ok) throw new Error("Failed to fetch nonce");
+      
+      const { nonce } = await response.json();
+      const msg = `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nNonce: ${nonce}`;
+      setMessage(msg);
+      return msg;
+    } catch (error) {
+      console.error("Error generating nonce:", error);
+      showToast("Could not generate a secure nonce. Please try again.", "error");
+    }
   };
+
 
   const handleLogin = async () => {
     if (!walletAddress || !signature || !message) {
@@ -201,7 +215,7 @@ export function WalletLoginForm({
             <div className="relative">
               <Wallet className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="0x..."
+                placeholder="G..."
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 className="pl-10"
@@ -242,7 +256,7 @@ export function WalletLoginForm({
                 variant="outline"
                 size="sm"
                 className="absolute top-2 right-2"
-                onClick={generateSignMessage}
+                onClick={() => generateSignMessage()}
               >
                 Generate
               </Button>
@@ -267,7 +281,7 @@ export function WalletLoginForm({
             <div className="relative">
               <Wallet className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="0x..."
+                placeholder="G..."
                 value={walletAddress}
                 onChange={(e) => setWalletAddress(e.target.value)}
                 className="pl-10"
@@ -335,7 +349,7 @@ export function WalletLoginForm({
                 variant="outline"
                 size="sm"
                 className="absolute top-2 right-2"
-                onClick={generateSignMessage}
+                onClick={() => generateSignMessage()}
               >
                 Generate
               </Button>
