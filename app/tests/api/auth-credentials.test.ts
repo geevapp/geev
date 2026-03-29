@@ -43,7 +43,7 @@ describe('Auth Credentials Provider (authorize)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFromPublicKey.mockReturnValue({ verify: mockVerify });
-    authorize = (authConfig.providers[0] as any).authorize;
+    authorize = (authConfig.providers[0] as any).options.authorize;
   });
 
   // ────────────────────────────────────────────────────────────
