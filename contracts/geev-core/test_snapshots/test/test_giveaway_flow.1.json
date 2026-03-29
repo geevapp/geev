@@ -1,7 +1,8 @@
 {
   "generators": {
     "address": 6,
-    "nonce": 0
+    "nonce": 0,
+    "mux_id": 0
   },
   "auth": [
     [],
@@ -37,10 +38,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                 },
                 {
-                  "i128": {
-                    "hi": 0,
-                    "lo": 1000
-                  }
+                  "i128": "1000"
                 }
               ]
             }
@@ -66,16 +64,13 @@
                   "address": "CBUSYNQKASUYFWYC3M2GUEDMX4AIVWPALDBYJPNK6554BREHTGZ2IUNF"
                 },
                 {
-                  "i128": {
-                    "hi": 0,
-                    "lo": 500
-                  }
+                  "i128": "500"
                 },
                 {
                   "string": "Test Giveaway"
                 },
                 {
-                  "u64": 60
+                  "u64": "60"
                 }
               ]
             }
@@ -94,10 +89,7 @@
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM"
                     },
                     {
-                      "i128": {
-                        "hi": 0,
-                        "lo": 500
-                      }
+                      "i128": "500"
                     }
                   ]
                 }
@@ -123,7 +115,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
                 },
                 {
-                  "u64": 1
+                  "u64": "1"
                 }
               ]
             }
@@ -145,7 +137,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
                 },
                 {
-                  "u64": 1
+                  "u64": "1"
                 }
               ]
             }
@@ -157,7 +149,7 @@
     []
   ],
   "ledger": {
-    "protocol_version": 22,
+    "protocol_version": 23,
     "sequence_number": 0,
     "timestamp": 100,
     "network_id": "0000000000000000000000000000000000000000000000000000000000000000",
@@ -178,8 +170,8 @@
             "data": {
               "account": {
                 "account_id": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGO6V",
-                "balance": 0,
-                "seq_num": 0,
+                "balance": "0",
+                "seq_num": "0",
                 "num_sub_entries": 0,
                 "inflation_dest": null,
                 "flags": 0,
@@ -200,7 +192,7 @@
             "contract": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGO6V",
             "key": {
               "ledger_key_nonce": {
-                "nonce": 801925984706572462
+                "nonce": "801925984706572462"
               }
             },
             "durability": "temporary"
@@ -215,7 +207,7 @@
                 "contract": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGO6V",
                 "key": {
                   "ledger_key_nonce": {
-                    "nonce": 801925984706572462
+                    "nonce": "801925984706572462"
                   }
                 },
                 "durability": "temporary",
@@ -237,7 +229,7 @@
                   "symbol": "Giveaway"
                 },
                 {
-                  "u64": 1
+                  "u64": "1"
                 }
               ]
             },
@@ -257,7 +249,7 @@
                       "symbol": "Giveaway"
                     },
                     {
-                      "u64": 1
+                      "u64": "1"
                     }
                   ]
                 },
@@ -269,10 +261,7 @@
                         "symbol": "amount"
                       },
                       "val": {
-                        "i128": {
-                          "hi": 0,
-                          "lo": 500
-                        }
+                        "i128": "500"
                       }
                     },
                     {
@@ -288,7 +277,7 @@
                         "symbol": "end_time"
                       },
                       "val": {
-                        "u64": 60
+                        "u64": "60"
                       }
                     },
                     {
@@ -296,7 +285,7 @@
                         "symbol": "id"
                       },
                       "val": {
-                        "u64": 1
+                        "u64": "1"
                       }
                     },
                     {
@@ -358,7 +347,7 @@
                   "symbol": "HasEntered"
                 },
                 {
-                  "u64": 1
+                  "u64": "1"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
@@ -381,7 +370,7 @@
                       "symbol": "HasEntered"
                     },
                     {
-                      "u64": 1
+                      "u64": "1"
                     },
                     {
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM"
@@ -409,7 +398,7 @@
                   "symbol": "HasEntered"
                 },
                 {
-                  "u64": 1
+                  "u64": "1"
                 },
                 {
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
@@ -432,7 +421,7 @@
                       "symbol": "HasEntered"
                     },
                     {
-                      "u64": 1
+                      "u64": "1"
                     },
                     {
                       "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4"
@@ -460,7 +449,7 @@
                   "symbol": "ParticipantIndex"
                 },
                 {
-                  "u64": 1
+                  "u64": "1"
                 },
                 {
                   "u32": 0
@@ -483,7 +472,7 @@
                       "symbol": "ParticipantIndex"
                     },
                     {
-                      "u64": 1
+                      "u64": "1"
                     },
                     {
                       "u32": 0
@@ -511,7 +500,7 @@
                   "symbol": "ParticipantIndex"
                 },
                 {
-                  "u64": 1
+                  "u64": "1"
                 },
                 {
                   "u32": 1
@@ -534,7 +523,7 @@
                       "symbol": "ParticipantIndex"
                     },
                     {
-                      "u64": 1
+                      "u64": "1"
                     },
                     {
                       "u32": 1
@@ -599,7 +588,7 @@
                           ]
                         },
                         "val": {
-                          "u64": 1
+                          "u64": "1"
                         }
                       }
                     ]
@@ -618,7 +607,7 @@
             "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
             "key": {
               "ledger_key_nonce": {
-                "nonce": 5541220902715666415
+                "nonce": "5541220902715666415"
               }
             },
             "durability": "temporary"
@@ -633,7 +622,7 @@
                 "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
                 "key": {
                   "ledger_key_nonce": {
-                    "nonce": 5541220902715666415
+                    "nonce": "5541220902715666415"
                   }
                 },
                 "durability": "temporary",
@@ -651,7 +640,7 @@
             "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
             "key": {
               "ledger_key_nonce": {
-                "nonce": 1033654523790656264
+                "nonce": "1033654523790656264"
               }
             },
             "durability": "temporary"
@@ -666,7 +655,7 @@
                 "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4",
                 "key": {
                   "ledger_key_nonce": {
-                    "nonce": 1033654523790656264
+                    "nonce": "1033654523790656264"
                   }
                 },
                 "durability": "temporary",
@@ -684,7 +673,7 @@
             "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM",
             "key": {
               "ledger_key_nonce": {
-                "nonce": 4837995959683129791
+                "nonce": "4837995959683129791"
               }
             },
             "durability": "temporary"
@@ -699,7 +688,7 @@
                 "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM",
                 "key": {
                   "ledger_key_nonce": {
-                    "nonce": 4837995959683129791
+                    "nonce": "4837995959683129791"
                   }
                 },
                 "durability": "temporary",
@@ -717,7 +706,7 @@
             "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4",
             "key": {
               "ledger_key_nonce": {
-                "nonce": 2032731177588607455
+                "nonce": "2032731177588607455"
               }
             },
             "durability": "temporary"
@@ -732,7 +721,7 @@
                 "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMDR4",
                 "key": {
                   "ledger_key_nonce": {
-                    "nonce": 2032731177588607455
+                    "nonce": "2032731177588607455"
                   }
                 },
                 "durability": "temporary",
@@ -786,10 +775,7 @@
                         "symbol": "amount"
                       },
                       "val": {
-                        "i128": {
-                          "hi": 0,
-                          "lo": 500
-                        }
+                        "i128": "500"
                       }
                     },
                     {
@@ -859,10 +845,7 @@
                         "symbol": "amount"
                       },
                       "val": {
-                        "i128": {
-                          "hi": 0,
-                          "lo": 500
-                        }
+                        "i128": "500"
                       }
                     },
                     {

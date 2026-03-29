@@ -1,16 +1,27 @@
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import tseslint from "typescript-eslint";
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-];
-
-export default eslintConfig;
+/** Scoped `no-console` for `components/` and App Router (GH #242). */
+export default tseslint.config(
+  {
+    ignores: [".next/**", "node_modules/**", "coverage/**"],
+  },
+  {
+    files: ["components/**/*.{ts,tsx}", "app/**/*.{ts,tsx}"],
+    ignores: ["app/api/**/test.ts"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: __dirname,
+      },
+    },
+    rules: {
+      "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+    },
+  },
+);

@@ -1,78 +1,42 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const secretKey = process.env.NEXTAUTH_SECRET || "your-secret-key-change-in-production";
-const key = new TextEncoder().encode(secretKey);
+const secret = new TextEncoder().encode(
+  process.env.NEXTAUTH_SECRET || "your-secret-key-change-in-production",
+);
 
-export interface UserJwtPayload {
-  jti: string;
-  iat: number;
-  exp: number;
+export interface JWTPayload {
   userId: string;
   walletAddress: string;
   username: string;
+  jti?: string;
+  iat?: number;
+  exp?: number;
 }
 
-/**
- * Create a new JWT token
- */
-export async function createToken (payload: {
+export async function createToken(payload: {
   userId: string;
   walletAddress: string;
   username: string;
 }): Promise<string> {
   const token = await new SignJWT({
-    ...payload,
-    jti: Math.random().toString(36).substring(2, 15),
+    userId: payload.userId,
+    walletAddress: payload.walletAddress,
+    username: payload.username,
   })
     .setProtectedHeader({ alg: "HS256" })
+    .setJti(crypto.randomUUID())
     .setIssuedAt()
     .setExpirationTime("30d")
-    .sign(key);
+    .sign(secret);
 
   return token;
 }
 
-/**
- * Verify and decode a JWT token
- */
-export async function verifyToken (token: string): Promise<UserJwtPayload> {
+export async function verifyToken(token: string): Promise<JWTPayload> {
   try {
-    const verified = await jwtVerify(token, key, {
-      algorithms: ["HS256"],
-    });
-
-    // Type assertion with validation
-    const payload: any = verified.payload;
-
-    if (!payload.userId || !payload.walletAddress || !payload.username) {
-      throw new Error("Invalid token payload");
-    }
-
-    return {
-      jti: payload.jti,
-      iat: payload.iat,
-      exp: payload.exp,
-      userId: payload.userId,
-      walletAddress: payload.walletAddress,
-      username: payload.username,
-    };
-  } catch (error) {
+    const { payload } = await jwtVerify(token, secret);
+    return payload as unknown as JWTPayload;
+  } catch {
     throw new Error("Invalid token");
   }
-}
-
-/**
- * Get token from request cookies
- */
-export function getTokenFromRequest (request: Request): string | null {
-  const cookieHeader = request.headers.get("cookie");
-  if (!cookieHeader) return null;
-
-  const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-    const [name, value] = cookie.trim().split("=");
-    acc[name] = value;
-    return acc;
-  }, {} as Record<string, string>);
-
-  return cookies["auth-token"] || cookies["authjs.session-token"] || null;
 }

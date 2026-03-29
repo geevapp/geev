@@ -41,8 +41,7 @@ export async function GET(
       return apiSuccess(userEntries);
 
     } catch (dbError) {
-      console.log('Database not available');
-      return apiError('Database not available', 500);
+      return apiError('Failed to fetch user entries', 500);
     }
 
   } catch (error) {

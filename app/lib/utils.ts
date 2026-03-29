@@ -26,10 +26,11 @@ export function isPostExpired (endDate: Date): boolean {
  * Converts Sets to Arrays for JSON serialization
  */
 export const serializeState = (state: AppState): string => {
-  const { user, ...stateWithoutUser } = state;
+  // Exclude user (re-fetched from session) and posts (re-fetched from API)
+  const { user: _user, posts: _posts, ...stateWithoutRemoteData } = state;
 
   const serializable = {
-    ...stateWithoutUser,
+    ...stateWithoutRemoteData,
     likes: Array.from(state.likes),
     burns: Array.from(state.burns),
   };
@@ -43,10 +44,11 @@ export const serializeState = (state: AppState): string => {
 export const deserializeState = (stored: string): Partial<AppState> | null => {
   try {
     const parsed = JSON.parse(stored);
+    const { users: _legacyUsers, ...rest } = parsed;
     return {
-      ...parsed,
-      likes: new Set<string>(parsed.likes || []),
-      burns: new Set<string>(parsed.burns || []),
+      ...rest,
+      likes: new Set<string>(rest.likes || []),
+      burns: new Set<string>(rest.burns || []),
     };
   } catch (error) {
     console.error("Failed to deserialize app state:", error);

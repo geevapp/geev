@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   ExternalLink,
   Flame,
@@ -8,18 +8,18 @@ import {
   Send,
   Trophy,
   Users,
-} from "lucide-react";
-import type { Post, Reply } from "@/lib/types";
+} from 'lucide-react';
+import type { Post, Reply } from '@/lib/types';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import type React from "react";
-import { Textarea } from "@/components/ui/textarea";
-import { UserRankBadge } from "@/components/user-rank-badge";
-import { useAppContext } from "@/contexts/app-context";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import type React from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import { UserRankBadge } from '@/components/user-rank-badge';
+import { useAppContext } from '@/contexts/app-context';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 interface CommentsSectionProps {
   post: Post;
@@ -29,7 +29,7 @@ interface CommentsSectionProps {
 
 interface ReplyFormProps {
   parentId: string;
-  parentType: "entry" | "contribution";
+  parentType: 'entry' | 'contribution';
   onSubmit: (content: string) => void;
   onCancel: () => void;
 }
@@ -40,14 +40,14 @@ function ReplyForm({
   onSubmit,
   onCancel,
 }: ReplyFormProps) {
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState('');
   const { user } = useAppContext();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (content.trim()) {
       onSubmit(content.trim());
-      setContent("");
+      setContent('');
     }
   };
 
@@ -58,14 +58,14 @@ function ReplyForm({
       <div className="flex gap-2">
         <Avatar className="w-6 h-6">
           <AvatarImage
-            src={user.avatar || "/placeholder.svg"}
+            src={user.avatarUrl || '/placeholder.svg'}
             alt={user.name}
           />
           <AvatarFallback className="text-xs">
             {user.name
-              .split(" ")
+              .split(' ')
               .map((n) => n[0])
-              .join("")}
+              .join('')}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1">
@@ -102,7 +102,7 @@ function ReplyItem({ reply }: ReplyItemProps) {
 
   const handleBurn = () => {
     if (!user) {
-      router.push("/login");
+      router.push('/login');
       return;
     }
     if (!isBurned) {
@@ -115,14 +115,14 @@ function ReplyItem({ reply }: ReplyItemProps) {
       <Link href={`/profile/${reply.user.id}`}>
         <Avatar className="w-6 h-6 cursor-pointer hover:opacity-80 transition-opacity">
           <AvatarImage
-            src={reply.user.avatar || "/placeholder.svg"}
+            src={reply.user.avatarUrl || '/placeholder.svg'}
             alt={reply.user.name}
           />
           <AvatarFallback className="text-xs">
             {reply.user.name
-              .split(" ")
+              .split(' ')
               .map((n) => n[0])
-              .join("")}
+              .join('')}
           </AvatarFallback>
         </Avatar>
       </Link>
@@ -149,12 +149,12 @@ function ReplyItem({ reply }: ReplyItemProps) {
             onClick={handleBurn}
             className={`h-5 px-1 text-xs transition-colors ${
               isBurned
-                ? "text-red-600 hover:text-red-700"
-                : "text-gray-500 hover:text-orange-500"
+                ? 'text-red-600 hover:text-red-700'
+                : 'text-gray-500 hover:text-orange-500'
             }`}
           >
             <Flame
-              className={`w-3 h-3 mr-1 ${isBurned ? "fill-current" : ""}`}
+              className={`w-3 h-3 mr-1 ${isBurned ? 'fill-current' : ''}`}
             />
             {reply.burnCount + (isBurned ? 1 : 0)}
           </Button>
@@ -172,7 +172,7 @@ export function CommentsSection({
   const { user, addReply } = useAppContext();
   const [replyingTo, setReplyingTo] = useState<{
     id: string;
-    type: "entry" | "contribution";
+    type: 'entry' | 'contribution';
   } | null>(null);
   const [burnedComments, setBurnedComments] = useState<Set<string>>(new Set());
   const router = useRouter();
@@ -180,13 +180,13 @@ export function CommentsSection({
   const allComments = [
     ...(post.entries || []).map((entry) => ({
       ...entry,
-      type: "entry" as const,
+      type: 'entry' as const,
       message: entry.content,
       createdAt: entry.submittedAt,
     })),
     ...(post.contributions || []).map((contribution) => ({
       ...contribution,
-      type: "contribution" as const,
+      type: 'contribution' as const,
       message: contribution.message || `Contributed $${contribution.amount}`,
       createdAt: contribution.contributedAt,
     })),
@@ -198,10 +198,10 @@ export function CommentsSection({
 
   const handleReply = (
     parentId: string,
-    parentType: "entry" | "contribution",
+    parentType: 'entry' | 'contribution',
   ) => {
     if (!user) {
-      router.push("/login");
+      router.push('/login');
       return;
     }
     setReplyingTo({ id: parentId, type: parentType });
@@ -221,7 +221,7 @@ export function CommentsSection({
 
   const handleBurnComment = (commentId: string) => {
     if (!user) {
-      router.push("/login");
+      router.push('/login');
       return;
     }
     if (!burnedComments.has(commentId)) {
@@ -235,7 +235,7 @@ export function CommentsSection({
         <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
           <Users className="w-4 h-4 text-gray-500" />
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {post.type === "giveaway" ? "Entries" : "Contributions"} (
+            {post.type === 'giveaway' ? 'Entries' : 'Contributions'} (
             {allComments.length})
           </span>
         </div>
@@ -244,7 +244,7 @@ export function CommentsSection({
       <div className="space-y-3">
         {displayComments.length === 0 ? (
           <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-            No {post.type === "giveaway" ? "entries" : "contributions"} yet
+            No {post.type === 'giveaway' ? 'entries' : 'contributions'} yet
           </div>
         ) : (
           displayComments.map((comment) => {
@@ -257,14 +257,14 @@ export function CommentsSection({
                   <Link href={`/profile/${comment.user.id}`}>
                     <Avatar className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity">
                       <AvatarImage
-                        src={comment.user.avatar || "/placeholder.svg"}
+                        src={comment.user.avatarUrl || '/placeholder.svg'}
                         alt={comment.user.name}
                       />
                       <AvatarFallback className="text-xs">
                         {comment.user.name
-                          .split(" ")
+                          .split(' ')
                           .map((n) => n[0])
-                          .join("")}
+                          .join('')}
                       </AvatarFallback>
                     </Avatar>
                   </Link>
@@ -280,8 +280,8 @@ export function CommentsSection({
                         rank={comment.user.rank}
                         showLevel={false}
                       />
-                      {comment.type === "entry" &&
-                        "isWinner" in comment &&
+                      {comment.type === 'entry' &&
+                        'isWinner' in comment &&
                         comment.isWinner && (
                           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs">
                             <Trophy className="w-3 h-3 mr-1" />
@@ -291,27 +291,27 @@ export function CommentsSection({
                       <span className="text-xs text-gray-500">
                         {comment.createdAt.toLocaleDateString()}
                       </span>
-                      {comment.type === "entry" && (
+                      {comment.type === 'entry' && (
                         <>
-                          {"proofImage" in comment && comment.proofImage && (
+                          {'proofImage' in comment && comment.proofImage && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-5 px-1 text-xs text-gray-500 hover:text-gray-700"
                               onClick={() =>
-                                window.open(comment.proofImage, "_blank")
+                                window.open(comment.proofImage, '_blank')
                               }
                             >
                               <ImageIcon className="w-3 h-3" />
                             </Button>
                           )}
-                          {"proofUrl" in comment && comment.proofUrl && (
+                          {'proofUrl' in comment && comment.proofUrl && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-5 px-1 text-xs text-gray-500 hover:text-gray-700"
                               onClick={() =>
-                                window.open(comment.proofUrl, "_blank")
+                                window.open(comment.proofUrl, '_blank')
                               }
                             >
                               <ExternalLink className="w-3 h-3" />
@@ -330,13 +330,13 @@ export function CommentsSection({
                         onClick={() => handleBurnComment(comment.id)}
                         className={`h-6 px-2 text-xs transition-colors ${
                           isBurned
-                            ? "text-red-600 hover:text-red-700"
-                            : "text-gray-500 hover:text-orange-500"
+                            ? 'text-red-600 hover:text-red-700'
+                            : 'text-gray-500 hover:text-orange-500'
                         }`}
                       >
                         <Flame
                           className={`w-3 h-3 mr-1 ${
-                            isBurned ? "fill-current" : ""
+                            isBurned ? 'fill-current' : ''
                           }`}
                         />
                         {Math.floor(Math.random() * 10) + (isBurned ? 1 : 0)}
@@ -385,8 +385,8 @@ export function CommentsSection({
               size="sm"
               className="text-xs text-gray-500 hover:text-gray-700"
             >
-              View all {allComments.length}{" "}
-              {post.type === "giveaway" ? "entries" : "contributions"}
+              View all {allComments.length}{' '}
+              {post.type === 'giveaway' ? 'entries' : 'contributions'}
             </Button>
           </Link>
         </div>

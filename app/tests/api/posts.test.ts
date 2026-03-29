@@ -1,34 +1,60 @@
-import { GET, POST } from '@/app/api/posts/route';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMockRequest, parseResponse } from '../helpers/api';
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockRequest, parseResponse } from "../helpers/api";
 
-import { createTestUser } from '../helpers/db';
-import { prisma } from '@/lib/prisma';
+import { createTestUser } from "../helpers/db";
+import { prisma } from "@/lib/prisma";
 
-describe('Posts API', () => {
+const mockAwardXp = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/xp", () => ({
+  awardXp: mockAwardXp,
+  XP_REWARDS: {
+    createGiveawayPost: 50,
+    createHelpRequest: 20,
+    enterGiveaway: 10,
+    receiveTenLikes: 25,
+  },
+}));
+
+import { GET, POST } from "@/app/api/posts/route";
+
+describe("Posts API", () => {
   let testUser: any;
 
   beforeEach(async () => {
     // Reset all mocks before each test
     vi.clearAllMocks();
+    mockAwardXp.mockResolvedValue({
+      awarded: true,
+      amount: 50,
+      reason: "giveaway_post_created",
+      xp: 50,
+      rankId: "newcomer",
+    });
+    prisma.$transaction = vi.fn(async (callback: any) =>
+      callback(prisma as any),
+    );
+    prisma.postRequirements.create = vi.fn().mockResolvedValue({
+      id: "requirements_123",
+      proofRequired: false,
+    });
 
     // Mock user creation for unit tests where DB is not available
-    if (process.env.MOCK_DB === 'true') {
+    if (process.env.MOCK_DB === "true") {
       testUser = {
-        id: 'user_123',
-        walletAddress: '0x123',
-        name: 'Test User',
-        bio: 'Test bio',
+        id: "user_123",
+        walletAddress: "0x123",
+        name: "Test User",
+        bio: "Test bio",
         xp: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
 
-      // Mock prisma.user.create
       prisma.user.create = vi.fn().mockResolvedValue(testUser);
-      // Mock prisma.post.findMany and count
       prisma.post.findMany = vi.fn().mockResolvedValue([]);
       prisma.post.count = vi.fn().mockResolvedValue(0);
+      prisma.post.findUnique = vi.fn().mockResolvedValue(null);
       // Mock prisma.post.create
       prisma.post.create = vi.fn().mockImplementation((args: any) => Promise.resolve({
         id: 'post_123',
@@ -42,12 +68,12 @@ describe('Posts API', () => {
     }
   });
 
-  describe('GET /api/posts', () => {
-    it('should return empty array when no posts exist', async () => {
+  describe("GET /api/posts", () => {
+    it("should return empty array when no posts exist", async () => {
       prisma.post.findMany = vi.fn().mockResolvedValue([]);
       prisma.post.count = vi.fn().mockResolvedValue(0);
 
-      const request = createMockRequest('http://localhost:3000/api/posts');
+      const request = createMockRequest("http://localhost:3000/api/posts");
       const response = await GET(request);
       const { status, data } = await parseResponse(response);
 
@@ -56,16 +82,16 @@ describe('Posts API', () => {
       expect(data.data.posts).toEqual([]);
     });
 
-    it('should return posts with pagination', async () => {
-      prisma.post.findMany = vi.fn().mockResolvedValue([{
-        id: 'post_123',
-        title: 'Test Post',
-        creator: testUser
-      }]);
+    it("should return posts with pagination", async () => {
+      prisma.post.findMany = vi
+        .fn()
+        .mockResolvedValue([
+          { id: "post_123", title: "Test Post", user: testUser },
+        ]);
       prisma.post.count = vi.fn().mockResolvedValue(1);
 
       const request = createMockRequest(
-        'http://localhost:3000/api/posts?page=1&limit=10',
+        "http://localhost:3000/api/posts?page=1&limit=10",
       );
       const response = await GET(request);
       const { status, data } = await parseResponse(response);
@@ -75,62 +101,159 @@ describe('Posts API', () => {
       expect(data.data.page).toBe(1);
       expect(data.data.limit).toBe(10);
     });
+
+    // ✅ NEW TEST: search query, category, sort
+    it("should handle search query, category filter, and sort", async () => {
+      const mockPosts = [
+        { id: "post_1", title: "Awesome Post", user: testUser },
+        { id: "post_2", title: "Another Post", user: testUser },
+      ];
+
+      prisma.post.findMany = vi.fn().mockResolvedValue(mockPosts);
+      prisma.post.count = vi.fn().mockResolvedValue(mockPosts.length);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?q=awesome&category=electronics&sort=popular",
+      );
+      const response = await GET(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.posts).toHaveLength(2);
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: expect.any(Array),
+            category: "electronics",
+          }),
+          orderBy: [{ likes: "desc" }, { entries: "desc" }],
+        }),
+      );
+    });
   });
 
-  describe('POST /api/posts', () => {
-    it('should create a new post', async () => {
+  describe("POST /api/posts", () => {
+    it("should create a new post", async () => {
       const postData = {
-        title: 'New Test Post',
+        title: "New Test Post",
         description:
-          'This is a test post description with enough characters to pass validation rules.',
-        category: 'electronics',
-        type: 'giveaway',
-        slug: 'new-test-post',
+          "This is a test post description with enough characters to pass validation rules.",
+        category: "electronics",
+        type: "giveaway",
+        slug: "new-test-post",
         winnerCount: 1,
         endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       };
 
       const mockCreatedPost = {
-        id: 'post_new_123',
+        id: "post_new_123",
         ...postData,
         endsAt: new Date(postData.endsAt),
         createdAt: new Date(),
         updatedAt: new Date(),
-        creator: testUser,
-        creatorId: testUser.id,
+        user: testUser,
+        userId: testUser.id,
       };
 
       prisma.post.create = vi.fn().mockResolvedValue(mockCreatedPost);
 
-      const request = createMockRequest('http://localhost:3000/api/posts', {
-        method: 'POST',
+      const request = createMockRequest("http://localhost:3000/api/posts", {
+        method: "POST",
         body: postData,
-        cookies: { session: 'mock-session-token' },
+        cookies: { session: "mock-session-token" },
       });
 
-      // Mock getCurrentUser to return the test user created in beforeEach
-      vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(testUser);
+      vi.spyOn(await import("@/lib/auth"), "getCurrentUser").mockResolvedValue(
+        testUser,
+      );
 
       const response = await POST(request);
       const { status, data } = await parseResponse(response);
 
       expect(status).toBe(201);
       expect(data.data.title).toBe(postData.title);
+      expect(mockAwardXp).toHaveBeenCalledWith(
+        testUser.id,
+        50,
+        "giveaway_post_created",
+        expect.objectContaining({
+          metadata: {
+            postId: mockCreatedPost.id,
+            postType: "giveaway",
+          },
+        }),
+        expect.anything(),
+      );
     });
 
-    it('should validate title length', async () => {
+    it("should award help-request XP when creating a request post", async () => {
       const postData = {
-        title: 'Short',
-        description: 'This is a test post description with enough characters.',
-        category: 'electronics',
-        type: 'giveaway',
+        title: "Need help with my laptop setup",
+        description:
+          "I need community support to replace a broken laptop and keep working on my projects this month.",
+        category: "services",
+        type: "request",
+        slug: "need-help-with-my-laptop-setup",
         endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       };
 
-      const request = createMockRequest('http://localhost:3000/api/posts', {
-        method: 'POST',
+      const mockCreatedPost = {
+        id: "post_request_123",
+        ...postData,
+        endsAt: new Date(postData.endsAt),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        user: testUser,
+        userId: testUser.id,
+      };
+
+      prisma.post.create = vi.fn().mockResolvedValue(mockCreatedPost);
+
+      const request = createMockRequest("http://localhost:3000/api/posts", {
+        method: "POST",
+        body: postData,
+        cookies: { session: "mock-session-token" },
+      });
+
+      vi.spyOn(await import("@/lib/auth"), "getCurrentUser").mockResolvedValue(
+        testUser,
+      );
+
+      const response = await POST(request);
+      const { status } = await parseResponse(response);
+
+      expect(status).toBe(201);
+      expect(mockAwardXp).toHaveBeenCalledWith(
+        testUser.id,
+        20,
+        "help_request_created",
+        expect.objectContaining({
+          metadata: {
+            postId: mockCreatedPost.id,
+            postType: "request",
+          },
+        }),
+        expect.anything(),
+      );
+    });
+
+    it("should validate title length", async () => {
+      const postData = {
+        title: "Short",
+        description: "This is a test post description with enough characters.",
+        category: "electronics",
+        type: "giveaway",
+        endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      };
+
+      const request = createMockRequest("http://localhost:3000/api/posts", {
+        method: "POST",
         body: postData,
       });
+
+      vi.spyOn(await import("@/lib/auth"), "getCurrentUser").mockResolvedValue(
+        testUser,
+      );
 
       const response = await POST(request);
       const { status } = await parseResponse(response);

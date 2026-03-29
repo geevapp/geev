@@ -23,7 +23,7 @@ export function TimelineFeed() {
     setShowRequestModal,
   } = useAppContext(); // Use context methods instead of dispatch
 
-  const handleCreatePost = (type: "giveaway" | "help-request") => {
+  const handleCreatePost = (type: "giveaway" | "request") => {
     if (type === "giveaway") {
       setShowGiveawayModal(true); // Use context method
     } else {
@@ -33,7 +33,7 @@ export function TimelineFeed() {
   };
 
   const giveaways = posts.filter((post) => post.type === "giveaway");
-  const helpRequests = posts.filter((post) => post.type === "help-request");
+  const helpRequests = posts.filter((post) => post.type === "request");
   const activePosts = posts.filter((post) => post.status === "active");
 
   return (
@@ -135,7 +135,7 @@ export function TimelineFeed() {
         onSelectType={handleCreatePost}
       />
       <CreateGiveawayModal
-        open={showGiveawayModal}
+        open={true}
         onOpenChange={setShowGiveawayModal} // Use context method
       />
       <CreateRequestModal
