@@ -95,7 +95,9 @@ impl MutualAidContract {
             panic_with_error!(&env, Error::HelpRequestAlreadyFullyFunded);
         }
 
-        if request.status == HelpRequestStatus::Cancelled {
+        if request.status == HelpRequestStatus::Cancelled
+            || request.status == HelpRequestStatus::Suspended
+        {
             panic_with_error!(&env, Error::InvalidStatus);
         }
 

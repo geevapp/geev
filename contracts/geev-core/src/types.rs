@@ -22,6 +22,7 @@ pub enum Error {
     HelpRequestAlreadyExists = 16,
     TokenNotSupported = 17,
     UsernameTaken = 18,
+    AlreadyFlagged = 19,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -30,6 +31,7 @@ pub enum GiveawayStatus {
     Active = 0,
     Claimable = 1,
     Completed = 2,
+    Suspended = 3,
 }
 
 #[derive(Clone)]
@@ -53,6 +55,7 @@ pub enum HelpRequestStatus {
     FullyFunded = 1,
     Closed = 2,
     Cancelled = 3,
+    Suspended = 4,
 }
 
 #[derive(Clone)]
@@ -83,6 +86,8 @@ pub enum DataKey {
     AllowedToken(Address),
     Profile(Address),
     Username(String),
+    FlagRecord(u64, Address),
+    FlagCount(u64),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
