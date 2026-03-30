@@ -7,8 +7,9 @@ use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
     testutils::{Address as _, Events as _, Ledger},
-    token, vec, Address, Env, IntoVal, String, Val,
+    token, vec, Address, Env, FromVal, IntoVal, String, Val,
 };
+use crate::governance::{GovernanceContract, GovernanceContractClient};
 
 #[test]
 fn test_giveaway_flow() {
@@ -1233,10 +1234,87 @@ fn test_toggle_request_verification_fails_non_admin() {
     contract_client.toggle_request_verification(&1u64);
 }
 
+/// Verifies that `donate` emits a `DonationReceived` event whose data contains
+/// the exact `amount_donated` for that call and the cumulative `new_total_raised`.
+/// This directly covers the acceptance criteria:
+///   "Emits the exact amount donated and the updated total."
+#[test]
+fn test_donate_event_emits_exact_amount_and_total() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let contract_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let mock_token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+
+    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
+
+    let creator = Address::generate(&env);
+    let donor1 = Address::generate(&env);
+    let donor2 = Address::generate(&env);
+
+    let first_amount: i128 = 250;
+    let second_amount: i128 = 350;
+
+    token_admin_client.mint(&donor1, &first_amount);
+    token_admin_client.mint(&donor2, &second_amount);
+
+    let request_id: u64 = 55;
+    let goal: i128 = 1000;
+
+    env.as_contract(&contract_id, || {
+        let request = HelpRequest {
+            id: request_id,
+            creator: creator.clone(),
+            token: mock_token.clone(),
+            goal,
+            raised_amount: 0,
+            status: HelpRequestStatus::Open,
+            is_verified: false,
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+
+    contract_client.donate(&donor1, &request_id, &first_amount);
+    contract_client.donate(&donor2, &request_id, &second_amount);
+
+    // After both donations the cumulative total must be first + second.
+    let expected_total: i128 = first_amount + second_amount;
+
+    let events = env.events().all();
+
+    // Topics expected for the second DonationReceived event.
+    let expected_topics: soroban_sdk::Vec<Val> = vec![
+        &env,
+        symbol_short!("aid").into_val(&env),
+        symbol_short!("donate").into_val(&env),
+        request_id.into_val(&env),
+    ];
+    assert!(
+        events.iter().any(|(event_contract, topics, data)| {
+            if event_contract != contract_id || topics != expected_topics.into_val(&env) {
+                return false;
+            }
+            // Decode the data Vec and compare each field to its concrete type.
+            let data_vec: soroban_sdk::Vec<Val> = soroban_sdk::Vec::from_val(&env, &data);
+            let actual_donor = Address::from_val(&env, &data_vec.get(0).unwrap());
+            let actual_amount = i128::from_val(&env, &data_vec.get(1).unwrap());
+            let actual_total = i128::from_val(&env, &data_vec.get(2).unwrap());
+            actual_donor == donor2
+                && actual_amount == second_amount
+                && actual_total == expected_total
+        }),
+        "DonationReceived event did not contain the exact amount_donated and new_total_raised"
+    );
+}
+
 // ── Governance / flag_content tests ──────────────────────────────────────────
-
-use crate::governance::{GovernanceContract, GovernanceContractClient};
-
 #[test]
 fn test_flag_content_increments_count() {
     let env = Env::default();
