@@ -1,3 +1,4 @@
+use crate::profile::ProfileContract;
 use crate::types::{DataKey, Error, Giveaway, GiveawayStatus};
 use crate::utils::with_reentrancy_guard;
 use soroban_sdk::{
@@ -211,6 +212,9 @@ impl GiveawayContract {
 
             giveaway.status = GiveawayStatus::Completed;
             env.storage().persistent().set(&giveaway_key, &giveaway);
+
+            // Increment creator's reputation — internal call, not user-accessible.
+            ProfileContract::increment_reputation(&env, giveaway.creator.clone());
         })
     }
 

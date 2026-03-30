@@ -88,6 +88,7 @@ pub enum DataKey {
     Username(String),
     FlagRecord(u64, Address),
     FlagCount(u64),
+    Reputation(Address),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

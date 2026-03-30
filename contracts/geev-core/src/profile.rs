@@ -67,4 +67,25 @@ impl ProfileContract {
             .persistent()
             .get::<DataKey, Address>(&DataKey::Username(username))
     }
+
+    /// Read the reputation score for a given address (defaults to 0).
+    pub fn get_reputation(env: Env, user: Address) -> u64 {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Reputation(user))
+            .unwrap_or(0)
+    }
+}
+
+impl ProfileContract {
+    /// Increment `user`'s reputation by 1.
+    /// Private — only callable from within this crate (e.g. `distribute_prize`).
+    /// Never exposed in the contract ABI.
+    pub(crate) fn increment_reputation(env: &Env, user: Address) {
+        let key = DataKey::Reputation(user);
+        let score: u64 = env.storage().persistent().get(&key).unwrap_or(0);
+        env.storage()
+            .persistent()
+            .set(&key, &score.saturating_add(1));
+    }
 }

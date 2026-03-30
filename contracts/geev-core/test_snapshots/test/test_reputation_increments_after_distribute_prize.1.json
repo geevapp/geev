@@ -67,7 +67,7 @@
                   "i128": "500"
                 },
                 {
-                  "string": "Prize Test"
+                  "string": "Rep Test"
                 },
                 {
                   "u64": "60"
@@ -122,9 +122,6 @@
         }
       ]
     ],
-    [],
-    [],
-    [],
     [],
     [],
     []
@@ -335,7 +332,7 @@
                         "symbol": "title"
                       },
                       "val": {
-                        "string": "Prize Test"
+                        "string": "Rep Test"
                       }
                     },
                     {
