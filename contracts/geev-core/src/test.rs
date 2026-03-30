@@ -1,6 +1,7 @@
 use crate::access::check_admin;
 use crate::admin::{AdminContract, AdminContractClient};
 use crate::giveaway::{GiveawayContract, GiveawayContractClient};
+use crate::governance::{GovernanceContract, GovernanceContractClient};
 use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
 use crate::profile::{ProfileContract, ProfileContractClient};
 use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
@@ -1311,4 +1312,89 @@ fn test_donate_event_emits_exact_amount_and_total() {
         }),
         "DonationReceived event did not contain the exact amount_donated and new_total_raised"
     );
+}
+
+// ── Governance / flag_content tests ──────────────────────────────────────────
+#[test]
+fn test_flag_content_increments_count() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GovernanceContract, ());
+    let client = GovernanceContractClient::new(&env, &contract_id);
+
+    let user = Address::generate(&env);
+    let target_id: u64 = 42;
+
+    assert_eq!(client.get_flag_count(&target_id), 0);
+
+    client.flag_content(&user, &target_id);
+
+    assert_eq!(client.get_flag_count(&target_id), 1);
+}
+
+#[test]
+fn test_flag_content_multiple_users() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GovernanceContract, ());
+    let client = GovernanceContractClient::new(&env, &contract_id);
+
+    let user_a = Address::generate(&env);
+    let user_b = Address::generate(&env);
+    let target_id: u64 = 7;
+
+    client.flag_content(&user_a, &target_id);
+    client.flag_content(&user_b, &target_id);
+
+    assert_eq!(client.get_flag_count(&target_id), 2);
+    assert!(client.has_flagged(&user_a, &target_id));
+    assert!(client.has_flagged(&user_b, &target_id));
+}
+
+#[test]
+#[should_panic]
+fn test_flag_content_duplicate_panics() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GovernanceContract, ());
+    let client = GovernanceContractClient::new(&env, &contract_id);
+
+    let user = Address::generate(&env);
+    let target_id: u64 = 1;
+
+    client.flag_content(&user, &target_id);
+    // Second flag from the same user must panic with AlreadyFlagged
+    client.flag_content(&user, &target_id);
+}
+
+#[test]
+fn test_has_flagged_returns_false_before_flag() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GovernanceContract, ());
+    let client = GovernanceContractClient::new(&env, &contract_id);
+
+    let user = Address::generate(&env);
+    assert!(!client.has_flagged(&user, &99u64));
+}
+
+#[test]
+fn test_flag_counts_are_independent_per_id() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GovernanceContract, ());
+    let client = GovernanceContractClient::new(&env, &contract_id);
+
+    let user = Address::generate(&env);
+
+    client.flag_content(&user, &1u64);
+
+    // ID 2 should still be at 0
+    assert_eq!(client.get_flag_count(&2u64), 0);
+    assert_eq!(client.get_flag_count(&1u64), 1);
 }
