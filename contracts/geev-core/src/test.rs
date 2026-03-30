@@ -8,7 +8,7 @@ use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
     testutils::{Address as _, Events as _, Ledger},
-    token, vec, Address, Env, FromVal, IntoVal, String, Val, Symbol,
+    token, vec, Address, Env, FromVal, IntoVal, String, Symbol, Val,
 };
 
 #[test]
@@ -1548,9 +1548,9 @@ fn test_content_auto_suspended_event_emitted() {
         Symbol::new(&env, "content_auto_suspended").into_val(&env),
         giveaway_id.into_val(&env),
     ];
-    assert!(events.iter().any(|(ec, topics, _)| {
-        ec == contract_id && topics == expected_topics.into_val(&env)
-    }));
+    assert!(events
+        .iter()
+        .any(|(ec, topics, _)| { ec == contract_id && topics == expected_topics.into_val(&env) }));
 }
 
 #[test]

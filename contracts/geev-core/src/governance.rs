@@ -1,5 +1,5 @@
-use soroban_sdk::{contract, contractevent, contractimpl, Address, Env};
 use crate::types::{DataKey, Error, GiveawayStatus, HelpRequestStatus};
+use soroban_sdk::{contract, contractevent, contractimpl, Address, Env};
 
 /// Number of flags required to automatically suspend content.
 pub const FLAG_THRESHOLD: u32 = 10;
@@ -87,10 +87,10 @@ impl GovernanceContract {
         let mut suspended = false;
 
         // Try Giveaway first.
-        if let Some(mut giveaway) =
-            env.storage()
-                .persistent()
-                .get::<DataKey, crate::types::Giveaway>(&giveaway_key)
+        if let Some(mut giveaway) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, crate::types::Giveaway>(&giveaway_key)
         {
             if giveaway.status == GiveawayStatus::Active {
                 giveaway.status = GiveawayStatus::Suspended;
@@ -101,10 +101,10 @@ impl GovernanceContract {
 
         // Try HelpRequest if giveaway wasn't found/suspended.
         if !suspended {
-            if let Some(mut request) =
-                env.storage()
-                    .persistent()
-                    .get::<DataKey, crate::types::HelpRequest>(&request_key)
+            if let Some(mut request) = env
+                .storage()
+                .persistent()
+                .get::<DataKey, crate::types::HelpRequest>(&request_key)
             {
                 if request.status == HelpRequestStatus::Open {
                     request.status = HelpRequestStatus::Suspended;
