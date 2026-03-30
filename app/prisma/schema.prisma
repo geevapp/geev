@@ -650,3 +650,19 @@ model ProcessedEvent {
   @@index([ledgerSeq])
   @@map("processed_events")
 }
+
+/**
+ * AuthNonce model for legacy signature replay attack prevention
+ * Stores nonces issued by the server to ensure they are used only once
+ */
+model AuthNonce {
+  id        String   @id @default(uuid())
+  nonce     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([nonce])
+  @@index([expiresAt])
+  @@map("auth_nonces")
+}

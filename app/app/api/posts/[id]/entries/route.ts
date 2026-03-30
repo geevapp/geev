@@ -1,5 +1,5 @@
+import { XP_REWARDS, awardXp } from '@/lib/xp';
 import { apiError, apiSuccess } from '@/lib/api-response';
-import { awardXp, XP_REWARDS } from '@/lib/xp';
 
 import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
@@ -105,8 +105,8 @@ export async function POST (
         tx,
       );
 
-      // Notify post owner, but ignore if notifications table is missing
-      if (post.userId) {
+      // Notify post owner, but ignore if notifications support is unavailable
+      if (post.userId && tx.notification?.create) {
         try {
           await tx.notification.create({
             data: {

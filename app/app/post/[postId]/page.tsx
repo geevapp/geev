@@ -50,8 +50,7 @@ export default function PostPage() {
   const normalizeApiPost = (apiPost: any) => {
     if (!apiPost) return null;
 
-    const normalizedType =
-      apiPost.type === "request" ? "help-request" : apiPost.type;
+    const normalizedType = apiPost.type;
     const normalizedStatus =
       apiPost.status === "open" || apiPost.status === "in_progress"
         ? "active"
@@ -188,7 +187,7 @@ export default function PostPage() {
 
   const getProgressPercentage = () => {
     if (
-      post.type === "help-request" &&
+      post.type === "request" &&
       post.targetAmount &&
       post.currentAmount
     ) {
@@ -498,7 +497,7 @@ export default function PostPage() {
                 )}
 
                 {/* Help Request Details */}
-                {post.type === "help-request" && (
+                {post.type === "request" && (
                   <div className="bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl p-4 space-y-3 border border-green-100 dark:border-green-800/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -734,7 +733,7 @@ export default function PostPage() {
       )}
 
       {/* Contribution Form Modal */}
-      {post.type === "help-request" && (
+      {post.type === "request" && (
         <ContributionForm
           open={showContributionForm}
           onOpenChange={setShowContributionForm}

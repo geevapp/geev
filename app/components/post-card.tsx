@@ -111,7 +111,7 @@ export function PostCard({ post }: PostCardProps) {
 
   const getProgressPercentage = () => {
     if (
-      post.type === 'help-request' &&
+      post.type === 'request' &&
       post.targetAmount &&
       post.currentAmount
     ) {
@@ -320,7 +320,7 @@ export function PostCard({ post }: PostCardProps) {
           )}
 
           {/* Help Request Details */}
-          {post.type === 'help-request' && (
+          {post.type === 'request' && (
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-xl p-4 space-y-3 border border-green-100 dark:border-green-800/30">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -486,7 +486,7 @@ export function PostCard({ post }: PostCardProps) {
       )}
 
       {/* Contribution Form Modal */}
-      {post.type === 'help-request' && (
+      {post.type === 'request' && (
         <ContributionForm
           open={showContributionForm}
           onOpenChange={setShowContributionForm}
