@@ -52,3 +52,5 @@ next-env.d.ts
 # rust
 **/target/
 wave-*.md
+
+.vscode

@@ -8,7 +8,7 @@ use crate::types::{DataKey, HelpRequest, HelpRequestStatus};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
     testutils::{Address as _, Events as _, Ledger},
-    token, vec, Address, Env, FromVal, IntoVal, String, Val,
+    token, vec, Address, Env, FromVal, IntoVal, String, Val, Symbol,
 };
 
 #[test]
@@ -1397,4 +1397,238 @@ fn test_flag_counts_are_independent_per_id() {
     // ID 2 should still be at 0
     assert_eq!(client.get_flag_count(&2u64), 0);
     assert_eq!(client.get_flag_count(&1u64), 1);
+}
+
+// ── auto-suspension tests ─────────────────────────────────────────────────────
+
+use crate::governance::FLAG_THRESHOLD;
+use crate::types::{Giveaway, GiveawayStatus};
+
+/// Seed a minimal active Giveaway directly into contract storage.
+fn seed_active_giveaway(env: &Env, contract_id: &Address, giveaway_id: u64, token: &Address) {
+    let creator = Address::generate(env);
+    let giveaway = Giveaway {
+        id: giveaway_id,
+        creator,
+        token: token.clone(),
+        amount: 500,
+        title: String::from_str(env, "Test"),
+        participant_count: 0,
+        end_time: env.ledger().timestamp() + 3600,
+        status: GiveawayStatus::Active,
+        winner: None,
+    };
+    env.as_contract(contract_id, || {
+        env.storage()
+            .persistent()
+            .set(&DataKey::Giveaway(giveaway_id), &giveaway);
+    });
+}
+
+/// Seed a minimal open HelpRequest directly into contract storage.
+fn seed_open_request(env: &Env, contract_id: &Address, request_id: u64, token: &Address) {
+    let creator = Address::generate(env);
+    let request = HelpRequest {
+        id: request_id,
+        creator,
+        token: token.clone(),
+        goal: 1000,
+        raised_amount: 0,
+        status: HelpRequestStatus::Open,
+        is_verified: false,
+    };
+    env.as_contract(contract_id, || {
+        env.storage()
+            .persistent()
+            .set(&DataKey::HelpRequest(request_id), &request);
+    });
+}
+
+#[test]
+fn test_giveaway_suspended_at_threshold() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    // Governance and Giveaway share the same contract so storage is shared.
+    let contract_id = env.register(GovernanceContract, ());
+    let gov = GovernanceContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let token = env
+        .register_stellar_asset_contract_v2(token_admin)
+        .address();
+
+    let giveaway_id: u64 = 42;
+    seed_active_giveaway(&env, &contract_id, giveaway_id, &token);
+
+    // Flag FLAG_THRESHOLD - 1 times — should still be Active.
+    for _ in 0..FLAG_THRESHOLD - 1 {
+        let flagger = Address::generate(&env);
+        gov.flag_content(&flagger, &giveaway_id);
+    }
+    env.as_contract(&contract_id, || {
+        let g: Giveaway = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Giveaway(giveaway_id))
+            .unwrap();
+        assert_eq!(g.status, GiveawayStatus::Active);
+    });
+
+    // The threshold flag suspends it.
+    let last_flagger = Address::generate(&env);
+    gov.flag_content(&last_flagger, &giveaway_id);
+
+    env.as_contract(&contract_id, || {
+        let g: Giveaway = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Giveaway(giveaway_id))
+            .unwrap();
+        assert_eq!(g.status, GiveawayStatus::Suspended);
+    });
+}
+
+#[test]
+fn test_help_request_suspended_at_threshold() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GovernanceContract, ());
+    let gov = GovernanceContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let token = env
+        .register_stellar_asset_contract_v2(token_admin)
+        .address();
+
+    let request_id: u64 = 7;
+    seed_open_request(&env, &contract_id, request_id, &token);
+
+    for _ in 0..FLAG_THRESHOLD {
+        let flagger = Address::generate(&env);
+        gov.flag_content(&flagger, &request_id);
+    }
+
+    env.as_contract(&contract_id, || {
+        let r: HelpRequest = env
+            .storage()
+            .persistent()
+            .get(&DataKey::HelpRequest(request_id))
+            .unwrap();
+        assert_eq!(r.status, HelpRequestStatus::Suspended);
+    });
+}
+
+#[test]
+fn test_content_auto_suspended_event_emitted() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(GovernanceContract, ());
+    let gov = GovernanceContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let token = env
+        .register_stellar_asset_contract_v2(token_admin)
+        .address();
+
+    let giveaway_id: u64 = 99;
+    seed_active_giveaway(&env, &contract_id, giveaway_id, &token);
+
+    for _ in 0..FLAG_THRESHOLD {
+        let flagger = Address::generate(&env);
+        gov.flag_content(&flagger, &giveaway_id);
+    }
+
+    // Verify ContentAutoSuspended event was emitted with the right topic.
+    let events = env.events().all();
+    let expected_topics: soroban_sdk::Vec<Val> = vec![
+        &env,
+        Symbol::new(&env, "content_auto_suspended").into_val(&env),
+        giveaway_id.into_val(&env),
+    ];
+    assert!(events.iter().any(|(ec, topics, _)| {
+        ec == contract_id && topics == expected_topics.into_val(&env)
+    }));
+}
+
+#[test]
+#[should_panic]
+fn test_enter_suspended_giveaway_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    // Register both contracts; they share storage only when it's the same contract_id.
+    // Here we use GiveawayContract for entry and seed Suspended status directly.
+    let contract_id = env.register(GiveawayContract, ());
+    let giveaway_client = GiveawayContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let token = env
+        .register_stellar_asset_contract_v2(token_admin)
+        .address();
+
+    let giveaway_id: u64 = 1;
+    // Seed a Suspended giveaway directly.
+    let creator = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        env.storage().persistent().set(
+            &DataKey::Giveaway(giveaway_id),
+            &Giveaway {
+                id: giveaway_id,
+                creator,
+                token,
+                amount: 500,
+                title: String::from_str(&env, "Suspended"),
+                participant_count: 0,
+                end_time: env.ledger().timestamp() + 3600,
+                status: GiveawayStatus::Suspended,
+                winner: None,
+            },
+        );
+    });
+
+    let participant = Address::generate(&env);
+    // Should panic with InvalidStatus because Suspended != Active.
+    giveaway_client.enter_giveaway(&participant, &giveaway_id);
+}
+
+#[test]
+#[should_panic]
+fn test_donate_to_suspended_request_fails() {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let contract_id = env.register(MutualAidContract, ());
+    let aid_client = MutualAidContractClient::new(&env, &contract_id);
+
+    let token_admin = Address::generate(&env);
+    let token = env
+        .register_stellar_asset_contract_v2(token_admin.clone())
+        .address();
+    let token_admin_client = token::StellarAssetClient::new(&env, &token);
+
+    let donor = Address::generate(&env);
+    token_admin_client.mint(&donor, &1000);
+
+    let request_id: u64 = 5;
+    let creator = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        env.storage().persistent().set(
+            &DataKey::HelpRequest(request_id),
+            &HelpRequest {
+                id: request_id,
+                creator,
+                token,
+                goal: 1000,
+                raised_amount: 0,
+                status: HelpRequestStatus::Suspended,
+                is_verified: false,
+            },
+        );
+    });
+
+    // Should panic with InvalidStatus.
+    aid_client.donate(&donor, &request_id, &100);
 }

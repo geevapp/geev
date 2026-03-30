@@ -25,7 +25,7 @@ pub enum Error {
     AlreadyFlagged = 19,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[contracttype]
 pub enum GiveawayStatus {
     Active = 0,
