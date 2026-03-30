@@ -1,6 +1,8 @@
+use crate::types::{DataKey, Error, GiveawayStatus, HelpRequestStatus};
 use soroban_sdk::{contract, contractevent, contractimpl, Address, Env};
 
-use crate::types::{DataKey, Error};
+/// Number of flags required to automatically suspend content.
+pub const FLAG_THRESHOLD: u32 = 10;
 
 #[contract]
 pub struct GovernanceContract;
@@ -10,6 +12,13 @@ pub struct ContentFlagged {
     #[topic]
     target_id: u64,
     user: Address,
+    count: u32,
+}
+
+#[contractevent]
+pub struct ContentAutoSuspended {
+    #[topic]
+    target_id: u64,
     count: u32,
 }
 
@@ -44,6 +53,11 @@ impl GovernanceContract {
         }
         .publish(&env);
 
+        // 5. Circuit breaker: suspend if threshold is reached.
+        if new_count >= FLAG_THRESHOLD {
+            Self::auto_suspend(&env, target_id, new_count);
+        }
+
         Ok(())
     }
 
@@ -60,5 +74,48 @@ impl GovernanceContract {
         env.storage()
             .persistent()
             .has(&DataKey::FlagRecord(target_id, user))
+    }
+
+    // ── internal ──────────────────────────────────────────────────────────────
+
+    /// Try to suspend the Giveaway or HelpRequest with `target_id`.
+    /// Silently skips if neither exists (the ID may belong to a future content type).
+    fn auto_suspend(env: &Env, target_id: u64, count: u32) {
+        let giveaway_key = DataKey::Giveaway(target_id);
+        let request_key = DataKey::HelpRequest(target_id);
+
+        let mut suspended = false;
+
+        // Try Giveaway first.
+        if let Some(mut giveaway) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, crate::types::Giveaway>(&giveaway_key)
+        {
+            if giveaway.status == GiveawayStatus::Active {
+                giveaway.status = GiveawayStatus::Suspended;
+                env.storage().persistent().set(&giveaway_key, &giveaway);
+                suspended = true;
+            }
+        }
+
+        // Try HelpRequest if giveaway wasn't found/suspended.
+        if !suspended {
+            if let Some(mut request) = env
+                .storage()
+                .persistent()
+                .get::<DataKey, crate::types::HelpRequest>(&request_key)
+            {
+                if request.status == HelpRequestStatus::Open {
+                    request.status = HelpRequestStatus::Suspended;
+                    env.storage().persistent().set(&request_key, &request);
+                    suspended = true;
+                }
+            }
+        }
+
+        if suspended {
+            ContentAutoSuspended { target_id, count }.publish(env);
+        }
     }
 }

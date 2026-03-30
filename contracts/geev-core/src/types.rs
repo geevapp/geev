@@ -25,12 +25,13 @@ pub enum Error {
     AlreadyFlagged = 19,
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[contracttype]
 pub enum GiveawayStatus {
     Active = 0,
     Claimable = 1,
     Completed = 2,
+    Suspended = 3,
 }
 
 #[derive(Clone)]
@@ -54,6 +55,7 @@ pub enum HelpRequestStatus {
     FullyFunded = 1,
     Closed = 2,
     Cancelled = 3,
+    Suspended = 4,
 }
 
 #[derive(Clone)]
