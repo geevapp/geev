@@ -22,6 +22,7 @@ pub enum Error {
     HelpRequestAlreadyExists = 16,
     TokenNotSupported = 17,
     UsernameTaken = 18,
+    AlreadyFlagged = 19,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -83,6 +84,8 @@ pub enum DataKey {
     AllowedToken(Address),
     Profile(Address),
     Username(String),
+    FlagRecord(u64, Address),
+    FlagCount(u64),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

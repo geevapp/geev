@@ -3,6 +3,7 @@
 pub mod access;
 pub mod admin;
 pub mod giveaway;
+pub mod governance;
 pub mod mutual_aid;
 pub mod profile;
 pub mod types;
@@ -15,6 +16,7 @@ pub use crate::admin::AdminContract;
 pub use crate::admin::AdminContractClient;
 pub use crate::giveaway::GiveawayContract;
 pub use crate::giveaway::GiveawayContractClient;
+pub use crate::governance::{GovernanceContract, GovernanceContractClient};
 pub use crate::mutual_aid::MutualAidContract;
 pub use crate::mutual_aid::MutualAidContractClient;
 pub use crate::profile::{ProfileContract, ProfileContractClient};
