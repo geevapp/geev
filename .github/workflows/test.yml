@@ -56,7 +56,9 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Generate Prisma Client
-        run: npx prisma generate
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/geev_test" > .env
+          npx prisma generate
 
       - name: Run database migrations
         env:
