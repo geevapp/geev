@@ -1,3 +1,27 @@
+enum NotificationType {
+  giveaway_entry
+  giveaway_win
+  help_contribution
+  post_closed
+  badge_awarded
+  rank_up
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  message   String
+  link      String?
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -112,6 +136,19 @@ enum HelpType {
   other
 }
 
+enum TransactionType {
+  fund
+  withdraw
+  contribution_out
+  prize_in
+}
+
+enum TransactionStatus {
+  pending
+  completed
+  failed
+}
+
 model Activity {
   id          String       @id @default(uuid())
   userId      String
@@ -136,11 +173,12 @@ model User {
   bio           String?
   avatarUrl     String?   @map("avatar_url")
   xp            Int       @default(0)
-  // walletBalance Float    @default(0) @map("wallet_balance")
+  walletBalance Float    @default(0) @map("wallet_balance")
   emailVerified DateTime? @map("email_verified")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   isVerified    Boolean   @default(false) @map("verified")
+
 
   posts           Post[]           @relation("PostCreator")
   entries         Entry[]
@@ -149,6 +187,8 @@ model User {
   badges          UserBadge[]
   analyticsEvents AnalyticsEvent[]
 
+  notifications   Notification[]
+
   followings        Follow[]           @relation("UserFollowing")
   followers         Follow[]           @relation("UserFollower")
   rank              Rank?              @relation(fields: [rankId], references: [id])
@@ -156,6 +196,7 @@ model User {
   accounts          Account[]
   sessions          Session[]
   wins              PostWinner[]       @relation("PostWinner")
+  walletTransactions WalletTransaction[]
 
   @@map("users")
 }
@@ -226,7 +267,7 @@ model Post {
   id                String          @id @default(uuid())
   userId            String          @map("creator_id")
   type              PostType
-  slug              String
+  slug              String          @unique @db.VarChar(50)
   title             String          @db.VarChar(200)
   description       String?
   duration          Int?            @map("duration") // Duration in seconds for time-limited posts
@@ -455,4 +496,173 @@ model AnalyticsEvent {
   @@index([createdAt], name: "idx_analytics_events_created")
   @@index([userId], name: "idx_analytics_events_user")
   @@map("analytics_events")
+}
+
+model WalletTransaction {
+  id        String            @id @default(uuid())
+  userId    String            @map("user_id")
+  type      TransactionType
+  amount    Float
+  currency  String            @default("USD") @db.VarChar(10)
+  status    TransactionStatus @default(pending)
+  method    String?           @db.VarChar(50)
+  reference String?           @db.VarChar(255)
+  note      String?
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("wallet_transactions")
+}
+
+/**
+ * UsedChallenge model for SEP-10 replay attack prevention
+ * Stores transaction hashes of used challenges to prevent reuse
+ */
+model UsedChallenge {
+  id              String   @id @default(uuid())
+  transactionHash String   @unique @map("transaction_hash") @db.VarChar(128)
+  publicKey       String   @map("public_key") @db.VarChar(56)
+  usedAt          DateTime @default(now()) @map("used_at")
+
+  @@index([transactionHash])
+  @@index([publicKey])
+  @@index([usedAt])
+  @@map("used_challenges")
+}
+
+/**
+ * IndexerState tracks the last processed ledger sequence
+ * Ensures idempotency and prevents duplicate processing on restart
+ */
+model IndexerState {
+  id              String   @id @default("singleton")
+  lastLedgerSeq   Int      @map("last_ledger_seq")
+  contractId      String   @map("contract_id") @db.VarChar(70)
+  network         String   @default("testnet") @db.VarChar(20)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("indexer_state")
+}
+
+/**
+ * On-chain Giveaway data synced from Soroban contract
+ */
+model OnChainGiveaway {
+  id                String    @id @default(uuid())
+  giveawayId        BigInt    @unique @map("giveaway_id")
+  creatorAddress    String    @map("creator_address") @db.VarChar(70)
+  tokenAddress      String    @map("token_address") @db.VarChar(70)
+  amount            Decimal   @db.Decimal(30, 7)
+  title             String    @db.VarChar(255)
+  participantCount  Int       @default(0) @map("participant_count")
+  endTime           DateTime  @map("end_time")
+  status            GiveawayOnChainStatus @default(ACTIVE)
+  winnerAddress     String?   @map("winner_address") @db.VarChar(70)
+  txHash            String?   @map("tx_hash") @db.VarChar(128)
+  ledgerSeq         Int       @map("ledger_seq")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([giveawayId])
+  @@index([creatorAddress])
+  @@index([status])
+  @@index([ledgerSeq])
+  @@map("on_chain_giveaways")
+}
+
+enum GiveawayOnChainStatus {
+  ACTIVE
+  CLAIMABLE
+  COMPLETED
+}
+
+/**
+ * On-chain Help Request data synced from Soroban contract
+ */
+model OnChainHelpRequest {
+  id              String                @id @default(uuid())
+  requestId       BigInt                @unique @map("request_id")
+  creatorAddress  String                @map("creator_address") @db.VarChar(70)
+  tokenAddress    String                @map("token_address") @db.VarChar(70)
+  goal            Decimal               @db.Decimal(30, 7)
+  raisedAmount    Decimal               @default(0) @db.Decimal(30, 7) @map("raised_amount")
+  status          HelpRequestOnChainStatus @default(OPEN)
+  txHash          String?               @map("tx_hash") @db.VarChar(128)
+  ledgerSeq       Int                   @map("ledger_seq")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  donations       OnChainDonation[]
+
+  @@index([requestId])
+  @@index([creatorAddress])
+  @@index([status])
+  @@index([ledgerSeq])
+  @@map("on_chain_help_requests")
+}
+
+enum HelpRequestOnChainStatus {
+  OPEN
+  FULLY_FUNDED
+  CLOSED
+  CANCELLED
+}
+
+/**
+ * On-chain Donation data synced from Soroban contract
+ */
+model OnChainDonation {
+  id              String   @id @default(uuid())
+  donationId      String   @unique @map("donation_id") @db.VarChar(128)
+  requestId       BigInt   @map("request_id")
+  donorAddress    String   @map("donor_address") @db.VarChar(70)
+  amount          Decimal  @db.Decimal(30, 7)
+  txHash          String   @map("tx_hash") @db.VarChar(128)
+  ledgerSeq       Int      @map("ledger_seq")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  helpRequest     OnChainHelpRequest @relation(fields: [requestId], references: [requestId], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([donorAddress])
+  @@index([ledgerSeq])
+  @@map("on_chain_donations")
+}
+
+/**
+ * Processed events tracking for idempotency
+ * Prevents duplicate processing of the same blockchain event
+ */
+model ProcessedEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique @map("event_id") @db.VarChar(128)
+  eventType   String   @map("event_type") @db.VarChar(50)
+  txHash      String   @map("tx_hash") @db.VarChar(128)
+  ledgerSeq   Int      @map("ledger_seq")
+  processedAt DateTime @default(now()) @map("processed_at")
+
+  @@index([eventId])
+  @@index([eventType])
+  @@index([ledgerSeq])
+  @@map("processed_events")
+}
+
+/**
+ * AuthNonce model for legacy signature replay attack prevention
+ * Stores nonces issued by the server to ensure they are used only once
+ */
+model AuthNonce {
+  id        String   @id @default(uuid())
+  nonce     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([nonce])
+  @@index([expiresAt])
+  @@map("auth_nonces")
 }

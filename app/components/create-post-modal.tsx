@@ -6,11 +6,11 @@ import { Gift, Heart } from "lucide-react"
 interface CreatePostModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSelectType: (type: "giveaway" | "help-request") => void
+  onSelectType: (type: "giveaway" | "request") => void
 }
 
 export function CreatePostModal({ open, onOpenChange, onSelectType }: CreatePostModalProps) {
-  const handleSelectType = (type: "giveaway" | "help-request") => {
+  const handleSelectType = (type: "giveaway" | "request") => {
     onSelectType(type)
     onOpenChange(false)
   }
@@ -43,7 +43,7 @@ export function CreatePostModal({ open, onOpenChange, onSelectType }: CreatePost
 
           <Card
             className="cursor-pointer hover:shadow-lg transition-all border-2 hover:border-green-500"
-            onClick={() => handleSelectType("help-request")}
+            onClick={() => handleSelectType("request")}
           >
             <CardHeader className="text-center pb-2">
               <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-teal-600 rounded-full flex items-center justify-center mx-auto mb-3">

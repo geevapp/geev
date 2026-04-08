@@ -20,6 +20,7 @@ const getCurrentUser = async (_request: NextRequest) => {
             bio: true,
             avatarUrl: true,
             xp: true,
+            walletBalance: true,
             createdAt: true,
             updatedAt: true,
         },

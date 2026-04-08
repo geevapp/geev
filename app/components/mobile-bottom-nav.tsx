@@ -19,7 +19,7 @@ export function MobileBottomNav() {
   const [showGiveawayModal, setShowGiveawayModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
 
-  const handleCreatePost = (type: "giveaway" | "help-request") => {
+  const handleCreatePost = (type: "giveaway" | "request") => {
     if (type === "giveaway") {
       setShowGiveawayModal(true);
     } else {
