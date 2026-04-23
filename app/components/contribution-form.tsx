@@ -16,21 +16,23 @@ import type React from "react";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { useAppContext } from "@/contexts/app-context";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface ContributionFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   post: Post;
+  onSuccess?: (progress: { totalRaised: number, targetAmount: number, percentage: number }) => void;
 }
 
 export function ContributionForm({
   open,
   onOpenChange,
   post,
+  onSuccess,
 }: ContributionFormProps) {
-  const { makeContribution } = useAppContext();
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -54,17 +56,28 @@ export function ContributionForm({
     setIsSubmitting(true);
 
     try {
-      makeContribution({
-        postId: post.id,
-        userId: "", // Will be set by context
-        amount: Number.parseFloat(formData.amount),
-        message: formData.message || undefined,
-        isAnonymous: formData.isAnonymous,
+      const res = await fetch(`/api/posts/${post.id}/contributions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number.parseFloat(formData.amount),
+          message: formData.message || undefined,
+          isAnonymous: formData.isAnonymous,
+        }),
       });
 
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to contribute");
+
       toast("Contribution sent!", {
-        description: `You've contributed $${formData.amount} to help ${post.author.name}.`,
+        description: `You've contributed $${formData.amount} to help ${post.author?.name || 'this request'}.`,
       });
+
+      if (onSuccess && data.data?.progress) {
+        onSuccess(data.data.progress);
+      }
+
+      router.refresh();
 
       // Reset form
       setFormData({

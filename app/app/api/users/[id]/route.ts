@@ -33,6 +33,9 @@ export async function GET(
               followers: true,
               followings: true,
             }
+          },
+          badges: {
+            include: { badge: true }
           }
         },
       });
@@ -51,7 +54,15 @@ export async function GET(
           isFollowing = !!follow;
         }
 
-        return apiSuccess({ ...user, isFollowing });
+        const normalizedUser = {
+            ...user,
+            badges: user.badges.map((userBadge) => ({
+                ...userBadge.badge,
+                awardedAt: userBadge.awardedAt,
+            })),
+        };
+
+        return apiSuccess({ ...normalizedUser, isFollowing });
       }
     } catch (dbError) {
       // Database error - fallback already handled above

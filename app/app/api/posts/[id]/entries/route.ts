@@ -5,6 +5,7 @@ import { NextRequest } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { readJsonBody } from '@/lib/parse-json-body';
+import { checkAndAwardBadges } from '@/lib/badges';
 
 /**
  * POST /api/posts/[id]/entries
@@ -128,6 +129,8 @@ export async function POST (
 
       return createdEntry;
     });
+
+    checkAndAwardBadges(user.id).catch(console.error);
 
     return apiSuccess(entry, 'Entry created successfully', 201);
   } catch (error) {
