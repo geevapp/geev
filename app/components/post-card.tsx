@@ -42,6 +42,7 @@ export function PostCard({ post }: PostCardProps) {
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [showContributionForm, setShowContributionForm] = useState(false);
   const [isBurned, setIsBurned] = useState(false);
+  const [burnCount, setBurnCount] = useState(post.burnCount);
 
   const handleAuthRequiredAction = (action: () => void) => {
     if (!user) {
@@ -53,10 +54,25 @@ export function PostCard({ post }: PostCardProps) {
 
   const handleBurn = (e: React.MouseEvent) => {
     e.stopPropagation();
-    handleAuthRequiredAction(() => {
-      if (!isBurned) {
-        burnPost(post.id);
-        setIsBurned(true);
+    handleAuthRequiredAction(async () => {
+      if (isBurned) return;
+      // Optimistic update
+      setIsBurned(true);
+      setBurnCount((c) => c + 1);
+      burnPost(post.id);
+      try {
+        const res = await fetch(`/api/posts/${post.id}/burn`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.data?.count !== undefined) setBurnCount(data.data.count);
+        } else {
+          // Rollback on failure
+          setIsBurned(false);
+          setBurnCount((c) => c - 1);
+        }
+      } catch {
+        setIsBurned(false);
+        setBurnCount((c) => c - 1);
       }
     });
   };
@@ -384,7 +400,7 @@ export function PostCard({ post }: PostCardProps) {
                   className={`w-4 h-4 ${isBurned ? 'fill-current' : ''}`}
                 />
                 <span className="text-sm font-medium">
-                  {post.burnCount + (isBurned ? 1 : 0)}
+                  {burnCount}
                 </span>
               </Button>
 

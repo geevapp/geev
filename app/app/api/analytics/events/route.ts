@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { readJsonBody } from "@/lib/parse-json-body";
 import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const VALID_EVENTS = [
   "page_view",
@@ -15,6 +16,14 @@ const VALID_EVENTS = [
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 60 events per minute per IP
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "unknown";
+    if (!checkRateLimit(`analytics:${ip}`, 60, 60_000)) {
+      return apiError("Too many requests", 429);
+    }
+
     const parsed = await readJsonBody<Record<string, unknown>>(request);
     if (!parsed.ok) return parsed.response;
 
