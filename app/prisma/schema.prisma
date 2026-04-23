@@ -43,6 +43,23 @@ enum PostType {
   request
 }
 
+/**
+ * Predefined categories for posts (Issue #204).
+ * Keeps category values consistent across the platform.
+ */
+enum PostCategory {
+  electronics
+  clothing
+  books
+  furniture
+  toys
+  food
+  sports
+  beauty
+  automotive
+  other
+}
+
 enum SelectionMethod {
   random
   merit_based
@@ -271,6 +288,7 @@ model Post {
   title             String          @db.VarChar(200)
   description       String?
   duration          Int?            @map("duration") // Duration in seconds for time-limited posts
+  category          PostCategory?   @map("category")
   helpType          HelpType?       @map("help_type")
   urgency           Urgency?        @map("urgency")
   status            PostStatus      @default(open)
@@ -298,6 +316,7 @@ model Post {
 
   @@index([userId])
   @@index([status])
+  @@index([category])
   @@index([createdAt(sort: Desc)])
   @@map("posts")
 }
