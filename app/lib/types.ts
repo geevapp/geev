@@ -171,6 +171,8 @@ export interface AppContextType extends AppState {
   logout: () => Promise<void>
   setCurrentUser: (user: User | null) => void
   // Post actions
+  refreshPosts: () => Promise<void>
+  refreshPostDetail: (postId: string) => Promise<void>
   createPost: (post: Omit<Post, "id" | "createdAt" | "updatedAt" | "author" | "entriesCount" | "shareCount" | "burnCount" | "commentCount" | "likesCount">) => void
   updatePost: (postId: string, updates: Partial<Post>) => void
   deletePost: (postId: string) => void
