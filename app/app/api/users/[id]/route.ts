@@ -56,7 +56,7 @@ export async function GET(
 
         const normalizedUser = {
             ...user,
-            badges: user.badges.map((userBadge) => ({
+            badges: (user.badges || []).map((userBadge: any) => ({
                 ...userBadge.badge,
                 awardedAt: userBadge.awardedAt,
             })),
