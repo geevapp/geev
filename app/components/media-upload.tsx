@@ -5,24 +5,33 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Upload, X, ImageIcon, Video, FileText, Loader2 } from "lucide-react"
+import { Upload, X, ImageIcon, Video, FileText, Loader2, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 import type { PostMedia } from "@/lib/types"
 import { validateMedia } from "@/lib/media-utils"
 import { uploadFile } from "@/lib/storage"
+import { compressImage, generateThumbnail, formatFileSize } from "@/lib/image-compression"
 
 // ── Constants ─────────────────────────────────────────────────
-const MAX_IMAGE_SIZE = 10  * 1024 * 1024  // 10 MB
+const MAX_IMAGE_SIZE = 10  * 1024 * 1024  // 10 MB (before compression)
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024  // 100 MB
 const ALLOWED_IMAGE  = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 const ALLOWED_VIDEO  = ["video/mp4", "video/webm", "video/quicktime"]
 
 // ── Types ─────────────────────────────────────────────────────
 
+interface CompressionInfo {
+  originalSize: number
+  compressedSize: number
+  savedPercent: number
+}
+
 // Extends PostMedia with transient UI state that never leaves this component.
 interface ExtendedPostMedia extends PostMedia {
-  isUploading?: boolean
-  error?:       string
+  isUploading?:  boolean
+  isCompressing?: boolean
+  error?:        string
+  compressionInfo?: CompressionInfo
 }
 
 interface MediaUploadProps {
@@ -64,7 +73,6 @@ export function MediaUpload({
         continue
       }
 
-      // 2. Additional size checks using the constants
       const isImage = ALLOWED_IMAGE.includes(file.type)
       const isVideo = ALLOWED_VIDEO.includes(file.type)
       const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
@@ -77,15 +85,16 @@ export function MediaUpload({
         continue
       }
 
-      // 3. Add placeholder so the grid updates immediately
       const tempId = `${Date.now()}-${file.name}`
 
+      // 2. Add compressing placeholder for images
       const placeholder: ExtendedPostMedia = {
-        id:          tempId,
-        type:        isImage ? "image" : "video",
-        url:         URL.createObjectURL(file),   // temporary preview
-        thumbnail:   isImage ? URL.createObjectURL(file) : undefined,
-        isUploading: true,
+        id:            tempId,
+        type:          isImage ? "image" : "video",
+        url:           URL.createObjectURL(file),
+        thumbnail:     isImage ? URL.createObjectURL(file) : undefined,
+        isUploading:   false,
+        isCompressing: isImage,
       }
 
       setMedia((prev) => {
@@ -94,10 +103,59 @@ export function MediaUpload({
         return updated
       })
 
+      // 3. Compress images before upload (Issue #64)
+      let fileToUpload = file
+      let compressionInfo: CompressionInfo | undefined
+
+      if (isImage) {
+        try {
+          const result = await compressImage(file)
+          const thumb  = await generateThumbnail(result.file)
+
+          fileToUpload   = result.file
+          compressionInfo = {
+            originalSize:    result.originalSize,
+            compressedSize:  result.compressedSize,
+            savedPercent:    result.savedPercent,
+          }
+
+          // Update preview to the compressed + thumbnail versions
+          setMedia((prev) =>
+            prev.map((item) =>
+              item.id === tempId
+                ? {
+                    ...item,
+                    url:           URL.createObjectURL(result.file),
+                    thumbnail:     thumb.dataUrl,
+                    isCompressing: false,
+                    isUploading:   true,
+                    compressionInfo,
+                  }
+                : item,
+            ),
+          )
+        } catch {
+          // Compression failed — proceed with original, clear compressing flag
+          setMedia((prev) =>
+            prev.map((item) =>
+              item.id === tempId
+                ? { ...item, isCompressing: false, isUploading: true }
+                : item,
+            ),
+          )
+        }
+      } else {
+        setMedia((prev) =>
+          prev.map((item) =>
+            item.id === tempId ? { ...item, isUploading: true } : item,
+          ),
+        )
+      }
+
       // 4. Real upload via /api/uploads (S3-backed)
       try {
         const form = new FormData()
-        form.append("file",   file)
+        form.append("file",   fileToUpload)
         form.append("folder", isVideo ? "videos" : "images")
 
         const res = await fetch("/api/uploads", { method: "POST", body: form })
@@ -107,22 +165,32 @@ export function MediaUpload({
           throw new Error(body.error ?? "Upload failed")
         }
 
-        const { url, key } = await res.json() as { url: string; key: string }
+        const { url } = await res.json() as { url: string; key: string }
 
-        // Replace placeholder with permanent CDN-backed item
         setMedia((prev) => {
           const updated = prev.map((item) =>
             item.id === tempId
-              ? { ...item, url, thumbnail: isImage ? url : undefined, isUploading: false }
+              ? {
+                  ...item,
+                  url,
+                  thumbnail:   isImage ? url : undefined,
+                  isUploading: false,
+                  compressionInfo: item.compressionInfo,
+                }
               : item,
           )
           onMediaChange(updated)
           return updated
         })
+
+        if (compressionInfo && compressionInfo.savedPercent > 0) {
+          toast.success("Image optimised", {
+            description: `Saved ${compressionInfo.savedPercent}% — ${formatFileSize(compressionInfo.originalSize)} → ${formatFileSize(compressionInfo.compressedSize)}`,
+          })
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Please try again."
         toast.error("Upload failed", { description: message })
-        // Remove the failed placeholder
         setMedia((prev) => {
           const updated = prev.filter((item) => item.id !== tempId)
           onMediaChange(updated)
@@ -160,6 +228,15 @@ export function MediaUpload({
     return <FileText className="w-4 h-4" />
   }
 
+  const getStatusLabel = (item: ExtendedPostMedia) => {
+    if (item.isCompressing) return "Optimising…"
+    if (item.isUploading)   return "Uploading…"
+    return item.type
+  }
+
+  const isProcessing = (item: ExtendedPostMedia) =>
+    item.isCompressing || item.isUploading
+
   // ── Render ─────────────────────────────────────────────────
 
   return (
@@ -182,7 +259,7 @@ export function MediaUpload({
             Drag and drop media files here, or click to browse
           </p>
           <p className="text-xs text-gray-500">
-            Images up to 10 MB · Videos up to 100 MB · Max {maxFiles} files
+            Images auto-optimised to &lt;500 KB · Videos up to 100 MB · Max {maxFiles} files
           </p>
           <Button
             variant="outline"
@@ -217,25 +294,27 @@ export function MediaUpload({
               <Card key={item.id} className="relative group overflow-hidden">
                 <CardContent className="p-2">
                   <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 rounded overflow-hidden flex items-center justify-center">
-                    {/* Upload overlay */}
-                    {item.isUploading && (
+                    {/* Processing overlay */}
+                    {isProcessing(item) && (
                       <div className="absolute inset-0 z-10 bg-black/40 flex flex-col items-center justify-center text-white p-2">
                         <Loader2 className="w-6 h-6 animate-spin mb-1" />
-                        <span className="text-[10px] font-medium">Uploading…</span>
+                        <span className="text-[10px] font-medium">
+                          {item.isCompressing ? "Optimising…" : "Uploading…"}
+                        </span>
                       </div>
                     )}
 
                     {item.type === "image" ? (
                       <img
-                        src={item.url || "/placeholder.svg"}
+                        src={item.thumbnail ?? item.url ?? "/placeholder.svg"}
                         alt="Upload preview"
                         className={`w-full h-full object-cover transition-opacity ${
-                          item.isUploading ? "opacity-50" : "opacity-100"
+                          isProcessing(item) ? "opacity-50" : "opacity-100"
                         }`}
                       />
                     ) : (
                       <div className={`w-full h-full flex items-center justify-center ${
-                        item.isUploading ? "opacity-50" : "opacity-100"
+                        isProcessing(item) ? "opacity-50" : "opacity-100"
                       }`}>
                         <Video className="w-8 h-8 text-gray-400" />
                       </div>
@@ -243,26 +322,34 @@ export function MediaUpload({
                   </div>
 
                   <div className="flex items-center justify-between mt-2">
-                    <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                      {item.isUploading
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1">
+                      {isProcessing(item)
                         ? <Loader2 className="w-3 h-3 animate-spin" />
-                        : getFileIcon(item.type)
+                        : item.compressionInfo
+                          ? <CheckCircle2 className="w-3 h-3 text-green-500" />
+                          : getFileIcon(item.type)
                       }
-                      <span className="ml-1 capitalize">
-                        {item.isUploading ? "Uploading…" : item.type}
-                      </span>
+                      <span className="capitalize">{getStatusLabel(item)}</span>
                     </Badge>
+
                     <Button
                       variant="ghost"
                       size="sm"
                       type="button"
-                      disabled={item.isUploading}
+                      disabled={isProcessing(item)}
                       onClick={(e) => { e.stopPropagation(); removeMedia(item.id) }}
                       className="h-6 w-6 p-0 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                     >
                       <X className="w-3 h-3" />
                     </Button>
                   </div>
+
+                  {/* Compression info badge */}
+                  {item.compressionInfo && item.compressionInfo.savedPercent > 0 && (
+                    <p className="text-[9px] text-green-600 dark:text-green-400 mt-0.5 leading-tight">
+                      {formatFileSize(item.compressionInfo.originalSize)} → {formatFileSize(item.compressionInfo.compressedSize)} (−{item.compressionInfo.savedPercent}%)
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ))}

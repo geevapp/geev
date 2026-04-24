@@ -96,7 +96,7 @@ const POST = async (request: NextRequest) => {
 
     const body = parsed.data;
 
-    const { title, description, type, winnerCount, endsAt, proofRequired } =
+    const { title, description, type, winnerCount, endsAt, proofRequired, category } =
       body as {
         title?: string;
         description?: string;
@@ -104,6 +104,7 @@ const POST = async (request: NextRequest) => {
         winnerCount?: unknown;
         endsAt?: string;
         proofRequired?: unknown;
+        category?: string;
       };
 
     if (!title || title.length < 10 || title.length > 200) {
@@ -133,6 +134,7 @@ const POST = async (request: NextRequest) => {
           title,
           slug: uniqueSlug,
           description,
+          category: category as any ?? null,
           maxWinners: winnerCount ? Number(winnerCount) : null,
           postRequirementsId: requirements.id,
           endsAt: new Date(endsAt),
