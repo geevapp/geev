@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { getCurrentUser } from '@/lib/auth';
+import { checkAndAwardBadges } from '@/lib/badges';
 
 export async function POST(
   request: NextRequest,
@@ -43,6 +44,7 @@ export async function POST(
           followingId: targetUserId,
         }
       });
+      checkAndAwardBadges(targetUserId).catch(console.error);
       return apiSuccess({ success: true, follow }, undefined, 201);
     }
 

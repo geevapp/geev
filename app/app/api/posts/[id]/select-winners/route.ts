@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readJsonBody } from "@/lib/parse-json-body";
 import { z } from "zod";
+import { checkAndAwardBadges } from "@/lib/badges";
 
 // ── Per-method request schemas ────────────────────────────────────────────────
 
@@ -14,7 +15,6 @@ const randomSchema = z.object({
 
 const manualSchema = z.object({
     method: z.literal("manual"),
-    // Strict: only entry IDs are accepted — callers must resolve user→entry mapping
     entryIds: z
         .array(z.string().uuid("Each entryId must be a valid UUID"))
         .min(1, "At least one entryId is required"),
@@ -189,6 +189,11 @@ export const POST = async (
                 skipDuplicates: true,
             });
         });
+
+        // Award badges to winners async (best-effort)
+        for (const entry of selectedEntries) {
+            checkAndAwardBadges(entry.userId).catch(console.error);
+        }
 
         return apiSuccess(
             {

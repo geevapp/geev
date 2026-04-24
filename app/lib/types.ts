@@ -171,6 +171,8 @@ export interface AppContextType extends AppState {
   logout: () => Promise<void>
   setCurrentUser: (user: User | null) => void
   // Post actions
+  refreshPosts: () => Promise<void>
+  refreshPostDetail: (postId: string) => Promise<void>
   createPost: (post: Omit<Post, "id" | "createdAt" | "updatedAt" | "author" | "entriesCount" | "shareCount" | "burnCount" | "commentCount" | "likesCount">) => void
   updatePost: (postId: string, updates: Partial<Post>) => void
   deletePost: (postId: string) => void
@@ -179,8 +181,6 @@ export interface AppContextType extends AppState {
   submitEntry: (entry: Omit<Entry, "id" | "submittedAt" | "user">) => void
   // Contribution actions
   makeContribution: (contribution: Omit<HelpContribution, "id" | "contributedAt" | "user">) => void
-  addReply: (reply: Omit<Reply, "id" | "createdAt" | "user" | "burnCount">) => void
-  burnReply: (replyId: string) => void
   // Theme actions
   toggleTheme: () => void
   setShowCreateModal: (show: boolean) => void

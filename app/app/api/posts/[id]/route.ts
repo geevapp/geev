@@ -51,6 +51,18 @@ const GET = async (
                         }
                     }
                 },
+                contributions: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                avatarUrl: true,
+                                username: true,
+                            }
+                        }
+                    }
+                },
             },
         });
 
@@ -58,7 +70,9 @@ const GET = async (
             return apiError('Post not found', 404);
         }
 
-        return apiSuccess(post);
+        const currentAmount = post.contributions?.reduce((sum, c) => sum + c.amount, 0) || 0;
+
+        return apiSuccess({ ...post, currentAmount });
     } catch (error) {
         return apiError('Failed to fetch post', 500);
     }
