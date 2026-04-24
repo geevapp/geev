@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readJsonBody } from "@/lib/parse-json-body";
+import { checkAndAwardBadges } from "@/lib/badges";
 
 export const POST = async (
     request: NextRequest,
@@ -96,6 +97,10 @@ export const POST = async (
         });
 
         const selectedUsers = selectedEntries.map(e => e.userId);
+
+        for (const winnerId of selectedUsers) {
+             checkAndAwardBadges(winnerId).catch(console.error);
+        }
 
         return apiSuccess({
              message: 'Winners selected successfully',

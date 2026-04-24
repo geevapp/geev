@@ -51,14 +51,6 @@ type AppAction =
   | { type: 'BURN_REPLY'; payload: string }
   | { type: 'ADD_ENTRY'; payload: Entry }
   | { type: 'ADD_CONTRIBUTION'; payload: HelpContribution }
-  | {
-      type: 'ADD_REPLY';
-      payload: {
-        parentId: string;
-        parentType: 'entry' | 'contribution';
-        reply: Reply;
-      };
-    }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'TOGGLE_THEME' }
   | { type: 'SET_CREATE_MODAL'; payload: boolean }
@@ -105,35 +97,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         contributions: [...state.contributions, action.payload],
-      };
-    case 'ADD_REPLY':
-      if (action.payload.parentType === 'entry') {
-        return {
-          ...state,
-          entries: state.entries.map((entry) =>
-            entry.id === action.payload.parentId
-              ? {
-                  ...entry,
-                  replies: [...(entry.replies || []), action.payload.reply],
-                }
-              : entry,
-          ),
-        };
-      }
-
-      return {
-        ...state,
-        contributions: state.contributions.map((contribution) =>
-          contribution.id === action.payload.parentId
-            ? {
-                ...contribution,
-                replies: [
-                  ...(contribution.replies || []),
-                  action.payload.reply,
-                ],
-              }
-            : contribution,
-        ),
       };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
@@ -312,9 +275,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       dispatch({ type: 'ADD_POST', payload: newPost });
     },
-    burnReply: (replyId: string) => {
-      dispatch({ type: 'BURN_REPLY', payload: replyId });
-    },
     updatePost: (postId: string, updates: Partial<Post>) => {
       dispatch({ type: 'UPDATE_POST', payload: { id: postId, updates } });
     },
@@ -341,29 +301,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         user: state.user!,
       };
       dispatch({ type: 'ADD_CONTRIBUTION', payload: newContribution });
-    },
-    addReply: (
-      entry: Omit<Reply, 'id' | 'createdAt' | 'user' | 'burnCount'>,
-    ) => {
-      const reply: Reply = {
-        id: Date.now().toString(),
-        parentId: entry.parentId,
-        parentType: entry.parentType,
-        userId: state.user!.id,
-        content: entry.content,
-        user: state.user!,
-        createdAt: new Date(),
-        burnCount: 0,
-      };
-
-      dispatch({
-        type: 'ADD_REPLY',
-        payload: {
-          parentId: entry.parentId,
-          parentType: entry.parentType,
-          reply,
-        },
-      });
     },
     toggleTheme: () => {
       dispatch({ type: 'TOGGLE_THEME' });

@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readJsonBody } from "@/lib/parse-json-body";
 import { POST_SLUG_MAX_LENGTH, sanitizePostSlug } from "@/lib/post-slug";
+import { checkAndAwardBadges } from "@/lib/badges";
 
 const SLUG_SUFFIX_LENGTH = 6;
 
@@ -173,6 +174,8 @@ const POST = async (request: NextRequest) => {
 
       return createdPost;
     });
+
+    checkAndAwardBadges(user.id).catch(console.error);
 
     return apiSuccess(post, "Post created successfully", 201);
   } catch (error) {

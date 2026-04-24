@@ -179,8 +179,6 @@ export interface AppContextType extends AppState {
   submitEntry: (entry: Omit<Entry, "id" | "submittedAt" | "user">) => void
   // Contribution actions
   makeContribution: (contribution: Omit<HelpContribution, "id" | "contributedAt" | "user">) => void
-  addReply: (reply: Omit<Reply, "id" | "createdAt" | "user" | "burnCount">) => void
-  burnReply: (replyId: string) => void
   // Theme actions
   toggleTheme: () => void
   setShowCreateModal: (show: boolean) => void
