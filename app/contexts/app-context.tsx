@@ -225,6 +225,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const contextValue: AppContextType = {
     ...state,
+    refreshPosts: async () => {
+      try {
+        const res = await fetch('/api/posts', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        dispatch({
+          type: 'SET_POSTS',
+          payload: Array.isArray(data.data) ? data.data : data.data?.posts ?? [],
+        });
+      } catch {
+        // silently ignore refresh failures
+      }
+    },
+    refreshPostDetail: async (postId: string) => {
+      try {
+        const res = await fetch(`/api/posts/${postId}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const post = data.data ?? data.post ?? null;
+        if (post) {
+          dispatch({ type: 'UPDATE_POST', payload: { id: postId, updates: post } });
+        }
+      } catch {
+        // silently ignore refresh failures
+      }
+    },
     login: async (
       user: User,
       credentials: {
