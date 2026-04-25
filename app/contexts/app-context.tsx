@@ -16,6 +16,7 @@ import {
   useReducer,
   useState,
 } from 'react';
+import { mapApiPostToClientPost } from '@/lib/map-api-post';
 import { deserializeState, serializeState } from '@/lib/utils';
 import { signIn, signOut } from 'next-auth/react';
 
@@ -197,11 +198,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
 
         const postData = await postRes.json();
+        const rawList = Array.isArray(postData.data)
+          ? postData.data
+          : postData.data?.posts ?? [];
+        const mapped = rawList
+          .map((p: Record<string, unknown>) => mapApiPostToClientPost(p))
+          .filter(Boolean) as Post[];
         dispatch({
           type: 'SET_POSTS',
-          payload: Array.isArray(postData.data)
-            ? postData.data
-            : postData.data?.posts ?? [],
+          payload: mapped,
         });
       } catch (error) {
         console.error('Failed to load data from API', error);
@@ -230,9 +235,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch('/api/posts', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
+        const rawList = Array.isArray(data.data) ? data.data : data.data?.posts ?? [];
+        const mapped = rawList
+          .map((p: Record<string, unknown>) => mapApiPostToClientPost(p))
+          .filter(Boolean) as Post[];
         dispatch({
           type: 'SET_POSTS',
-          payload: Array.isArray(data.data) ? data.data : data.data?.posts ?? [],
+          payload: mapped,
         });
       } catch {
         // silently ignore refresh failures
@@ -243,7 +252,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`/api/posts/${postId}`, { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        const post = data.data ?? data.post ?? null;
+        const raw = data.data ?? data.post ?? null;
+        const post = raw
+          ? mapApiPostToClientPost(raw as Record<string, unknown>)
+          : null;
         if (post) {
           dispatch({ type: 'UPDATE_POST', payload: { id: postId, updates: post } });
         }

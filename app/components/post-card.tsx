@@ -5,7 +5,6 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
-  Clock,
   DollarSign,
   Flame,
   Gift,
@@ -21,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { CommentsSection } from '@/components/comments-section';
 import { ContributionForm } from '@/components/contribution-form';
 import { EntryForm } from '@/components/entry-form';
+import { GiveawayCountdown } from '@/components/giveaway-countdown';
 import Link from 'next/link';
 import type { Post } from '@/lib/types';
 import { Progress } from '@/components/ui/progress';
@@ -124,6 +124,14 @@ export function PostCard({ post }: PostCardProps) {
         return 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700';
     }
   };
+
+  const giveawayDeadline =
+    post.type === 'giveaway' && post.endDate ? post.endDate : null;
+  const giveawayStillOpen =
+    post.type === 'giveaway' &&
+    (post.status === 'active' || post.status === 'open') &&
+    giveawayDeadline &&
+    giveawayDeadline.getTime() > Date.now();
 
   const getProgressPercentage = () => {
     if (
@@ -293,11 +301,8 @@ export function PostCard({ post }: PostCardProps) {
                     Prize: {post.prizeAmount} {post.currency}
                   </span>
                 </div>
-                {post.endDate && (
-                  <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
-                    <Clock className="w-4 h-4" />
-                    Ends {post.endDate.toLocaleDateString()}
-                  </div>
+                {giveawayDeadline && (
+                  <GiveawayCountdown endsAt={giveawayDeadline} />
                 )}
               </div>
 
@@ -317,7 +322,7 @@ export function PostCard({ post }: PostCardProps) {
                 </div>
               )}
 
-              {post.status === 'active' && (
+              {giveawayStillOpen && (
                 <Button
                   onClick={(e) => {
                     handleInteractiveClick(e);

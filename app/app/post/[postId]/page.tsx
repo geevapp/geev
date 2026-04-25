@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  Clock,
   DollarSign,
   Flame,
   Gift,
@@ -24,15 +23,16 @@ import { Button } from "@/components/ui/button";
 import { CommentsSection } from "@/components/comments-section";
 import { ContributionForm } from "@/components/contribution-form";
 import { EntryForm } from "@/components/entry-form";
+import { GiveawayCountdown } from "@/components/giveaway-countdown";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { UserRankBadge } from "@/components/user-rank-badge";
 import { useAppContext } from "@/contexts/app-context";
-import { useEffect, useState } from "react";
+import { mapApiPostToClientPost } from "@/lib/map-api-post";
+import { useCallback, useEffect, useState } from "react";
 
 export default function PostPage() {
-  const { user, burnPost } = useAppContext();
-  const [post, setPost] = useState<any>(null);
+  const { user, burnPost, posts, refreshPostDetail } = useAppContext();
   const params = useParams();
   const postId = params.postId as string;
   const contextPost = posts.find((p) => p.id === postId);
@@ -47,79 +47,65 @@ export default function PostPage() {
   const [showContributionForm, setShowContributionForm] = useState(false);
 
   const router = useRouter();
-  const normalizeApiPost = (apiPost: any) => {
-    if (!apiPost) return null;
 
-    const normalizedType = apiPost.type;
-    const normalizedStatus =
-      apiPost.status === "open" || apiPost.status === "in_progress"
-        ? "active"
-        : apiPost.status;
-    const fallbackUsername =
-      apiPost.user?.name?.toLowerCase()?.replace(/\s+/g, "") || "user";
+  const reloadPostFromApi = useCallback(async () => {
+    setIsLoadingPost(true);
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        cache: "no-store",
+      });
 
-    return {
-      ...apiPost,
-      type: normalizedType,
-      status: normalizedStatus,
-      createdAt: apiPost.createdAt ? new Date(apiPost.createdAt) : new Date(),
-      updatedAt: apiPost.updatedAt ? new Date(apiPost.updatedAt) : new Date(),
-      endDate: apiPost.endsAt ? new Date(apiPost.endsAt) : undefined,
-      burnCount: apiPost.burnCount ?? 0,
-      shareCount: apiPost.shareCount ?? 0,
-      commentCount: apiPost.commentCount ?? 0,
-      likesCount: apiPost.likesCount ?? apiPost._count?.interactions ?? 0,
-      entriesCount: apiPost.entriesCount ?? apiPost._count?.entries ?? 0,
-      author: {
-        id: apiPost.user?.id ?? apiPost.userId,
-        name: apiPost.user?.name ?? "Unknown User",
-        username: apiPost.user?.username ?? fallbackUsername,
-        avatarUrl: apiPost.user?.avatarUrl,
-        rank: apiPost.user?.rank,
-      },
-    };
-  };
-
-  useEffect(() => {
-    let ignore = false;
-
-    const loadPost = async () => {
-      if (contextPost) {
+      if (!response.ok) {
         setFetchedPost(null);
-        setIsLoadingPost(false);
         return;
       }
 
-      setIsLoadingPost(true);
+      const result = await response.json();
+      setFetchedPost(
+        mapApiPostToClientPost(result?.data as Record<string, unknown>),
+      );
+    } catch {
+      setFetchedPost(null);
+    } finally {
+      setIsLoadingPost(false);
+    }
+  }, [postId]);
 
+  useEffect(() => {
+    if (contextPost) {
+      setFetchedPost(null);
+      setIsLoadingPost(false);
+      return;
+    }
+
+    let ignore = false;
+
+    const run = async () => {
+      setIsLoadingPost(true);
       try {
         const response = await fetch(`/api/posts/${postId}`, {
           cache: "no-store",
         });
 
         if (!response.ok) {
-          if (!ignore) {
-            setFetchedPost(null);
-          }
+          if (!ignore) setFetchedPost(null);
           return;
         }
 
         const result = await response.json();
         if (!ignore) {
-          setFetchedPost(normalizeApiPost(result?.data));
+          setFetchedPost(
+            mapApiPostToClientPost(result?.data as Record<string, unknown>),
+          );
         }
-      } catch (error) {
-        if (!ignore) {
-          setFetchedPost(null);
-        }
+      } catch {
+        if (!ignore) setFetchedPost(null);
       } finally {
-        if (!ignore) {
-          setIsLoadingPost(false);
-        }
+        if (!ignore) setIsLoadingPost(false);
       }
     };
 
-    loadPost();
+    void run();
 
     return () => {
       ignore = true;
@@ -142,7 +128,8 @@ export default function PostPage() {
               body: JSON.stringify({ method, winnerIds })
           });
           if (res.ok) {
-              loadPost();
+              await refreshPostDetail(post.id);
+              if (!contextPost) await reloadPostFromApi();
           } else {
              const errorData = await res.json();
              alert(errorData.error || 'Failed to select winners');
@@ -418,10 +405,7 @@ export default function PostPage() {
                         </span>
                       </div>
                       {post.endDate && (
-                        <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
-                          <Clock className="w-4 h-4" />
-                          Ends {post.endDate.toLocaleDateString()}
-                        </div>
+                        <GiveawayCountdown endsAt={post.endDate} />
                       )}
                     </div>
 

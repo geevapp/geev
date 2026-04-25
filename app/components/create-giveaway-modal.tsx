@@ -93,14 +93,17 @@ const response = await fetch("/api/posts", {
           type: "giveaway",
           title: formData.title,
           description: formData.description,
-          status: "active",
           prizeAmount: Number.parseFloat(formData.prizeAmount),
           currency: formData.currency,
           winnerCount: Number.parseInt(formData.winnerCount),
           selectionType: formData.selectionType,
           entryRequirements: requirements,
           proofRequired: formData.proofRequired,
-          endDate: formData.endDate ? new Date(formData.endDate) : undefined,
+          endsAt: (
+            formData.endDate
+              ? new Date(formData.endDate)
+              : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          ).toISOString(),
           media: media.length > 0 ? media : undefined,
         }),
       });
