@@ -30,13 +30,16 @@ export function mapApiPostToClientPost(apiPost: Record<string, unknown> | null |
     endDate: apiPost.endsAt ? new Date(apiPost.endsAt as string) : undefined,
     burnCount: (apiPost.burnCount as number) ?? 0,
     shareCount: (apiPost.shareCount as number) ?? 0,
-    commentCount: (apiPost.commentCount as number) ?? 0,
+    commentCount:
+      (apiPost.commentCount as number) ??
+      (typeof _count?.comments === "number" ? _count.comments : 0),
     likesCount:
       (apiPost.likesCount as number) ??
       (typeof _count?.interactions === "number" ? _count.interactions : 0),
     entriesCount:
       (apiPost.entriesCount as number) ??
-      (typeof _count?.entries === "number" ? _count.entries : 0),
+      (typeof _count?.entries === "number" ? _count.entries : 0) ??
+      (Array.isArray(apiPost.entries) ? apiPost.entries.length : 0),
     author: {
       id: (user?.id as string) ?? (apiPost.userId as string) ?? "",
       name: (user?.name as string) ?? "Unknown User",
