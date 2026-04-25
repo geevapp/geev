@@ -9,6 +9,11 @@ const withdrawSchema = z.object({
     amount: z.number().positive('Amount must be greater than 0'),
     method: z.enum(['bank', 'crypto', 'card']).default('bank'),
     note: z.string().optional(),
+    /**
+     * simulated=true  (default) — mutate local ledger only.
+     * simulated=false           — reserved for future on-chain Stellar withdrawal.
+     */
+    simulated: z.boolean().default(true),
 });
 
 export async function POST(request: NextRequest) {
@@ -23,7 +28,16 @@ export async function POST(request: NextRequest) {
             return apiError(parsed.error.errors[0].message, 400);
         }
 
-        const { amount, method, note } = parsed.data;
+        const { amount, method, note, simulated } = parsed.data;
+
+        if (!simulated) {
+            // On-chain path: build and submit a Stellar payment transaction.
+            // Placeholder — integrate StellarService.submitWithdrawal() here.
+            return apiError(
+                'On-chain withdrawal is not yet available. Set simulated=true for local ledger withdrawal.',
+                501,
+            );
+        }
 
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.user.findUnique({
@@ -49,21 +63,25 @@ export async function POST(request: NextRequest) {
             const updatedUser = await tx.user.update({
                 where: { id: currentUser.id },
                 data: { walletBalance: { decrement: amount } },
-                select: { walletBalance: true },
+                select: { walletBalance: true, updatedAt: true },
             });
 
-            return { transaction, balance: updatedUser.walletBalance };
+            return { transaction, balance: updatedUser.walletBalance, updatedAt: updatedUser.updatedAt };
         });
 
-        return apiSuccess(result, 'Withdrawal initiated successfully');
+        return apiSuccess(
+            {
+                balance: result.balance,
+                transaction: result.transaction,
+                lastSync: result.updatedAt.toISOString(),
+                simulated,
+            },
+            'Withdrawal initiated successfully',
+        );
     } catch (error) {
         if (error instanceof Error) {
-            if (error.message === 'INSUFFICIENT_BALANCE') {
-                return apiError('Insufficient wallet balance', 400);
-            }
-            if (error.message === 'USER_NOT_FOUND') {
-                return apiError('User not found', 404);
-            }
+            if (error.message === 'INSUFFICIENT_BALANCE') return apiError('Insufficient wallet balance', 400);
+            if (error.message === 'USER_NOT_FOUND') return apiError('User not found', 404);
         }
         return apiError('Failed to process withdrawal', 500);
     }
