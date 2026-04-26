@@ -77,11 +77,14 @@ describe('Entry API Endpoints', () => {
       category: 'electronics',
       status: 'open',
       selectionMethod: 'random',
-      winnerCount: 1,
+      maxWinners: 1,
       media: null,
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
       updatedAt: new Date(),
+      proofRequired: false,
+      requirements: { proofRequired: false },
+      winners: [],
     };
 
     requestPost = {
@@ -94,12 +97,27 @@ describe('Entry API Endpoints', () => {
       category: 'services',
       status: 'open',
       selectionMethod: 'random',
-      winnerCount: 1,
+      maxWinners: 1,
       media: null,
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
       updatedAt: new Date(),
+      proofRequired: false,
+      requirements: { proofRequired: false },
+      winners: [],
     };
+
+    prisma.entry.count = vi.fn().mockResolvedValue(0);
+    prisma.entry.updateMany = vi.fn().mockResolvedValue({ count: 0 });
+    prisma.postWinner = {
+      count: vi.fn().mockResolvedValue(0),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
+    } as any;
+    prisma.post.update = vi.fn().mockResolvedValue(post);
+    prisma.notification = {
+      create: vi.fn().mockResolvedValue({}),
+      createMany: vi.fn().mockResolvedValue({ count: 0 }),
+    } as any;
   });
 
   describe('POST /api/posts/[id]/entries', () => {
@@ -411,6 +429,208 @@ describe('Entry API Endpoints', () => {
       expect(status).toBe(400);
       expect(data.success).toBe(false);
       expect(data.error).toBe('Entries can only be submitted to giveaway posts');
+    });
+
+    it('should reject when proof is required on post but missing', async () => {
+      const proofPost = {
+        ...post,
+        proofRequired: true,
+        requirements: { proofRequired: false },
+      };
+      prisma.post.findUnique = vi.fn().mockResolvedValue(proofPost);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
+
+      vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
+
+      const request = createMockRequest(`http://localhost:3000/api/posts/${post.id}/entries`, {
+        method: 'POST',
+        body: {
+          content: 'This is my entry for the giveaway!',
+        },
+        headers: { 'x-mock-wallet': user2.walletAddress },
+      });
+
+      const response = await CreateEntry(request, {
+        params: Promise.resolve({ id: post.id }),
+      });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe(
+        'Proof is required for this giveaway (provide proofUrl or proofImage)',
+      );
+    });
+
+    it('should reject when proof is required via PostRequirements only', async () => {
+      const proofPost = {
+        ...post,
+        proofRequired: false,
+        requirements: { proofRequired: true },
+      };
+      prisma.post.findUnique = vi.fn().mockResolvedValue(proofPost);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
+
+      vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
+
+      const request = createMockRequest(`http://localhost:3000/api/posts/${post.id}/entries`, {
+        method: 'POST',
+        body: {
+          content: 'This is my entry for the giveaway!',
+        },
+        headers: { 'x-mock-wallet': user2.walletAddress },
+      });
+
+      const response = await CreateEntry(request, {
+        params: Promise.resolve({ id: post.id }),
+      });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe(
+        'Proof is required for this giveaway (provide proofUrl or proofImage)',
+      );
+    });
+
+    it('should accept proofImage when proof is required', async () => {
+      const proofPost = {
+        ...post,
+        proofRequired: true,
+        requirements: { proofRequired: false },
+      };
+      const mockEntry = {
+        id: 'entry_proof_img',
+        postId: post.id,
+        userId: user2.id,
+        content: 'This is my entry for the giveaway!',
+        proofUrl: null,
+        proofImage: 'https://example.com/p.png',
+        isWinner: false,
+        createdAt: new Date(),
+        user: {
+          id: user2.id,
+          name: user2.name,
+          walletAddress: user2.walletAddress,
+          avatarUrl: user2.avatarUrl,
+        },
+      };
+
+      prisma.post.findUnique = vi.fn().mockResolvedValue(proofPost);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
+      prisma.entry.create = vi.fn().mockResolvedValue(mockEntry);
+
+      vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
+
+      const request = createMockRequest(`http://localhost:3000/api/posts/${post.id}/entries`, {
+        method: 'POST',
+        body: {
+          content: 'This is my entry for the giveaway!',
+          proofImage: 'https://example.com/p.png',
+        },
+        headers: { 'x-mock-wallet': user2.walletAddress },
+      });
+
+      const response = await CreateEntry(request, {
+        params: Promise.resolve({ id: post.id }),
+      });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(201);
+      expect(data.success).toBe(true);
+      expect(prisma.entry.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            proofImage: 'https://example.com/p.png',
+          }),
+        }),
+      );
+    });
+
+    it('should reject first-come entry when giveaway has filled winner slots', async () => {
+      const fcPost = {
+        ...post,
+        selectionMethod: 'firstcome',
+        maxWinners: 1,
+      };
+      prisma.post.findUnique = vi.fn().mockResolvedValue(fcPost);
+      prisma.entry.count = vi.fn().mockResolvedValue(1);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
+
+      vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
+
+      const request = createMockRequest(`http://localhost:3000/api/posts/${post.id}/entries`, {
+        method: 'POST',
+        body: {
+          content: 'This is my entry for the giveaway!',
+        },
+        headers: { 'x-mock-wallet': user2.walletAddress },
+      });
+
+      const response = await CreateEntry(request, {
+        params: Promise.resolve({ id: post.id }),
+      });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe('This giveaway has filled all winner slots');
+    });
+
+    it('should assign first-come winners and complete post when cap is reached', async () => {
+      const fcPost = {
+        ...post,
+        selectionMethod: 'firstcome',
+        maxWinners: 1,
+        title: 'First come test',
+      };
+      const mockEntry = {
+        id: 'entry_fc_1',
+        postId: post.id,
+        userId: user2.id,
+        content: 'First entrant wins',
+        proofUrl: null,
+        isWinner: true,
+        createdAt: new Date(),
+        user: {
+          id: user2.id,
+          name: user2.name,
+          walletAddress: user2.walletAddress,
+          avatarUrl: user2.avatarUrl,
+        },
+      };
+
+      prisma.post.findUnique = vi.fn().mockResolvedValue(fcPost);
+      prisma.entry.count = vi.fn().mockResolvedValue(0);
+      prisma.entry.findUnique = vi.fn().mockResolvedValue(null);
+      prisma.entry.create = vi.fn().mockResolvedValue(mockEntry);
+      prisma.entry.findMany = vi.fn().mockResolvedValue([mockEntry]);
+
+      vi.spyOn(await import('@/lib/auth'), 'getCurrentUser').mockResolvedValue(user2);
+
+      const request = createMockRequest(`http://localhost:3000/api/posts/${post.id}/entries`, {
+        method: 'POST',
+        body: {
+          content: 'First entrant wins',
+        },
+        headers: { 'x-mock-wallet': user2.walletAddress },
+      });
+
+      const response = await CreateEntry(request, {
+        params: Promise.resolve({ id: post.id }),
+      });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(201);
+      expect(data.success).toBe(true);
+      expect(prisma.postWinner.createMany).toHaveBeenCalled();
+      expect(prisma.post.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: post.id },
+          data: { status: 'completed' },
+        }),
+      );
+      expect(prisma.notification.createMany).toHaveBeenCalled();
     });
   });
 
