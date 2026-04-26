@@ -102,8 +102,8 @@ describe("Posts API", () => {
       expect(data.data.limit).toBe(10);
     });
 
-    // ✅ NEW TEST: search query, category, sort
-    it("should handle search query, category filter, and sort", async () => {
+    // ✅ NEW TEST: search query, type filter, sort
+    it("should handle search query, type filter, and sort", async () => {
       const mockPosts = [
         { id: "post_1", title: "Awesome Post", user: testUser },
         { id: "post_2", title: "Another Post", user: testUser },
@@ -113,7 +113,7 @@ describe("Posts API", () => {
       prisma.post.count = vi.fn().mockResolvedValue(mockPosts.length);
 
       const request = createMockRequest(
-        "http://localhost:3000/api/posts?q=awesome&category=electronics&sort=popular",
+        "http://localhost:3000/api/posts?q=awesome&type=giveaway&sort=popular",
       );
       const response = await GET(request);
       const { status, data } = await parseResponse(response);
@@ -124,9 +124,54 @@ describe("Posts API", () => {
         expect.objectContaining({
           where: expect.objectContaining({
             OR: expect.any(Array),
-            category: "electronics",
+            type: "giveaway",
           }),
-          orderBy: [{ likes: "desc" }, { entries: "desc" }],
+          orderBy: [{ _count: { interactions: "desc" } }, { createdAt: "desc" }],
+        }),
+      );
+    });
+
+    it("should filter by userId, status, and date range", async () => {
+      const mockPosts = [{ id: "post_1", title: "User Post", user: testUser }];
+
+      prisma.post.findMany = vi.fn().mockResolvedValue(mockPosts);
+      prisma.post.count = vi.fn().mockResolvedValue(mockPosts.length);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?userId=user_123&status=open&from=2024-01-01&to=2024-12-31",
+      );
+      const response = await GET(request);
+      const { status } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: "user_123",
+            status: "open",
+            createdAt: expect.objectContaining({
+              gte: expect.any(Date),
+              lte: expect.any(Date),
+            }),
+          }),
+        }),
+      );
+    });
+
+    it("should sort by ending_soon", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?sort=ending_soon",
+      );
+      const response = await GET(request);
+      const { status } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: [{ endsAt: "asc" }],
         }),
       );
     });

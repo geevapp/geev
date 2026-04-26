@@ -21,9 +21,9 @@ const testPostsAPI = async () => {
     console.log('  First title  :', json1.data?.posts?.[0]?.title || '(no posts)');
     console.log('----------------------------------------\n');
 
-    console.log('[2] GET /api/posts  →  giveaway + crypto + small page');
+    console.log('[2] GET /api/posts  →  giveaway + small page');
     const req2 = new Request(
-        `${BASE_URL}?page=1&limit=3&type=giveaway&category=crypto`
+        `${BASE_URL}?page=1&limit=3&type=giveaway`
     );
     const res2 = await GET(req2 as any);
     const json2 = await res2.json();

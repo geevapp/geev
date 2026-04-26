@@ -199,13 +199,17 @@ const GET = async (request: NextRequest) => {
     const { searchParams } = new URL(request.url);
 
     const q = searchParams.get("q");
-    const category = searchParams.get("category");
+    const type = searchParams.get("type");
     const sort = searchParams.get("sort");
     const filter = searchParams.get("filter");
+    const userId = searchParams.get("userId");
+    const status = searchParams.get("status");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
 
-    const where: any = {};
+    const where: Prisma.PostWhereInput = {};
 
     if (filter === "active") {
       where.endsAt = { gt: new Date() };
@@ -218,13 +222,29 @@ const GET = async (request: NextRequest) => {
       ];
     }
 
-    if (category) {
-      where.category = category;
+    if (type) {
+      where.type = type as Prisma.PostTypeFilter;
     }
 
-    let orderBy: any = [{ createdAt: "desc" }];
+    if (userId) {
+      where.userId = userId;
+    }
+
+    if (status) {
+      where.status = status as Prisma.PostStatusFilter;
+    }
+
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) where.createdAt.lte = new Date(to);
+    }
+
+    let orderBy: Prisma.PostOrderByWithRelationInput[] = [{ createdAt: "desc" }];
     if (sort === "popular") {
-      orderBy = [{ likes: "desc" }, { entries: "desc" }];
+      orderBy = [{ _count: { interactions: "desc" } }, { createdAt: "desc" }];
+    } else if (sort === "ending_soon") {
+      orderBy = [{ endsAt: "asc" }];
     }
 
     const [posts, total] = await Promise.all([
@@ -239,6 +259,13 @@ const GET = async (request: NextRequest) => {
               id: true,
               name: true,
               avatarUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              entries: true,
+              interactions: true,
+              comments: true,
             },
           },
         },
