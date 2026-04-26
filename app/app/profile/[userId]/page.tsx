@@ -13,6 +13,8 @@ import { FollowListDialog } from '@/components/follow-list-dialog';
 import { PostCard } from '@/components/post-card';
 import { UserRankBadge } from '@/components/user-rank-badge';
 import { useAppContext } from '@/contexts/app-context';
+import { mapApiPostToClientPost } from '@/lib/map-api-post';
+import type { Post } from '@/lib/types';
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
@@ -20,7 +22,7 @@ export default function ProfilePage() {
   const params = useParams();
   const { user: currentUser } = useAppContext();
   const [profileUser, setProfileUser] = useState<any>(null);
-  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
@@ -42,8 +44,8 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       try {
         const [userRes, postsRes] = await Promise.all([
-          fetch(`/api/users/${userId}`),
-          fetch(`/api/posts?userId=${userId}`),
+          fetch(`/api/users/${userId}`, { cache: 'no-store' }),
+          fetch(`/api/users/${userId}/posts`, { cache: 'no-store' }),
         ]);
 
         if (userRes.ok) {
@@ -55,8 +57,14 @@ export default function ProfilePage() {
         }
 
         if (postsRes.ok) {
-          const postsData = await postsRes.json(); 
-          setUserPosts(postsData.data ?? []);
+          const postsData = await postsRes.json();
+          const rawList = Array.isArray(postsData.data) ? postsData.data : [];
+          const mapped = rawList
+            .map((p: Record<string, unknown>) => mapApiPostToClientPost(p))
+            .filter(Boolean) as Post[];
+          setUserPosts(mapped);
+        } else {
+          setUserPosts([]);
         }
       } catch (error) {
         console.error('Failed to load profile:', error);
@@ -82,7 +90,9 @@ export default function ProfilePage() {
       setIsFollowing(!newIsFollowing);
       setFollowerCount((prev) => (newIsFollowing ? prev - 1 : prev + 1));
     }
-  };  if (!profileUser) {
+  };
+
+  if (!profileUser) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">

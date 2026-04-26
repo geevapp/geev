@@ -22,11 +22,30 @@ export async function GET (
         return apiError('User not found', 404);
       }
 
-      // Fetch user's posts
+      // Fetch user's posts (shape aligned with feed/detail for PostCard)
       const userPosts = await prisma.post.findMany({
         where: { userId: id },
         orderBy: { createdAt: 'desc' },
         include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatarUrl: true,
+              username: true,
+              rank: {
+                select: {
+                  id: true,
+                  level: true,
+                  title: true,
+                  color: true,
+                  minPoints: true,
+                  maxPoints: true,
+                },
+              },
+            },
+          },
+          media: true,
           entries: {
             select: {
               id: true,
@@ -34,6 +53,13 @@ export async function GET (
               content: true,
               isWinner: true,
               createdAt: true,
+            },
+          },
+          _count: {
+            select: {
+              entries: true,
+              interactions: true,
+              comments: true,
             },
           },
         },
