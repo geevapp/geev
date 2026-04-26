@@ -10,6 +10,9 @@ import { CreateRequestModal } from "@/components/create-request-modal";
 import { GuestBanner } from "@/components/guest-banner";
 import { PostCard } from "@/components/post-card";
 import { useAppContext } from "@/contexts/app-context";
+import { mapApiPostToClientPost } from "@/lib/map-api-post";
+import type { Post } from "@/lib/types";
+import { useEffect, useState } from "react";
 
 export function TimelineFeed() {
   const {
@@ -23,6 +26,37 @@ export function TimelineFeed() {
     setShowRequestModal,
   } = useAppContext(); // Use context methods instead of dispatch
 
+  const [deadlineActivePosts, setDeadlineActivePosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDeadlineActive = async () => {
+      try {
+        const res = await fetch("/api/posts?filter=active&limit=100", {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        const rawList = Array.isArray(json.data)
+          ? json.data
+          : json.data?.posts ?? [];
+        const mapped = rawList
+          .map((p: Record<string, unknown>) => mapApiPostToClientPost(p))
+          .filter(Boolean) as Post[];
+        if (!cancelled) setDeadlineActivePosts(mapped);
+      } catch {
+        if (!cancelled) setDeadlineActivePosts([]);
+      }
+    };
+
+    loadDeadlineActive();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [posts]);
+
   const handleCreatePost = (type: "giveaway" | "request") => {
     if (type === "giveaway") {
       setShowGiveawayModal(true); // Use context method
@@ -34,7 +68,6 @@ export function TimelineFeed() {
 
   const giveaways = posts.filter((post) => post.type === "giveaway");
   const helpRequests = posts.filter((post) => post.type === "request");
-  const activePosts = posts.filter((post) => post.status === "active");
 
   return (
     <div className="space-y-6">
@@ -57,7 +90,7 @@ export function TimelineFeed() {
             Help Requests ({helpRequests.length})
           </TabsTrigger>
           <TabsTrigger value="active" className="flex items-center gap-2">
-            Active ({activePosts.length})
+            Active ({deadlineActivePosts.length})
           </TabsTrigger>
         </TabsList>
 
@@ -112,8 +145,8 @@ export function TimelineFeed() {
         </TabsContent>
 
         <TabsContent value="active" className="space-y-6">
-          {activePosts.length > 0 ? (
-            activePosts.map((post) => <PostCard key={post.id} post={post} />)
+          {deadlineActivePosts.length > 0 ? (
+            deadlineActivePosts.map((post) => <PostCard key={post.id} post={post} />)
           ) : (
             <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
               <CardContent className="p-8 text-center">

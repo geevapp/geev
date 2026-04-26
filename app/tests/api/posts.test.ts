@@ -130,6 +130,26 @@ describe("Posts API", () => {
         }),
       );
     });
+
+    it("applies deadline active filter when filter=active", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?filter=active&page=1&limit=10",
+      );
+      const response = await GET(request);
+      const { status } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            endsAt: { gt: expect.any(Date) },
+          }),
+        }),
+      );
+    });
   });
 
   describe("POST /api/posts", () => {

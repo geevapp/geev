@@ -201,10 +201,15 @@ const GET = async (request: NextRequest) => {
     const q = searchParams.get("q");
     const category = searchParams.get("category");
     const sort = searchParams.get("sort");
+    const filter = searchParams.get("filter");
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
 
     const where: any = {};
+
+    if (filter === "active") {
+      where.endsAt = { gt: new Date() };
+    }
 
     if (q) {
       where.OR = [

@@ -76,7 +76,13 @@ export interface PostMedia {
   thumbnail?: string
 }
 
-export type PostStatus = "active" | "completed" | "cancelled" | "expired"
+export type PostStatus =
+  | "active"
+  | "open"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "expired"
 
 export interface Entry {
   id: string
