@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Calendar,
   DollarSign,
@@ -8,16 +8,16 @@ import {
   Heart,
   TrendingUp,
   Trophy,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { AuthGuard } from '@/components/auth-guard';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
-import { UserRankBadge } from '@/components/user-rank-badge';
-import { useAppContext } from '@/contexts/app-context';
-import { useEffect,  useState } from 'react';
+import { AuthGuard } from "@/components/auth-guard";
+import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { UserRankBadge } from "@/components/user-rank-badge";
+import { useAppContext } from "@/contexts/app-context";
+import { useEffect, useState } from "react";
 
 export default function ActivityPage() {
   const { user } = useAppContext();
@@ -31,7 +31,7 @@ export default function ActivityPage() {
     if (!user?.id) return;
 
     const loadActivity = async () => {
-      try{
+      try {
         const [activityRes, postsRes] = await Promise.all([
           fetch(`/api/users/${user.id}/activity`),
           fetch(`/api/posts`),
@@ -46,13 +46,11 @@ export default function ActivityPage() {
           setRecentActivities(data.recentActivities ?? []);
         }
       } catch (error) {
-        console.error('Failed to load activity:', error);
-    }
+        console.error("Failed to load activity:", error);
+      }
     };
     loadActivity();
   }, [user?.id]);
-
-
 
   const ActivityItem = ({
     activity,
@@ -65,14 +63,14 @@ export default function ActivityPage() {
           <Link href={`/profile/${activity.user.id}`}>
             <Avatar className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-gray-300 transition-all">
               <AvatarImage
-                src={activity.user.avatarUrl || '/placeholder.svg'}
+                src={activity.user.avatarUrl || "/placeholder.svg"}
                 alt={activity.user.name}
               />
               <AvatarFallback>
                 {activity.user.name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')}
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("")}
               </AvatarFallback>
             </Avatar>
           </Link>
@@ -89,39 +87,39 @@ export default function ActivityPage() {
             </div>
 
             <div className="flex items-center gap-2 text-sm">
-              {activity.type === 'post' && (
+              {activity.type === "post" && (
                 <>
-                  {activity.post?.type === 'giveaway' ? (
+                  {activity.post?.type === "giveaway" ? (
                     <Gift className="w-4 h-4 text-gray-500" />
                   ) : (
                     <Heart className="w-4 h-4 text-gray-500" />
                   )}
                   <span>
-                    Created a{' '}
-                    {activity.post?.type === 'giveaway'
-                      ? 'giveaway'
-                      : 'help request'}
-                    :{' '}
+                    Created a{" "}
+                    {activity.post?.type === "giveaway"
+                      ? "giveaway"
+                      : "help request"}
+                    :{" "}
                     <span className="font-medium">{activity.post?.title}</span>
                   </span>
                 </>
               )}
 
-              {activity.type === 'entry' && (
+              {activity.type === "entry" && (
                 <>
                   <Trophy className="w-4 h-4 text-gray-500" />
                   <span>
-                    Entered giveaway:{' '}
+                    Entered giveaway:{" "}
                     <span className="font-medium">{activity.post?.title}</span>
                   </span>
                 </>
               )}
 
-              {activity.type === 'contribution' && (
+              {activity.type === "contribution" && (
                 <>
                   <DollarSign className="w-4 h-4 text-gray-500" />
                   <span>
-                    Contributed ${activity.contribution?.amount.toFixed(2)} to:{' '}
+                    Contributed ${activity.contribution?.amount.toFixed(2)} to:{" "}
                     <span className="font-medium">{activity.post?.title}</span>
                   </span>
                 </>
@@ -130,7 +128,7 @@ export default function ActivityPage() {
 
             <span className="text-xs text-gray-500 flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {activity.timestamp.toLocaleDateString()} at{' '}
+              {activity.timestamp.toLocaleDateString()} at{" "}
               {activity.timestamp.toLocaleTimeString()}
             </span>
           </div>
@@ -203,7 +201,7 @@ export default function ActivityPage() {
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            {post.type === 'giveaway' ? (
+                            {post.type === "giveaway" ? (
                               <Gift className="w-5 h-5 text-gray-500" />
                             ) : (
                               <Heart className="w-5 h-5 text-gray-500" />
@@ -211,18 +209,18 @@ export default function ActivityPage() {
                             <div>
                               <h3 className="font-semibold">{post.title}</h3>
                               <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {post.type === 'giveaway'
-                                  ? 'Giveaway'
-                                  : 'Help Request'}{' '}
+                                {post.type === "giveaway"
+                                  ? "Giveaway"
+                                  : "Help Request"}{" "}
                                 • {post.createdAt.toLocaleDateString()}
                               </p>
                             </div>
                           </div>
                           <Badge
                             className={
-                              post.status === 'active'
-                                ? 'bg-gray-100 text-gray-700'
-                                : 'bg-gray-100 text-gray-700'
+                              post.status === "active"
+                                ? "bg-gray-100 text-gray-700"
+                                : "bg-gray-100 text-gray-700"
                             }
                           >
                             {post.status}
@@ -265,7 +263,7 @@ export default function ActivityPage() {
                               <div>
                                 <h3 className="font-semibold">{post?.title}</h3>
                                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  Entered{' '}
+                                  Entered{" "}
                                   {entry.submittedAt.toLocaleDateString()}
                                 </p>
                               </div>
@@ -316,7 +314,7 @@ export default function ActivityPage() {
                               <div>
                                 <h3 className="font-semibold">{post?.title}</h3>
                                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  Contributed{' '}
+                                  Contributed{" "}
                                   {contribution.contributedAt.toLocaleDateString()}
                                 </p>
                               </div>

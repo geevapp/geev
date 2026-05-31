@@ -44,12 +44,12 @@ export async function GET(request: NextRequest) {
     const simulated = searchParams.get("simulated") !== "false";
 
     let chainTransactions: unknown[] = [];
-    if (!simulated && currentUser.stellarAddress) {
+    if (!simulated && currentUser.walletAddress) {
       chainTransactions = await getLiveTransactions(
-        currentUser.stellarAddress,
+        currentUser.walletAddress,
       ).catch(() => []);
     }
-    
+
     return apiSuccess({
       transactions, // local ledger (always present)
       chainTransactions, // on-chain records (non-simulated only)

@@ -1,17 +1,11 @@
 /**
  * Vercel Cron Job for Indexer
- * 
+ *
  * This route is triggered by Vercel's cron scheduler
  * Configuration in vercel.json:
- * {
- *   "crons": [
- *     {
- *       "path": "/api/cron/indexer",
- *       "schedule": "*/5 * * * *"
- *     }
- *   ]
- * }
- * 
+ * cron path: /api/cron/indexer
+ * cron schedule: every 5 minutes
+ *
  * Runs every 5 minutes to sync blockchain events
  */
 
@@ -26,20 +20,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Verify cron secret to prevent unauthorized access
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
-    
+
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     console.log("[Cron] Running indexer at", new Date().toISOString());
-    
+
     const startTime = Date.now();
     await runIndexerOnce();
     const duration = Date.now() - startTime;
-    
+
     console.log(`[Cron] Indexer completed in ${duration}ms`);
 
     return NextResponse.json({
@@ -50,7 +41,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     console.error("[Cron] Indexer failed:", error);
-    
+
     return NextResponse.json(
       {
         success: false,
@@ -58,7 +49,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         message: error instanceof Error ? error.message : "Unknown error",
         timestamp: new Date().toISOString(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

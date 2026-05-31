@@ -1,8 +1,8 @@
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { apiSuccess, apiError } from '@/lib/api-response';
-import { getCurrentUser } from '@/lib/auth';
-import { readJsonBody } from '@/lib/parse-json-body';
+import { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { apiSuccess, apiError } from "@/lib/api-response";
+import { getCurrentUser } from "@/lib/auth";
+import { readJsonBody } from "@/lib/parse-json-body";
 
 export async function GET(
   request: NextRequest,
@@ -32,11 +32,11 @@ export async function GET(
             select: {
               followers: true,
               followings: true,
-            }
+            },
           },
           badges: {
-            include: { badge: true }
-          }
+            include: { badge: true },
+          },
         },
       });
 
@@ -48,18 +48,18 @@ export async function GET(
               userId_followingId: {
                 userId: currentUser.id,
                 followingId: id,
-              }
-            }
+              },
+            },
           });
           isFollowing = !!follow;
         }
 
         const normalizedUser = {
-            ...user,
-            badges: (user.badges || []).map((userBadge: any) => ({
-                ...userBadge.badge,
-                awardedAt: userBadge.awardedAt,
-            })),
+          ...user,
+          badges: (user.badges || []).map((userBadge: any) => ({
+            ...userBadge.badge,
+            awardedAt: userBadge.awardedAt,
+          })),
         };
 
         return apiSuccess({ ...normalizedUser, isFollowing });
@@ -68,9 +68,9 @@ export async function GET(
       // Database error - fallback already handled above
     }
 
-    return apiError('User not found', 404);
+    return apiError("User not found", 404);
   } catch (error) {
-    return apiError('Failed to fetch user', 500);
+    return apiError("Failed to fetch user", 500);
   }
 }
 
@@ -80,12 +80,12 @@ export async function PATCH(
 ) {
   try {
     const currentUser = await getCurrentUser(request);
-    if (!currentUser) return apiError('Unauthorized', 401);
+    if (!currentUser) return apiError("Unauthorized", 401);
 
     const { id } = await params;
 
     if (currentUser.id !== id) {
-      return apiError('Can only update own profile', 403);
+      return apiError("Can only update own profile", 403);
     }
 
     const raw = await readJsonBody<Record<string, unknown>>(request);
@@ -102,7 +102,7 @@ export async function PATCH(
           select: { id: true },
         });
         if (existing) {
-          return apiError('Username is already taken', 409);
+          return apiError("Username is already taken", 409);
         }
       }
 
@@ -112,7 +112,7 @@ export async function PATCH(
           select: { id: true },
         });
         if (existing) {
-          return apiError('Email address is already in use', 409);
+          return apiError("Email address is already in use", 409);
         }
       }
 
@@ -120,10 +120,12 @@ export async function PATCH(
       const updatedUser = await prisma.user.update({
         where: { id },
         data: {
-          ...(name !== undefined && { name }),
-          ...(username !== undefined && { username }),
-          ...(bio !== undefined && { bio }),
-          ...(email !== undefined && { email }),
+          ...(name !== undefined && { name: name as string }),
+          ...(username !== undefined && {
+            username: username as string | null,
+          }),
+          ...(bio !== undefined && { bio: bio as string | null }),
+          ...(email !== undefined && { email: email as string | null }),
           updatedAt: new Date(),
         },
         select: {
@@ -143,9 +145,9 @@ export async function PATCH(
 
       return apiSuccess(updatedUser);
     } catch (dbError) {
-      return apiError('Failed to update profile', 500);
+      return apiError("Failed to update profile", 500);
     }
   } catch (error) {
-    return apiError('Failed to update profile', 500);
+    return apiError("Failed to update profile", 500);
   }
 }

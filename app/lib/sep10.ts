@@ -1,13 +1,13 @@
 /**
  * SEP-10 Web Authentication implementation
- * 
+ *
  * This module implements the Stellar Ecosystem Proposal 10 (SEP-10) Web Authentication flow.
  * It provides functions to generate authentication challenges and verify signed transactions.
- * 
+ *
  * @see https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0010.md
  */
 
-import { 
+import {
   Keypair,
   Transaction,
   TransactionBuilder,
@@ -29,16 +29,17 @@ function getServerKeypair(): Keypair {
     const secret = process.env.STELLAR_SERVER_SECRET;
     if (!secret) {
       _serverKeyError = new Error(
-        "STELLAR_SERVER_SECRET environment variable is required for SEP-10 authentication"
+        "STELLAR_SERVER_SECRET environment variable is required for SEP-10 authentication",
       );
       throw _serverKeyError;
     }
     try {
       _serverKeypair = Keypair.fromSecret(secret);
     } catch (error) {
-      _serverKeyError = error instanceof Error 
-        ? error 
-        : new Error("Invalid STELLAR_SERVER_SECRET");
+      _serverKeyError =
+        error instanceof Error
+          ? error
+          : new Error("Invalid STELLAR_SERVER_SECRET");
       throw _serverKeyError;
     }
   }
@@ -56,8 +57,6 @@ export function isSEP10Configured(): boolean {
     return false;
   }
 }
-
-
 
 // Challenge expiration time in seconds (15 minutes as per SEP-10 recommendation)
 const CHALLENGE_EXPIRATION_SECONDS = 15 * 60;
@@ -80,14 +79,14 @@ function generateNonce(): string {
 
 /**
  * Generate a SEP-10 challenge transaction (XDR)
- * 
+ *
  * @param clientPublicKey - The client's Stellar public key
  * @param homeDomain - The home domain for the challenge (optional)
  * @returns Object containing the transaction XDR and the transaction hash
  */
 export function generateChallenge(
   clientPublicKey: string,
-  homeDomain: string = HOME_DOMAIN
+  homeDomain: string = HOME_DOMAIN,
 ): { transactionXDR: string; transactionHash: string; nonce: string } {
   // Validate the client public key
   try {
@@ -109,10 +108,10 @@ export function generateChallenge(
   // 4. A manage_data operation with the client's public key as the source
   const serverKeypair = getServerKeypair();
   const serverPublicKey = serverKeypair.publicKey();
-  
+
   // Create a dummy account with sequence number 0 for the challenge
   const serverAccount = new Account(serverPublicKey, "0");
-  
+
   const transaction = new TransactionBuilder(serverAccount, {
     fee: BASE_FEE,
     networkPassphrase: Networks.PUBLIC,
@@ -123,14 +122,14 @@ export function generateChallenge(
         name: `${homeDomain} auth`,
         value: Buffer.from(nonce, "hex"),
         source: clientPublicKey,
-      })
+      }),
     )
     .addOperation(
       Operation.manageData({
         name: "web_auth_domain",
         value: WEB_AUTH_DOMAIN,
         source: serverPublicKey,
-      })
+      }),
     )
     .setTimebounds(minTime, maxTime)
     .build();
@@ -147,7 +146,7 @@ export function generateChallenge(
 
 /**
  * Verify a signed SEP-10 challenge transaction
- * 
+ *
  * @param signedXDR - The signed transaction XDR from the client
  * @param clientPublicKey - The expected client public key
  * @param homeDomain - The expected home domain
@@ -156,7 +155,7 @@ export function generateChallenge(
 export function verifyChallenge(
   signedXDR: string,
   clientPublicKey: string,
-  homeDomain: string = HOME_DOMAIN
+  homeDomain: string = HOME_DOMAIN,
 ): {
   valid: boolean;
   error?: string;
@@ -166,7 +165,7 @@ export function verifyChallenge(
     // Decode the transaction
     const transaction = TransactionBuilder.fromXDR(
       signedXDR,
-      Networks.PUBLIC
+      Networks.PUBLIC,
     ) as Transaction;
 
     const serverKeypair = getServerKeypair();
@@ -228,10 +227,7 @@ export function verifyChallenge(
     // 6. Verify the transaction is signed by the server
     const serverSignatureValid = transaction.signatures.some((sig: any) => {
       try {
-        return serverKeypair.verify(
-          transaction.hash(),
-          sig.signature()
-        );
+        return serverKeypair.verify(transaction.hash(), sig.signature());
       } catch {
         return false;
       }
@@ -257,10 +253,10 @@ export function verifyChallenge(
 
     // 8. Verify web_auth_domain if present (optional check for additional security)
     const webAuthOp = operations.find(
-      (op: any) => op.type === "manageData" && op.name === "web_auth_domain"
+      (op: any) => op.type === "manageData" && op.name === "web_auth_domain",
     );
-    if (webAuthOp && webAuthOp.value) {
-      const authDomain = Buffer.from(webAuthOp.value).toString();
+    if (webAuthOp && (webAuthOp as any).value) {
+      const authDomain = Buffer.from((webAuthOp as any).value).toString();
       if (authDomain !== WEB_AUTH_DOMAIN) {
         return { valid: false, error: "Invalid web auth domain" };
       }
@@ -273,7 +269,8 @@ export function verifyChallenge(
   } catch (error) {
     return {
       valid: false,
-      error: error instanceof Error ? error.message : "Unknown verification error",
+      error:
+        error instanceof Error ? error.message : "Unknown verification error",
     };
   }
 }
@@ -281,7 +278,7 @@ export function verifyChallenge(
 /**
  * Extract the client public key from a signed challenge transaction
  * This is useful when you want to identify the signer without full verification
- * 
+ *
  * @param signedXDR - The signed transaction XDR
  * @returns The client public key or null if extraction fails
  */
@@ -289,7 +286,7 @@ export function extractClientPublicKey(signedXDR: string): string | null {
   try {
     const transaction = TransactionBuilder.fromXDR(
       signedXDR,
-      Networks.PUBLIC
+      Networks.PUBLIC,
     ) as Transaction;
 
     const firstOp = transaction.operations[0];

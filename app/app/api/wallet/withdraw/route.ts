@@ -4,7 +4,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readJsonBody } from "@/lib/parse-json-body";
-import { submitStellarWithdrawal, } from '@/lib/stellar';
+import { submitStellarWithdrawal } from "@/lib/stellar";
 
 const withdrawSchema = z.object({
   amount: z.number().positive("Amount must be greater than 0"),
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       // Optimistic balance check before hitting the chain
       const user = await prisma.user.findUnique({
         where: { id: currentUser.id },
-        select: { walletBalance: true, stellarAddress: true },
+        select: { walletBalance: true, walletAddress: true },
       });
       if (!user) return apiError("User not found", 404);
       if (user.walletBalance < amount)
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       let txHash: string;
       try {
         txHash = await submitStellarWithdrawal({
-          sourceAddress: user.stellarAddress!,
+          sourceAddress: user.walletAddress,
           destinationAddress,
           amount,
           asset,

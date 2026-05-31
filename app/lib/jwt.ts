@@ -40,3 +40,24 @@ export async function verifyToken(token: string): Promise<JWTPayload> {
     throw new Error("Invalid token");
   }
 }
+
+export function getTokenFromRequest(request: Request): string | null {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    return authHeader.slice(7);
+  }
+
+  // Try to get from cookies
+  const cookieHeader = request.headers.get("cookie");
+  if (cookieHeader) {
+    const cookies = cookieHeader.split(";");
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split("=");
+      if (name === "token" || name === "auth-token") {
+        return value;
+      }
+    }
+  }
+
+  return null;
+}

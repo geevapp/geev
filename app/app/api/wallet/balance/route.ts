@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getLiveBalances } from '@/lib/stellar';
+import { getLiveBalances } from "@/lib/stellar";
 
 /**
  * GET /api/wallet/balance
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       balance: user.walletBalance,
       assets: simulated
         ? []
-        : await getLiveBalances(currentUser.stellarAddress).catch(() => []),
+        : await getLiveBalances(currentUser.walletAddress).catch(() => []),
       transactions: recentTransactions,
       lastSync: user.updatedAt.toISOString(),
       simulated,

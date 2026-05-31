@@ -96,16 +96,23 @@ const POST = async (request: NextRequest) => {
 
     const body = parsed.data;
 
-    const { title, description, type, winnerCount, endsAt, proofRequired, category } =
-      body as {
-        title?: string;
-        description?: string;
-        type?: string;
-        winnerCount?: unknown;
-        endsAt?: string;
-        proofRequired?: unknown;
-        category?: string;
-      };
+    const {
+      title,
+      description,
+      type,
+      winnerCount,
+      endsAt,
+      proofRequired,
+      category,
+    } = body as {
+      title?: string;
+      description?: string;
+      type?: string;
+      winnerCount?: unknown;
+      endsAt?: string;
+      proofRequired?: unknown;
+      category?: string;
+    };
 
     if (!title || title.length < 10 || title.length > 200) {
       return apiError("Title must be 10-200 characters", 400);
@@ -120,7 +127,7 @@ const POST = async (request: NextRequest) => {
       const uniqueSlug = await generateUniquePostSlug(
         tx.post,
         title,
-        body.slug,
+        body.slug as string | undefined,
       );
 
       const requirements = await tx.postRequirements.create({
@@ -130,14 +137,16 @@ const POST = async (request: NextRequest) => {
       const createdPost = await tx.post.create({
         data: {
           userId: user.id,
-          type,
+          type: type as any,
           title,
           slug: uniqueSlug,
           description,
-          category: category as any ?? null,
+          category: (category as any) ?? null,
           maxWinners: winnerCount ? Number(winnerCount) : null,
           postRequirementsId: requirements.id,
-          endsAt: new Date(endsAt),
+          endsAt: endsAt
+            ? new Date(endsAt)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days if not provided
         },
         include: {
           user: {
@@ -223,7 +232,7 @@ const GET = async (request: NextRequest) => {
     }
 
     if (type) {
-      where.type = type as Prisma.PostTypeFilter;
+      where.type = type as any;
     }
 
     if (userId) {
@@ -231,7 +240,7 @@ const GET = async (request: NextRequest) => {
     }
 
     if (status) {
-      where.status = status as Prisma.PostStatusFilter;
+      where.status = status as any;
     }
 
     if (from || to) {
@@ -240,9 +249,14 @@ const GET = async (request: NextRequest) => {
       if (to) where.createdAt.lte = new Date(to);
     }
 
-    let orderBy: Prisma.PostOrderByWithRelationInput[] = [{ createdAt: "desc" }];
+    let orderBy: Prisma.PostOrderByWithRelationInput[] = [
+      { createdAt: "desc" },
+    ];
     if (sort === "popular") {
-      orderBy = [{ _count: { interactions: "desc" } }, { createdAt: "desc" }];
+      orderBy = [
+        { interactions: { _count: "desc" } } as any,
+        { createdAt: "desc" },
+      ];
     } else if (sort === "ending_soon") {
       orderBy = [{ endsAt: "asc" }];
     }

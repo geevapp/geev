@@ -17,7 +17,6 @@ vi.mock("@/lib/xp", () => ({
   },
 }));
 
-
 describe("Posts API", () => {
   let testUser: any;
 
@@ -56,13 +55,15 @@ describe("Posts API", () => {
       prisma.post.findMany = vi.fn().mockResolvedValue([]);
       prisma.post.count = vi.fn().mockResolvedValue(0);
       // Mock prisma.post.create
-      prisma.post.create = vi.fn().mockImplementation((args: any) => Promise.resolve({
-        id: 'post_123',
-        ...args.data,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        creator: testUser
-      }));
+      prisma.post.create = vi.fn().mockImplementation((args: any) =>
+        Promise.resolve({
+          id: "post_123",
+          ...args.data,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          creator: testUser,
+        }),
+      );
     } else {
       testUser = await createTestUser();
     }
@@ -126,7 +127,10 @@ describe("Posts API", () => {
             OR: expect.any(Array),
             type: "giveaway",
           }),
-          orderBy: [{ _count: { interactions: "desc" } }, { createdAt: "desc" }],
+          orderBy: [
+            { interactions: { _count: "desc" } },
+            { createdAt: "desc" },
+          ],
         }),
       );
     });

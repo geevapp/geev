@@ -1,8 +1,9 @@
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { apiSuccess, apiError } from '@/lib/api-response';
-import { getCurrentUser } from '@/lib/auth';
-import { awardXp, XP_REWARDS } from '@/lib/xp';
+import { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { apiSuccess, apiError } from "@/lib/api-response";
+import { getCurrentUser } from "@/lib/auth";
+import { awardXp, XP_REWARDS } from "@/lib/xp";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(
   request: NextRequest,
@@ -10,7 +11,7 @@ export async function POST(
 ) {
   try {
     const user = await getCurrentUser(request);
-    if (!user) return apiError('Unauthorized', 401);
+    if (!user) return apiError("Unauthorized", 401);
 
     const { id: postId } = await params;
 
@@ -20,41 +21,64 @@ export async function POST(
         select: {
           id: true,
           userId: true,
+          title: true,
         },
       });
 
       if (!post) {
-        throw new Error('POST_NOT_FOUND');
+        throw new Error("POST_NOT_FOUND");
       }
+
+      // Check if like already exists to avoid duplicate notifications
+      const existingLike = await tx.interaction.findUnique({
+        where: {
+          userId_postId_type: {
+            userId: user.id,
+            postId,
+            type: "like",
+          },
+        },
+      });
 
       await tx.interaction.upsert({
         where: {
           userId_postId_type: {
             userId: user.id,
             postId,
-            type: 'like',
+            type: "like",
           },
         },
         update: {},
         create: {
           userId: user.id,
           postId,
-          type: 'like',
+          type: "like",
         },
       });
 
       const likeCount = await tx.interaction.count({
         where: {
           postId,
-          type: 'like',
+          type: "like",
         },
       });
+
+      // Only send notification if this is a new like and not the user's own post
+      if (!existingLike && post.userId !== user.id) {
+        // Fire-and-forget notification (non-blocking)
+        createNotification({
+          userId: post.userId,
+          type: "badge_awarded", // Using badge_awarded as closest type, could add post_liked type
+          message: `${user.name} liked your post "${post.title}"`,
+          link: `/post/${postId}`,
+        }).catch(() => undefined);
+      }
 
       if (likeCount === 10) {
         await awardXp(
           post.userId,
           XP_REWARDS.receiveTenLikes,
-          'post_received_10_likes',
+          "post_received_10_likes",
           {
             dedupeKey: `post_10_likes:${postId}`,
             metadata: {
@@ -71,11 +95,11 @@ export async function POST(
 
     return apiSuccess({ liked: true, count });
   } catch (error) {
-    if (error instanceof Error && error.message === 'POST_NOT_FOUND') {
-      return apiError('Post not found', 404);
+    if (error instanceof Error && error.message === "POST_NOT_FOUND") {
+      return apiError("Post not found", 404);
     }
 
-    return apiError('Failed to like post', 500);
+    return apiError("Failed to like post", 500);
   }
 }
 
@@ -85,7 +109,7 @@ export async function DELETE(
 ) {
   try {
     const user = await getCurrentUser(request);
-    if (!user) return apiError('Unauthorized', 401);
+    if (!user) return apiError("Unauthorized", 401);
 
     const { id: postId } = await params;
 
@@ -93,19 +117,19 @@ export async function DELETE(
       where: {
         userId: user.id,
         postId,
-        type: 'like',
+        type: "like",
       },
     });
 
     const count = await prisma.interaction.count({
       where: {
         postId,
-        type: 'like',
+        type: "like",
       },
     });
 
     return apiSuccess({ liked: false, count });
   } catch (error) {
-    return apiError('Failed to unlike post', 500);
+    return apiError("Failed to unlike post", 500);
   }
 }

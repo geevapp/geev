@@ -15,7 +15,10 @@ import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { isConnected, signMessage as freighterSignMessage } from "@stellar/freighter-api";
+import {
+  isConnected,
+  signMessage as freighterSignMessage,
+} from "@stellar/freighter-api";
 
 /**
  * Wallet-based login and registration form
@@ -53,16 +56,24 @@ export function WalletLoginForm({
       // Check if Freighter is available
       const connected = await isConnected();
       if (!connected) {
-        showToast("Freighter wallet is not installed or not connected", "error");
+        showToast(
+          "Freighter wallet is not installed or not connected",
+          "error",
+        );
         return;
       }
 
-      const msg = message || await generateSignMessage();
-      
+      const msg = message || (await generateSignMessage());
+
+      if (!msg) {
+        showToast("Failed to generate sign message", "error");
+        return;
+      }
+
       let signedMsg;
       try {
         signedMsg = await freighterSignMessage(msg, {
-          networkPassphrase: "Test SDF Network ; September 2015" // fallback or configurable
+          networkPassphrase: "Test SDF Network ; September 2015", // fallback or configurable
         });
       } catch (err) {
         // Fallback for cases where it doesn't take options or simple reject
@@ -72,7 +83,10 @@ export function WalletLoginForm({
       if (signedMsg) {
         if (typeof signedMsg === "string") {
           setSignature(signedMsg);
-        } else if (typeof signedMsg === "object" && typeof (signedMsg as any).signature === "string") {
+        } else if (
+          typeof signedMsg === "object" &&
+          typeof (signedMsg as any).signature === "string"
+        ) {
           setSignature((signedMsg as any).signature);
         } else {
           setSignature(signedMsg.toString());
@@ -95,17 +109,19 @@ export function WalletLoginForm({
     try {
       const response = await fetch("/api/auth/nonce");
       if (!response.ok) throw new Error("Failed to fetch nonce");
-      
+
       const { nonce } = await response.json();
       const msg = `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nNonce: ${nonce}`;
       setMessage(msg);
       return msg;
     } catch (error) {
       console.error("Error generating nonce:", error);
-      showToast("Could not generate a secure nonce. Please try again.", "error");
+      showToast(
+        "Could not generate a secure nonce. Please try again.",
+        "error",
+      );
     }
   };
-
 
   const handleLogin = async () => {
     if (!walletAddress || !signature || !message) {

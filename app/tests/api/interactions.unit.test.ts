@@ -1,7 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { POST as likePost, DELETE as unlikePost } from '@/app/api/posts/[id]/like/route';
-import { POST as burnPost, DELETE as unburnPost } from '@/app/api/posts/[id]/burn/route';
-import { GET as getStats } from '@/app/api/posts/[id]/stats/route';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  POST as likePost,
+  DELETE as unlikePost,
+} from "@/app/api/posts/[id]/like/route";
+import {
+  POST as burnPost,
+  DELETE as unburnPost,
+} from "@/app/api/posts/[id]/burn/route";
+import { GET as getStats } from "@/app/api/posts/[id]/stats/route";
 
 const mockAwardXp = vi.hoisted(() => vi.fn());
 
@@ -10,6 +16,7 @@ const mockPrisma = vi.hoisted(() => {
   const prisma = {
     $transaction: vi.fn(),
     interaction: {
+      findUnique: vi.fn(),
       upsert: vi.fn(),
       count: vi.fn(),
       deleteMany: vi.fn(),
@@ -20,18 +27,30 @@ const mockPrisma = vi.hoisted(() => {
     post: {
       findUnique: vi.fn(),
     },
+    user: {
+      update: vi.fn().mockResolvedValue({ xp: 100, rankId: "newcomer" }),
+      findUnique: vi.fn(),
+    },
+    analyticsEvent: {
+      create: vi.fn().mockResolvedValue({}),
+    },
+    rank: {
+      findFirst: vi.fn().mockResolvedValue({ id: "newcomer" }),
+    },
   };
 
-  prisma.$transaction.mockImplementation(async (callback: any) => callback(prisma));
+  prisma.$transaction.mockImplementation(async (callback: any) =>
+    callback(prisma),
+  );
 
   return prisma;
 });
 
-vi.mock('@/lib/prisma', () => ({
+vi.mock("@/lib/prisma", () => ({
   prisma: mockPrisma,
 }));
 
-vi.mock('@/lib/xp', () => ({
+vi.mock("@/lib/xp", () => ({
   awardXp: mockAwardXp,
   XP_REWARDS: {
     createGiveawayPost: 50,
@@ -41,20 +60,24 @@ vi.mock('@/lib/xp', () => ({
   },
 }));
 
-vi.mock('@/lib/auth', () => ({
+vi.mock("@/lib/auth", () => ({
   getCurrentUser: vi.fn(),
 }));
 
-import { getCurrentUser } from '@/lib/auth';
+vi.mock("@/lib/notifications", () => ({
+  createNotification: vi.fn().mockResolvedValue({}),
+}));
+
+import { getCurrentUser } from "@/lib/auth";
 
 // Helper to create request
-function createRequest(method = 'GET') {
-  return new Request('http://localhost:3000', { method });
+function createRequest(method = "GET") {
+  return new Request("http://localhost:3000", { method });
 }
 
-describe('Interactions API (Unit)', () => {
-  const mockUser = { id: 'user-1' };
-  const postId = 'post-1';
+describe("Interactions API (Unit)", () => {
+  const mockUser = { id: "user-1", name: "Test User" };
+  const postId = "post-1";
   const params = Promise.resolve({ id: postId });
 
   beforeEach(() => {
@@ -63,50 +86,60 @@ describe('Interactions API (Unit)', () => {
     mockAwardXp.mockResolvedValue({
       awarded: true,
       amount: 25,
-      reason: 'post_received_10_likes',
+      reason: "post_received_10_likes",
       xp: 25,
-      rankId: 'newcomer',
+      rankId: "newcomer",
     });
-    mockPrisma.$transaction.mockImplementation(async (callback: any) => callback(mockPrisma));
+    mockPrisma.$transaction.mockImplementation(async (callback: any) =>
+      callback(mockPrisma),
+    );
   });
 
-  describe('Like API', () => {
-    it('should like a post', async () => {
+  describe("Like API", () => {
+    it("should like a post", async () => {
       mockPrisma.post.findUnique.mockResolvedValue({
         id: postId,
-        userId: 'author-1',
+        userId: "author-1",
+        title: "Test Post",
       });
+      mockPrisma.interaction.findUnique = vi.fn().mockResolvedValue(null);
       mockPrisma.interaction.upsert.mockResolvedValue({});
       mockPrisma.interaction.count.mockResolvedValue(10);
+      mockAwardXp.mockResolvedValue({ awarded: false });
 
-      const request = createRequest('POST');
+      const request = createRequest("POST");
       const response = await likePost(request as any, { params });
       const data = await response.json();
+
+      // Debug: log the response if it's not 200
+      if (response.status !== 200) {
+        console.log("Error response:", data);
+      }
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data.liked).toBe(true);
       expect(data.data.count).toBe(10);
-      
+
       expect(mockPrisma.interaction.upsert).toHaveBeenCalledWith({
         where: {
           userId_postId_type: {
             userId: mockUser.id,
             postId,
-            type: 'like',
+            type: "like",
           },
         },
         update: {},
         create: {
           userId: mockUser.id,
           postId,
-          type: 'like',
+          type: "like",
         },
       });
       expect(mockAwardXp).toHaveBeenCalledWith(
-        'author-1',
+        "author-1",
         25,
-        'post_received_10_likes',
+        "post_received_10_likes",
         expect.objectContaining({
           dedupeKey: `post_10_likes:${postId}`,
         }),
@@ -114,27 +147,27 @@ describe('Interactions API (Unit)', () => {
       );
     });
 
-    it('should return 401 if not authorized', async () => {
+    it("should return 401 if not authorized", async () => {
       (getCurrentUser as any).mockResolvedValue(null);
-      const request = createRequest('POST');
+      const request = createRequest("POST");
       const response = await likePost(request as any, { params });
       expect(response.status).toBe(401);
     });
 
-    it('should return 404 when liking a missing post', async () => {
+    it("should return 404 when liking a missing post", async () => {
       mockPrisma.post.findUnique.mockResolvedValue(null);
 
-      const request = createRequest('POST');
+      const request = createRequest("POST");
       const response = await likePost(request as any, { params });
 
       expect(response.status).toBe(404);
     });
 
-    it('should unlike a post', async () => {
+    it("should unlike a post", async () => {
       mockPrisma.interaction.deleteMany.mockResolvedValue({ count: 1 });
       mockPrisma.interaction.count.mockResolvedValue(9);
 
-      const request = createRequest('DELETE');
+      const request = createRequest("DELETE");
       const response = await unlikePost(request as any, { params });
       const data = await response.json();
 
@@ -146,18 +179,18 @@ describe('Interactions API (Unit)', () => {
         where: {
           userId: mockUser.id,
           postId,
-          type: 'like',
+          type: "like",
         },
       });
     });
   });
 
-  describe('Burn API', () => {
-    it('should burn a post', async () => {
+  describe("Burn API", () => {
+    it("should burn a post", async () => {
       mockPrisma.interaction.upsert.mockResolvedValue({});
       mockPrisma.interaction.count.mockResolvedValue(5);
 
-      const request = createRequest('POST');
+      const request = createRequest("POST");
       const response = await burnPost(request as any, { params });
       const data = await response.json();
 
@@ -165,16 +198,18 @@ describe('Interactions API (Unit)', () => {
       expect(data.data.burned).toBe(true);
       expect(data.data.count).toBe(5);
 
-      expect(mockPrisma.interaction.upsert).toHaveBeenCalledWith(expect.objectContaining({
-        create: expect.objectContaining({ type: 'burn' })
-      }));
+      expect(mockPrisma.interaction.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          create: expect.objectContaining({ type: "burn" }),
+        }),
+      );
     });
 
-    it('should unburn a post', async () => {
+    it("should unburn a post", async () => {
       mockPrisma.interaction.deleteMany.mockResolvedValue({ count: 1 });
       mockPrisma.interaction.count.mockResolvedValue(4);
 
-      const request = createRequest('DELETE');
+      const request = createRequest("DELETE");
       const response = await unburnPost(request as any, { params });
       const data = await response.json();
 
@@ -184,16 +219,16 @@ describe('Interactions API (Unit)', () => {
     });
   });
 
-  describe('Stats API', () => {
-    it('should return stats', async () => {
+  describe("Stats API", () => {
+    it("should return stats", async () => {
       mockPrisma.interaction.count.mockImplementation((args: any) => {
-        if (args.where.type === 'like') return Promise.resolve(10);
-        if (args.where.type === 'burn') return Promise.resolve(2);
+        if (args.where.type === "like") return Promise.resolve(10);
+        if (args.where.type === "burn") return Promise.resolve(2);
         return Promise.resolve(0);
       });
       mockPrisma.entry.count.mockResolvedValue(5);
 
-      const request = createRequest('GET');
+      const request = createRequest("GET");
       const response = await getStats(request as any, { params });
       const data = await response.json();
 
