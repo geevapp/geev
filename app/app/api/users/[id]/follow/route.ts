@@ -37,18 +37,40 @@ export async function POST(
       }
     });
 
+    let follow = existing;
+
     if (!existing) {
-      const follow = await prisma.follow.create({
+      follow = await prisma.follow.create({
         data: {
           userId: currentUser.id,
           followingId: targetUserId,
         }
       });
       checkAndAwardBadges(targetUserId).catch(console.error);
-      return apiSuccess({ success: true, follow }, undefined, 201);
     }
 
-    return apiSuccess({ success: true, follow: existing }, undefined, 200);
+    const [followersCount, followingCount] = await Promise.all([
+      prisma.follow.count({
+        where: { followingId: targetUserId },
+      }),
+      prisma.follow.count({
+        where: { userId: targetUserId, followingId: { not: null } },
+      }),
+    ]);
+
+    return apiSuccess(
+      {
+        success: true,
+        isFollowing: true,
+        follow,
+        counts: {
+          followers: followersCount,
+          following: followingCount,
+        },
+      },
+      undefined,
+      existing ? 200 : 201,
+    );
   } catch (error) {
     console.error('Failed to follow user:', error);
     return apiError('Failed to follow user', 500);
@@ -78,7 +100,27 @@ export async function DELETE(
       // Ignore if not found
     }
 
-    return apiSuccess({ success: true }, undefined, 200);
+    const [followersCount, followingCount] = await Promise.all([
+      prisma.follow.count({
+        where: { followingId: targetUserId },
+      }),
+      prisma.follow.count({
+        where: { userId: targetUserId, followingId: { not: null } },
+      }),
+    ]);
+
+    return apiSuccess(
+      {
+        success: true,
+        isFollowing: false,
+        counts: {
+          followers: followersCount,
+          following: followingCount,
+        },
+      },
+      undefined,
+      200,
+    );
   } catch (error) {
     console.error('Failed to unfollow user:', error);
     return apiError('Failed to unfollow user', 500);

@@ -16,17 +16,38 @@ import { useAppContext } from '@/contexts/app-context';
 import { mapApiPostToClientPost } from '@/lib/map-api-post';
 import type { Post } from '@/lib/types';
 import { useParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
+
+type ProfileUser = {
+  id: string;
+  name: string;
+  username: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  badges: Array<Record<string, unknown>>;
+  isFollowing?: boolean;
+  isVerified?: boolean;
+  rank?: unknown;
+  createdAt: string | Date;
+  _count?: {
+    followers?: number;
+    followings?: number;
+  };
+};
 
 export default function ProfilePage() {
   const params = useParams();
   const { user: currentUser } = useAppContext();
-  const [profileUser, setProfileUser] = useState<any>(null);
+  const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [showAchievements, setShowAchievements] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
   const [showFollowList, setShowFollowList] = useState<{ open: boolean; type: 'followers' | 'following' }>({
     open: false,
     type: 'followers',
@@ -42,6 +63,9 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const loadProfile = async () => {
+      setIsLoadingProfile(true);
+      setProfileError(null);
+
       try {
         const [userRes, postsRes] = await Promise.all([
           fetch(`/api/users/${userId}`, { cache: 'no-store' }),
@@ -54,6 +78,11 @@ export default function ProfilePage() {
           setIsFollowing(!!userData.data.isFollowing);
           setFollowerCount(userData.data._count?.followers || 0);
           setFollowingCount(userData.data._count?.followings || 0);
+        } else if (userRes.status === 404) {
+          setProfileUser(null);
+          setProfileError("The user you're looking for doesn't exist.");
+        } else {
+          throw new Error('Failed to load profile');
         }
 
         if (postsRes.ok) {
@@ -68,6 +97,11 @@ export default function ProfilePage() {
         }
       } catch (error) {
         console.error('Failed to load profile:', error);
+        setProfileError(
+          error instanceof Error ? error.message : 'Failed to load profile',
+        );
+      } finally {
+        setIsLoadingProfile(false);
       }
     };
 
@@ -75,22 +109,57 @@ export default function ProfilePage() {
   }, [userId]);
 
   const handleFollowToggle = async () => {
-    if (!currentUser) return;
+    if (!currentUser || isUpdatingFollow) return;
 
-    const newIsFollowing = !isFollowing;
-    setIsFollowing(newIsFollowing);
-    setFollowerCount((prev) => (newIsFollowing ? prev + 1 : prev - 1));
+    const nextIsFollowing = !isFollowing;
+    setIsUpdatingFollow(true);
 
     try {
-      const method = newIsFollowing ? 'POST' : 'DELETE';
+      const method = nextIsFollowing ? 'POST' : 'DELETE';
       const res = await fetch(`/api/users/${userId}/follow`, { method });
-      if (!res.ok) throw new Error('Failed to toggle follow status');
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to toggle follow status');
+      }
+
+      setIsFollowing(Boolean(data.data?.isFollowing));
+      setFollowerCount(data.data?.counts?.followers ?? followerCount);
+      setFollowingCount(data.data?.counts?.following ?? followingCount);
+      setProfileUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              isFollowing: Boolean(data.data?.isFollowing),
+              _count: {
+                followers: data.data?.counts?.followers ?? followerCount,
+                followings: data.data?.counts?.following ?? followingCount,
+              },
+            }
+          : prev,
+      );
     } catch (error) {
       console.error(error);
-      setIsFollowing(!newIsFollowing);
-      setFollowerCount((prev) => (newIsFollowing ? prev - 1 : prev + 1));
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update follow state',
+      );
+    } finally {
+      setIsUpdatingFollow(false);
     }
   };
+
+  if (isLoadingProfile) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Loading profile...</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Fetching user details and relationship data.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!profileUser) {
     return (
@@ -98,7 +167,7 @@ export default function ProfilePage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">User not found</h1>
           <p className="text-gray-600 dark:text-gray-400">
-            The user you're looking for doesn't exist.
+            {profileError || "The user you're looking for doesn't exist."}
           </p>
         </div>
       </div>
@@ -151,14 +220,14 @@ export default function ProfilePage() {
                   )}
                 </div>
                 <p className="text-gray-600 dark:text-gray-400 mb-2">
-                  @{profileUser.username}
+                  {profileUser.username ? `@${profileUser.username}` : 'No username yet'}
                 </p>
                 <UserRankBadge rank={profileUser.rank} />
               </div>
 
               {/* Bio */}
               <p className="text-gray-700 dark:text-gray-300 max-w-md">
-                {profileUser.bio}
+                {profileUser.bio || 'No bio yet.'}
               </p>
 
               <div className="flex justify-center gap-8 text-sm">
@@ -217,7 +286,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                 <Calendar className="w-4 h-4" />
                 Joined{' '}
-                {profileUser.createdAt.toLocaleDateString('en-US', {
+                {new Date(profileUser.createdAt).toLocaleDateString('en-US', {
                   month: 'long',
                   year: 'numeric',
                 })}
@@ -229,10 +298,21 @@ export default function ProfilePage() {
                   className="mt-2" 
                   variant={isFollowing ? "outline" : "default"}
                   onClick={handleFollowToggle}
+                  disabled={isUpdatingFollow}
                 >
-                  {isFollowing ? 'Unfollow' : 'Follow'}
+                  {isUpdatingFollow
+                    ? isFollowing
+                      ? 'Unfollowing...'
+                      : 'Following...'
+                    : isFollowing
+                      ? 'Unfollow'
+                      : 'Follow'}
                 </Button>
               )}
+
+              {profileError ? (
+                <p className="text-sm text-red-500">{profileError}</p>
+              ) : null}
             </div>
           </CardContent>
         </Card>
