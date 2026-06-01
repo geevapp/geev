@@ -17,7 +17,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
   isConnected,
-  signMessage as freighterSignMessage,
+  signTransaction as freighterSignTransaction,
 } from "@stellar/freighter-api";
 
 /**
@@ -42,89 +42,93 @@ export function WalletLoginForm({
   const [walletAddress, setWalletAddress] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [signature, setSignature] = useState("");
-  const [message, setMessage] = useState("");
+  const [challengeXdr, setChallengeXdr] = useState("");
+  const [signedTransaction, setSignedTransaction] = useState("");
 
-  // Generate actual signature using Freighter
-  const handleSignMessage = async () => {
+  const fetchChallenge = async () => {
+    if (!walletAddress) {
+      showToast("Please enter your wallet address first", "error");
+      return null;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/auth/challenge?publicKey=${encodeURIComponent(walletAddress)}`,
+        { cache: "no-store" },
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to fetch challenge");
+      }
+
+      setChallengeXdr(data.transaction);
+      return data as { transaction: string; network_passphrase: string };
+    } catch (error) {
+      console.error("Challenge error:", error);
+      showToast("Could not generate a secure challenge. Please try again.", "error");
+      return null;
+    }
+  };
+
+  const handleSignChallenge = async () => {
     if (!walletAddress) {
       showToast("Please enter your wallet address first", "error");
       return;
     }
 
     try {
-      // Check if Freighter is available
       const connected = await isConnected();
       if (!connected) {
-        showToast(
-          "Freighter wallet is not installed or not connected",
-          "error",
-        );
+        showToast("Freighter wallet is not installed or not connected", "error");
         return;
       }
 
-      const msg = message || (await generateSignMessage());
+      const challenge = challengeXdr
+        ? {
+            transaction: challengeXdr,
+            network_passphrase: "Public Global Stellar Network ; September 2015",
+          }
+        : await fetchChallenge();
 
-      if (!msg) {
-        showToast("Failed to generate sign message", "error");
+      if (!challenge) {
         return;
       }
 
-      let signedMsg;
-      try {
-        signedMsg = await freighterSignMessage(msg, {
-          networkPassphrase: "Test SDF Network ; September 2015", // fallback or configurable
-        });
-      } catch (err) {
-        // Fallback for cases where it doesn't take options or simple reject
-        signedMsg = await freighterSignMessage(msg);
+      const signedResult = await (freighterSignTransaction as any)(
+        challenge.transaction,
+        {
+          networkPassphrase: challenge.network_passphrase,
+        },
+      );
+
+      const signedXdr =
+        typeof signedResult === "string"
+          ? signedResult
+          : signedResult?.signedTxXdr ||
+            signedResult?.signedTransaction ||
+            signedResult?.txXdr ||
+            null;
+
+      if (!signedXdr) {
+        throw new Error("Freighter did not return a signed transaction");
       }
 
-      if (signedMsg) {
-        if (typeof signedMsg === "string") {
-          setSignature(signedMsg);
-        } else if (
-          typeof signedMsg === "object" &&
-          typeof (signedMsg as any).signature === "string"
-        ) {
-          setSignature((signedMsg as any).signature);
-        } else {
-          setSignature(signedMsg.toString());
-        }
-        showToast("Message signed successfully", "success");
-      }
+      setSignedTransaction(signedXdr);
+      showToast("Challenge signed successfully", "success");
     } catch (error) {
       console.error("Signing error:", error);
-      showToast("Error signing the message", "error");
+      showToast("Error signing the challenge", "error");
     }
   };
 
-  // Fetch a server-issued nonce
-  const generateSignMessage = async () => {
-    if (!walletAddress) {
-      showToast("Please enter your wallet address first", "error");
+  const authenticate = async (mode: "login" | "register") => {
+    if (!walletAddress || !signedTransaction) {
+      showToast("Please sign the wallet challenge first", "error");
       return;
     }
 
-    try {
-      const response = await fetch("/api/auth/nonce");
-      if (!response.ok) throw new Error("Failed to fetch nonce");
-
-      const { nonce } = await response.json();
-      const msg = `Sign this message to authenticate with Geev\n\nWallet: ${walletAddress}\nNonce: ${nonce}`;
-      setMessage(msg);
-      return msg;
-    } catch (error) {
-      console.error("Error generating nonce:", error);
-      showToast(
-        "Could not generate a secure nonce. Please try again.",
-        "error",
-      );
-    }
-  };
-
-  const handleLogin = async () => {
-    if (!walletAddress || !signature || !message) {
+    if (mode === "register" && !username) {
       showToast("Please fill in all required fields", "error");
       return;
     }
@@ -134,53 +138,36 @@ export function WalletLoginForm({
     try {
       const result = await signIn("credentials", {
         walletAddress,
-        signature,
-        message,
+        transaction: signedTransaction,
+        username: mode === "register" ? username : undefined,
+        email: mode === "register" ? email || undefined : undefined,
         redirect: false,
       });
 
       if (result?.ok && !result.error) {
-        showToast("Successfully logged in!", "success");
+        showToast(
+          mode === "login"
+            ? "Successfully logged in!"
+            : "Account created successfully!",
+          "success",
+        );
         router.push("/feed");
         return;
       }
 
-      showToast(result?.error || "Login failed", "error");
+      showToast(
+        result?.error ||
+          (mode === "login" ? "Login failed" : "Registration failed"),
+        "error",
+      );
     } catch (error) {
-      console.error("Login error:", error);
-      showToast("Login failed. Please try again.", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async () => {
-    if (!walletAddress || !username || !signature || !message) {
-      showToast("Please fill in all required fields", "error");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const result = await signIn("credentials", {
-        walletAddress,
-        signature,
-        message,
-        username,
-        email: email || undefined,
-        redirect: false,
-      });
-
-      if (result?.ok && !result.error) {
-        showToast("Account created successfully!", "success");
-        router.push("/feed");
-      } else {
-        showToast(result?.error || "Registration failed", "error");
-      }
-    } catch (error) {
-      console.error("Registration error:", error);
-      showToast("Registration failed. Please try again.", "error");
+      console.error("Authentication error:", error);
+      showToast(
+        mode === "login"
+          ? "Login failed. Please try again."
+          : "Registration failed. Please try again.",
+        "error",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -240,18 +227,18 @@ export function WalletLoginForm({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Signature</label>
+            <label className="text-sm font-medium">Signed Challenge</label>
             <div className="flex gap-2">
               <Input
-                placeholder="Signature from wallet"
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
+                placeholder="Signed transaction from Freighter"
+                value={signedTransaction}
+                onChange={(e) => setSignedTransaction(e.target.value)}
                 className="flex-1"
               />
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleSignMessage}
+                onClick={handleSignChallenge}
               >
                 <Key className="h-4 w-4" />
               </Button>
@@ -259,28 +246,28 @@ export function WalletLoginForm({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Message to Sign</label>
+            <label className="text-sm font-medium">Challenge Transaction</label>
             <div className="relative">
               <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={challengeXdr}
+                onChange={(e) => setChallengeXdr(e.target.value)}
                 className="flex min-h-20 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-0"
-                placeholder="Message to sign..."
+                placeholder="Server-issued challenge transaction..."
               />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 className="absolute top-2 right-2"
-                onClick={() => generateSignMessage()}
+                onClick={() => fetchChallenge()}
               >
-                Generate
+                Fetch
               </Button>
             </div>
           </div>
 
           <Button
-            onClick={handleLogin}
+            onClick={() => authenticate("login")}
             disabled={isLoading}
             className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
           >
@@ -333,18 +320,18 @@ export function WalletLoginForm({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Signature</label>
+            <label className="text-sm font-medium">Signed Challenge</label>
             <div className="flex gap-2">
               <Input
-                placeholder="Signature from wallet"
-                value={signature}
-                onChange={(e) => setSignature(e.target.value)}
+                placeholder="Signed transaction from Freighter"
+                value={signedTransaction}
+                onChange={(e) => setSignedTransaction(e.target.value)}
                 className="flex-1"
               />
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleSignMessage}
+                onClick={handleSignChallenge}
               >
                 <Key className="h-4 w-4" />
               </Button>
@@ -352,28 +339,28 @@ export function WalletLoginForm({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Message to Sign</label>
+            <label className="text-sm font-medium">Challenge Transaction</label>
             <div className="relative">
               <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={challengeXdr}
+                onChange={(e) => setChallengeXdr(e.target.value)}
                 className="flex min-h-20 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Message to sign..."
+                placeholder="Server-issued challenge transaction..."
               />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 className="absolute top-2 right-2"
-                onClick={() => generateSignMessage()}
+                onClick={() => fetchChallenge()}
               >
-                Generate
+                Fetch
               </Button>
             </div>
           </div>
 
           <Button
-            onClick={handleRegister}
+            onClick={() => authenticate("register")}
             disabled={isLoading}
             className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
           >
@@ -385,9 +372,8 @@ export function WalletLoginForm({
 
       <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
         <p className="text-sm text-orange-700 dark:text-orange-300">
-          <strong>Note:</strong> This is a demo implementation. In production,
-          you would integrate with actual wallet providers like MetaMask or
-          WalletConnect.
+          <strong>Note:</strong> Wallet auth now uses a signed Stellar
+          challenge transaction before a session is issued.
         </p>
       </div>
     </div>

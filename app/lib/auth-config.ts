@@ -4,17 +4,7 @@ import { JWT } from "next-auth/jwt";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { PrismaAdapter } from "@auth/prisma-adapter"
-import { Keypair } from "@stellar/stellar-sdk";
-
-// Lazy import SEP-10 functions to avoid initialization errors during tests
-let _verifyChallenge: typeof import("@/lib/sep10").verifyChallenge | null = null;
-async function getVerifyChallenge() {
-  if (!_verifyChallenge) {
-    const sep10 = await import("@/lib/sep10");
-    _verifyChallenge = sep10.verifyChallenge;
-  }
-  return _verifyChallenge;
-}
+import { authenticateWalletWithChallenge } from "@/lib/wallet-auth";
 
 // JWT payload structure
 interface UserJWT extends JWT {
@@ -34,100 +24,6 @@ interface UserSession {
   joinDate: Date;
 }
 
-/**
- * Legacy wallet signature validation using simple message signing
- * Used for backwards compatibility with existing clients
- */
-async function verifyWalletSignature (
-  walletAddress: string,
-  signature: string,
-  message: string
-): Promise<boolean> {
-  try {
-    // Step 1: Verify cryptography
-    const keypair = Keypair.fromPublicKey(walletAddress);
-    // Freighter returns base64 string for signMessage, so we parse it into Buffer to verify
-    const isValidSignature = keypair.verify(Buffer.from(message), Buffer.from(signature, "base64"));
-    
-    if (!isValidSignature) return false;
-
-    // Step 2: Verify and consume nonce to prevent replay attacks
-    const nonceMatch = message.match(/Nonce: ([a-f0-9]+)/);
-    if (!nonceMatch) {
-      console.error("No nonce found in message");
-      return false;
-    }
-
-    const nonce = nonceMatch[1];
-    const authNonce = await prisma.authNonce.findUnique({
-      where: { nonce },
-    });
-
-    if (!authNonce || authNonce.used || authNonce.expiresAt < new Date()) {
-      console.error("Invalid, used, or expired nonce");
-      return false;
-    }
-
-    // Consume the nonce
-    await prisma.authNonce.update({
-      where: { nonce },
-      data: { used: true },
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Invalid signature or verification failed:", error);
-    return false;
-  }
-}
-
-
-/**
- * SEP-10 transaction verification with replay attack prevention
- * This is the recommended authentication method for Stellar wallets
- */
-async function verifySEP10Transaction(
-  signedXDR: string,
-  walletAddress: string
-): Promise<{ valid: boolean; error?: string }> {
-  try {
-    // Step 1: Check if this transaction has already been used (replay attack prevention)
-    const { TransactionBuilder, Networks } = await import("@stellar/stellar-sdk");
-    const transaction = TransactionBuilder.fromXDR(signedXDR, Networks.PUBLIC);
-    const transactionHash = transaction.hash().toString("hex");
-
-    const existingChallenge = await prisma.usedChallenge.findUnique({
-      where: { transactionHash },
-    });
-
-    if (existingChallenge) {
-      return { valid: false, error: "Replay attack detected: This signature has already been used" };
-    }
-
-    // Step 2: Verify the signed challenge transaction
-    const verifyChallenge = await getVerifyChallenge();
-    const verificationResult = verifyChallenge(signedXDR, walletAddress);
-
-    if (!verificationResult.valid) {
-      return { valid: false, error: verificationResult.error };
-    }
-
-    // Step 3: Mark this transaction as used to prevent replay attacks
-    await prisma.usedChallenge.create({
-      data: {
-        transactionHash,
-        publicKey: walletAddress,
-        usedAt: new Date(),
-      },
-    });
-
-    return { valid: true };
-  } catch (error) {
-    console.error("SEP-10 verification error:", error);
-    return { valid: false, error: "Failed to verify SEP-10 transaction" };
-  }
-}
-
 export const authConfig = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -135,22 +31,15 @@ export const authConfig = {
       name: "Wallet",
       credentials: {
         walletAddress: { label: "Wallet Address", type: "text" },
-        signature: { label: "Signature", type: "text" },
-        message: { label: "Message", type: "text" },
         transaction: { label: "SEP-10 Transaction XDR", type: "text" },
         username: { label: "Username", type: "text", optional: true },
         email: { label: "Email", type: "email", optional: true },
       },
       async authorize (credentials: any) {
-        // Parse credentials with support for both legacy and SEP-10 authentication
         const parsedCredentials = z
           .object({
             walletAddress: z.string().regex(/^G[A-Z2-7]{55}$/, "Invalid Stellar address (must start with G and be 56 characters long)"),
-            // Legacy authentication fields
-            signature: z.string().optional().nullable(),
-            message: z.string().optional().nullable(),
-            // SEP-10 authentication field
-            transaction: z.string().optional().nullable(),
+            transaction: z.string().min(1, "SEP-10 transaction is required"),
             username: z.string().optional().nullable(),
             email: z.string().email().optional().nullable(),
           })
@@ -160,73 +49,26 @@ export const authConfig = {
           return null;
         }
 
-        const { walletAddress, signature, message, transaction, username, email } = parsedCredentials.data;
+        const { walletAddress, transaction, username, email } = parsedCredentials.data;
 
         try {
-          let isAuthenticated = false;
-
-          // Determine authentication method and verify
-          if (transaction) {
-            // SEP-10 Transaction-based authentication (recommended)
-            const sep10Result = await verifySEP10Transaction(transaction, walletAddress);
-            if (!sep10Result.valid) {
-              console.error("SEP-10 verification failed:", sep10Result.error);
-              throw new Error(sep10Result.error || "Invalid SEP-10 transaction");
-            }
-            isAuthenticated = true;
-          } else if (signature && message) {
-            // Legacy message-based authentication
-            isAuthenticated = await verifyWalletSignature(walletAddress, signature, message);
-            if (!isAuthenticated) {
-              throw new Error("Invalid wallet signature");
-            }
-          } else {
-            throw new Error("Missing authentication credentials. Provide either transaction (SEP-10) or signature+message (legacy).");
-          }
-
-          if (!isAuthenticated) {
-            throw new Error("Authentication failed");
-          }
-
-          // Check if user exists
-          let user = await prisma.user.findUnique({
-            where: { walletAddress },
+          const authResult = await authenticateWalletWithChallenge({
+            walletAddress,
+            transaction,
+            username,
+            email,
           });
 
-          // If user doesn't exist and this is a login attempt, fail
-          if (!user && !username) {
-            throw new Error("User not found. Please register first.");
+          if (!authResult.success) {
+            throw new Error(authResult.message);
           }
-
-          // If user doesn't exist and this is a registration attempt, create user
-          if (!user && username) {
-            // Check if username is already taken
-            const existingUsername = await prisma.user.findUnique({
-              where: { username },
-            });
-
-            if (existingUsername) {
-              throw new Error("Username already taken");
-            }
-
-            user = await prisma.user.create({
-              data: {
-                walletAddress,
-                name: username,
-                username,
-                email: email || null,
-                bio: null,
-                avatarUrl: `https://api.dicebear.com/7.x/identicon/svg?seed=${walletAddress}`,
-                xp: 0,
-              },
-            });
-          }
+          const { user } = authResult;
 
           if (user) {
             return {
               id: user.id,
               walletAddress: user.walletAddress,
-              username: user.name,
+              username: user.username || user.name,
               email: user.email,
               avatar: user.avatarUrl,
               bio: user.bio,

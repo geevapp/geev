@@ -22,15 +22,16 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { verifyChallenge } from "@/lib/sep10";
 import { createToken } from "@/lib/jwt";
-import { prisma } from "@/lib/prisma";
+import { authenticateWalletWithChallenge } from "@/lib/wallet-auth";
 import { z } from "zod";
 
 // Validation schema for the request body
 const verifyRequestSchema = z.object({
   transaction: z.string().min(1, "Transaction XDR is required"),
   publicKey: z.string().length(56, "Invalid Stellar public key"),
+  username: z.string().min(3).max(30).optional(),
+  email: z.string().email().optional(),
 });
 
 /**
@@ -53,64 +54,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const { transaction: signedXDR, publicKey: clientPublicKey } = validationResult.data;
+    const {
+      transaction: signedXDR,
+      publicKey: clientPublicKey,
+      username,
+      email,
+    } = validationResult.data;
 
-    // Step 1: Check if this transaction has already been used (replay attack prevention)
-    const transactionHash = await getTransactionHash(signedXDR);
-    const existingChallenge = await prisma.usedChallenge.findUnique({
-      where: { transactionHash },
+    const authResult = await authenticateWalletWithChallenge({
+      walletAddress: clientPublicKey,
+      transaction: signedXDR,
+      username,
+      email,
     });
 
-    if (existingChallenge) {
+    if (!authResult.success) {
       return NextResponse.json(
         {
-          error: "Replay attack detected",
-          message: "This signature has already been used. Please request a new challenge.",
+          error: authResult.error,
+          message: authResult.message,
         },
-        { status: 403 }
+        { status: authResult.status }
       );
     }
 
-    // Step 2: Verify the signed challenge transaction
-    const verificationResult = verifyChallenge(signedXDR, clientPublicKey);
-
-    if (!verificationResult.valid) {
-      return NextResponse.json(
-        {
-          error: "Verification failed",
-          message: verificationResult.error || "Invalid signature",
-        },
-        { status: 401 }
-      );
-    }
-
-    // Step 3: Mark this transaction as used to prevent replay attacks
-    await prisma.usedChallenge.create({
-      data: {
-        transactionHash,
-        publicKey: clientPublicKey,
-        usedAt: new Date(),
-      },
-    });
-
-    // Step 4: Find or create the user
-    let user = await prisma.user.findUnique({
-      where: { walletAddress: clientPublicKey },
-    });
-
-    // If user doesn't exist, create a new user with default values
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          walletAddress: clientPublicKey,
-          name: `User_${clientPublicKey.slice(0, 8)}`,
-          username: `user_${clientPublicKey.slice(0, 8)}`,
-          avatarUrl: `https://api.dicebear.com/7.x/identicon/svg?seed=${clientPublicKey}`,
-          xp: 0,
-          walletBalance: 0,
-        },
-      });
-    }
+    const { user } = authResult;
 
     // Step 5: Generate JWT token
     const token = await createToken({
@@ -174,18 +142,3 @@ export async function OPTIONS(): Promise<NextResponse> {
   });
 }
 
-/**
- * Helper function to extract transaction hash from XDR
- * This is a simplified version - in production, use proper XDR parsing
- */
-async function getTransactionHash(signedXDR: string): Promise<string> {
-  // Import dynamically to avoid issues if stellar-sdk isn't available at build time
-  const { TransactionBuilder, Networks } = await import("@stellar/stellar-sdk");
-  
-  const transaction = TransactionBuilder.fromXDR(
-    signedXDR,
-    Networks.PUBLIC
-  );
-  
-  return transaction.hash().toString("hex");
-}
