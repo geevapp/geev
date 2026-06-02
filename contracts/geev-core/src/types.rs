@@ -1,4 +1,4 @@
-use soroban_sdk::{contracterror, contracttype, Address, String};
+use soroban_sdk::{contracterror, contracttype, Address, String, Vec};
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -12,7 +12,10 @@ pub enum Error {
     InvalidIndex = 6,
     NotCreator = 7,
     AlreadyEntered = 8,
-    HelpRequestNotFound = 9,
+    UnauthorizedParticipant = 9,
+    InvalidWinnerCount = 10,
+    InsufficientParticipants = 11,
+    HelpRequestNotFound = 12,
     HelpRequestAlreadyFullyFunded = 10,
     InvalidDonationAmount = 11,
     AlreadyInitialized = 12,
@@ -36,6 +39,13 @@ pub enum GiveawayStatus {
 
 #[derive(Clone)]
 #[contracttype]
+pub enum ParticipantVerification {
+    Allowlist(Vec<Address>),
+    Reputation { min_reputation: u64 },
+}
+
+#[derive(Clone)]
+#[contracttype]
 pub struct Giveaway {
     pub id: u64,
     pub creator: Address,
@@ -45,7 +55,9 @@ pub struct Giveaway {
     pub participant_count: u32,
     pub end_time: u64,
     pub status: GiveawayStatus,
-    pub winner: Option<Address>,
+    pub winner_count: u32,
+    pub winners: Vec<Address>,
+    pub verification: Option<ParticipantVerification>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
