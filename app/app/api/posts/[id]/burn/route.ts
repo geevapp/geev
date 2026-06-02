@@ -13,6 +13,16 @@ export async function POST(
 
     const { id: postId } = await params;
 
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, moderationStatus: true },
+    });
+
+    if (!post) return apiError('Post not found', 404);
+    if (['suspended', 'banned'].includes(post.moderationStatus)) {
+      return apiError('Cannot burn moderated content', 403);
+    }
+
     // Insert burn (ignore if already exists)
     await prisma.interaction.upsert({
       where: {
@@ -53,6 +63,16 @@ export async function DELETE(
     if (!user) return apiError('Unauthorized', 401);
 
     const { id: postId } = await params;
+
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, moderationStatus: true },
+    });
+
+    if (!post) return apiError('Post not found', 404);
+    if (['suspended', 'banned'].includes(post.moderationStatus)) {
+      return apiError('Cannot unburn moderated content', 403);
+    }
 
     await prisma.interaction.deleteMany({
       where: {

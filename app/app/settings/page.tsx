@@ -169,6 +169,25 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold">Settings</h1>
         </div>
 
+        {['admin', 'moderator'].includes(user?.role ?? '') && (
+          <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle>Admin</CardTitle>
+              <CardDescription>
+                Review flagged content and moderation history
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin/moderation">
+                <Button>
+                  <Shield className="w-4 h-4 mr-2" />
+                  Open Moderation
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Profile Settings */}
         <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
           <CardHeader>

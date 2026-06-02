@@ -1,9 +1,9 @@
-"use client"
+'use client';
 
-import Link from "next/link"
+import Link from 'next/link';
 
 export function AppFooter() {
-  const currentYear = new Date().getFullYear()
+  const currentYear = new Date().getFullYear();
 
   return (
     <footer className="border-t bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
@@ -12,8 +12,16 @@ export function AppFooter() {
           {/* Brand */}
           <div>
             <div className="flex items-center space-x-2 mb-3">
-              <img src="/logo-light.png" alt="Geev" className="h-5 dark:hidden" />
-              <img src="/logo-dark.png" alt="Geev" className="h-5 hidden dark:block" />
+              <img
+                src="/logo-light.png"
+                alt="Geev"
+                className="h-5 dark:hidden"
+              />
+              <img
+                src="/logo-dark.png"
+                alt="Geev"
+                className="h-5 hidden dark:block"
+              />
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400">
               Building stronger communities through social giving
@@ -22,15 +30,23 @@ export function AppFooter() {
 
           {/* Product */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Product</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Product
+            </h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <Link
+                  href="/"
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
                   Home
                 </Link>
               </li>
               <li>
-                <Link href="/faq" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <Link
+                  href="/faq"
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
                   FAQ
                 </Link>
               </li>
@@ -39,15 +55,23 @@ export function AppFooter() {
 
           {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Legal</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Legal
+            </h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/terms" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <Link
+                  href="/terms"
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <Link
+                  href="/privacy"
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
                   Privacy Policy
                 </Link>
               </li>
@@ -56,15 +80,23 @@ export function AppFooter() {
 
           {/* Support */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Support</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Support
+            </h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/support" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <Link
+                  href="/support"
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
                   Contact Us
                 </Link>
               </li>
               <li>
-                <a href="mailto:support@geev.app" className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                <a
+                  href="mailto:support@geev.app"
+                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
                   Email Support
                 </a>
               </li>
@@ -80,5 +112,5 @@ export function AppFooter() {
         </div>
       </div>
     </footer>
-  )
+  );
 }

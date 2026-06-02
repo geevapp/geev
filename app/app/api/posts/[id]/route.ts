@@ -70,6 +70,18 @@ const GET = async (
             return apiError('Post not found', 404);
         }
 
+        if (['suspended', 'banned'].includes(post.moderationStatus)) {
+            const currentUser = await getCurrentUser(request);
+            const canViewModeratedPost =
+                currentUser &&
+                (currentUser.id === post.userId ||
+                    ['admin', 'moderator'].includes(currentUser.role));
+
+            if (!canViewModeratedPost) {
+                return apiError('Post not found', 404);
+            }
+        }
+
         const currentAmount = post.contributions?.reduce((sum, c) => sum + c.amount, 0) || 0;
 
         return apiSuccess({ ...post, currentAmount });
@@ -102,6 +114,10 @@ const PATCH = async (
 
         if (!post) {
             return apiError('Post not found', 404);
+        }
+
+        if (['suspended', 'banned'].includes(post.moderationStatus)) {
+            return apiError('Cannot edit moderated content', 403);
         }
 
         if (post.userId !== user.id) {
@@ -151,6 +167,10 @@ const DELETE = async (
 
         if (!post) {
             return apiError('Post not found', 404);
+        }
+
+        if (['suspended', 'banned'].includes(post.moderationStatus)) {
+            return apiError('Cannot delete moderated content', 403);
         }
 
         if (post.userId !== user.id) {

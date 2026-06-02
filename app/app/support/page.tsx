@@ -18,7 +18,7 @@ export default function SupportPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -41,7 +41,7 @@ export default function SupportPage() {
       });
 
       if (response.ok) {
-        toast.success('Message sent successfully! We\'ll get back to you soon.');
+        toast.success("Message sent successfully! We'll get back to you soon.");
         setFormData({
           name: '',
           email: '',
@@ -70,9 +70,12 @@ export default function SupportPage() {
         </Link>
 
         <div className="mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Support & Contact</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            Support & Contact
+          </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Need help? We're here to assist you. Reach out through any of the channels below.
+            Need help? We're here to assist you. Reach out through any of the
+            channels below.
           </p>
         </div>
 
@@ -82,7 +85,9 @@ export default function SupportPage() {
             <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center mb-4">
               <Mail className="w-6 h-6 text-orange-600 dark:text-orange-500" />
             </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Email</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              Email
+            </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               Send us an email and we'll respond within 24-48 hours.
             </p>
@@ -99,7 +104,9 @@ export default function SupportPage() {
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
               <MessageSquare className="w-6 h-6 text-blue-600 dark:text-blue-500" />
             </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Chat</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              Chat
+            </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               Chat with our support team in real-time.
             </p>
@@ -117,7 +124,9 @@ export default function SupportPage() {
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center mb-4">
               <Globe className="w-6 h-6 text-green-600 dark:text-green-500" />
             </div>
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Documentation</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              Documentation
+            </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               Check out our FAQ and help articles.
             </p>
@@ -131,12 +140,17 @@ export default function SupportPage() {
 
         {/* Contact Form */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Send us a Message</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            Send us a Message
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
                   Name
                 </label>
                 <Input
@@ -151,7 +165,10 @@ export default function SupportPage() {
                 />
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                >
                   Email
                 </label>
                 <Input
@@ -168,7 +185,10 @@ export default function SupportPage() {
             </div>
 
             <div>
-              <label htmlFor="subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label
+                htmlFor="subject"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 Subject
               </label>
               <Input
@@ -184,7 +204,10 @@ export default function SupportPage() {
             </div>
 
             <div>
-              <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label
+                htmlFor="message"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 Message
               </label>
               <Textarea
@@ -210,7 +233,8 @@ export default function SupportPage() {
 
           <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <p className="text-sm text-blue-900 dark:text-blue-200">
-              <strong>Response Time:</strong> We typically respond to all inquiries within 24-48 hours during business days.
+              <strong>Response Time:</strong> We typically respond to all
+              inquiries within 24-48 hours during business days.
             </p>
           </div>
         </div>
@@ -218,20 +242,31 @@ export default function SupportPage() {
         {/* Additional Resources */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Quick Links</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+              Quick Links
+            </h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/faq" className="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400">
+                <Link
+                  href="/faq"
+                  className="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400"
+                >
                   Frequently Asked Questions
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400">
+                <Link
+                  href="/privacy"
+                  className="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400"
+                >
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="/terms" className="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400">
+                <Link
+                  href="/terms"
+                  className="text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400"
+                >
                   Terms of Service
                 </Link>
               </li>
@@ -239,7 +274,9 @@ export default function SupportPage() {
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Business Inquiries</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+              Business Inquiries
+            </h3>
             <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
               For partnerships, sponsorships, or media inquiries:
             </p>

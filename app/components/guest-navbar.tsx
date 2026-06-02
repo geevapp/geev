@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { useAppContext } from "@/contexts/app-context";
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { useAppContext } from '@/contexts/app-context';
 
 export function GuestNavbar() {
   const { theme, user, toggleTheme } = useAppContext();
@@ -13,7 +13,7 @@ export function GuestNavbar() {
     <nav className="sticky top-0 z-50 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href={user ? "/feed" : "/"} className="flex items-center gap-3">
+        <Link href={user ? '/feed' : '/'} className="flex items-center gap-3">
           <img src="/logo-light.png" alt="Geev" className="h-8 dark:hidden" />
           <img
             src="/logo-dark.png"
@@ -51,7 +51,10 @@ export function GuestNavbar() {
             </Button>
           </Link>
           <Link href="/register">
-            <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
+            <Button
+              size="sm"
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
               Get Started
             </Button>
           </Link>
@@ -63,7 +66,7 @@ export function GuestNavbar() {
             onClick={toggleTheme}
             className="w-9 h-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
           >
-            {theme === "dark" ? (
+            {theme === 'dark' ? (
               <Sun className="w-4 h-4" />
             ) : (
               <Moon className="w-4 h-4" />

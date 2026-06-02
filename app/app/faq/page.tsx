@@ -77,7 +77,9 @@ function FAQAccordion() {
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
             className="w-full px-6 py-4 flex items-center justify-between bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <h3 className="font-semibold text-gray-900 dark:text-white text-left">{faq.question}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-left">
+              {faq.question}
+            </h3>
             <ChevronDown
               className={`w-5 h-5 text-gray-600 dark:text-gray-400 transition-transform flex-shrink-0 ml-4 ${
                 openIndex === index ? 'transform rotate-180' : ''
@@ -107,9 +109,12 @@ export default function FAQPage() {
         </Link>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-sm">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">Frequently Asked Questions</h1>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            Frequently Asked Questions
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-8">
-            Find answers to common questions about Geev, how it works, and how to get started.
+            Find answers to common questions about Geev, how it works, and how
+            to get started.
           </p>
 
           <FAQAccordion />
