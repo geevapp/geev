@@ -22,17 +22,36 @@ export function GuestNavbar() {
           />
           {/* <span className="text-xl font-bold text-gray-900 dark:text-white">Geev</span> */}
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
+          <Link href="/faq">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-600 dark:text-gray-300 hidden sm:inline-flex"
+            >
+              FAQ
+            </Button>
+          </Link>
+          <Link href="/support">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-600 dark:text-gray-300 hidden sm:inline-flex"
+            >
+              Support
+            </Button>
+          </Link>
           <Link href="/login">
             <Button
               variant="ghost"
+              size="sm"
               className="text-gray-600 dark:text-gray-300"
             >
               Sign In
             </Button>
           </Link>
           <Link href="/register">
-            <Button className="bg-orange-600 hover:bg-orange-700 text-white">
+            <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
               Get Started
             </Button>
           </Link>

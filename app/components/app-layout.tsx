@@ -25,14 +25,16 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
         <ScrollRestoration />
 
         {!noNavPages.includes(path) && <GuestNavbar />}
 
-        <main className="p-0">
+        <main className="p-0 flex-1">
           <div className="max-w-screen">{children}</div>
         </main>
+
+        <AppFooter />
 
         {/* Dev User Switcher - Only visible in development mode */}
         <DevUserSwitcher />
