@@ -1,9 +1,21 @@
 'use client';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, Gift, Settings, Star } from 'lucide-react';
+import { Calendar, Gift, Mail, Save, Settings, Shield, Star, Wallet, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { AvatarUpload } from '@/components/avatar-upload';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 
 import { AchievementsDialog } from '@/components/achievements-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +26,12 @@ import { PostCard } from '@/components/post-card';
 import { UserRankBadge } from '@/components/user-rank-badge';
 import { useAppContext } from '@/contexts/app-context';
 import { mapApiPostToClientPost } from '@/lib/map-api-post';
-import type { Post } from '@/lib/types';
+import type {
+  Badge as UserBadge,
+  Post,
+  ProfileVisibility,
+  UserRank,
+} from '@/lib/types';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
@@ -25,10 +42,15 @@ type ProfileUser = {
   username: string | null;
   avatarUrl: string | null;
   bio: string | null;
-  badges: Array<Record<string, unknown>>;
+  email: string | null;
+  walletAddress: string;
+  profileVisibility: ProfileVisibility;
+  showEmail: boolean;
+  showWalletAddress: boolean;
+  badges: UserBadge[];
   isFollowing?: boolean;
   isVerified?: boolean;
-  rank?: unknown;
+  rank: UserRank;
   createdAt: string | Date;
   _count?: {
     followers?: number;
@@ -38,9 +60,18 @@ type ProfileUser = {
 
 export default function ProfilePage() {
   const params = useParams();
-  const { user: currentUser } = useAppContext();
+  const { user: currentUser, setCurrentUser } = useAppContext();
   const [profileUser, setProfileUser] = useState<ProfileUser | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    bio: '',
+    profileVisibility: 'public' as ProfileVisibility,
+    showEmail: false,
+    showWalletAddress: false,
+  });
   const [showAchievements, setShowAchievements] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
@@ -57,6 +88,10 @@ export default function ProfilePage() {
   //const profileUser = users.find((u) => u.id === userId);
   //const userPosts = posts.filter((p) => p.userId === userId);
   const isOwnProfile = currentUser?.id === userId;
+  const canViewProfileDetails =
+    isOwnProfile ||
+    profileUser?.profileVisibility === 'public' ||
+    (profileUser?.profileVisibility === 'followers' && isFollowing);
 
   const givePosts = userPosts.filter((p) => p.type === 'giveaway').length;
   const takePosts = userPosts.filter((p) => p.type === 'request').length;
@@ -67,33 +102,51 @@ export default function ProfilePage() {
       setProfileError(null);
 
       try {
-        const [userRes, postsRes] = await Promise.all([
-          fetch(`/api/users/${userId}`, { cache: 'no-store' }),
-          fetch(`/api/users/${userId}/posts`, { cache: 'no-store' }),
-        ]);
+        const userRes = await fetch(`/api/users/${userId}`, { cache: 'no-store' });
 
         if (userRes.ok) {
           const userData = await userRes.json();
-          setProfileUser(userData.data);
-          setIsFollowing(!!userData.data.isFollowing);
-          setFollowerCount(userData.data._count?.followers || 0);
-          setFollowingCount(userData.data._count?.followings || 0);
+          const loadedUser = userData.data as ProfileUser;
+          const nextIsFollowing = !!loadedUser.isFollowing;
+          const nextCanView =
+            currentUser?.id === userId ||
+            loadedUser.profileVisibility === 'public' ||
+            (loadedUser.profileVisibility === 'followers' && nextIsFollowing);
+
+          setProfileUser(loadedUser);
+          setEditForm({
+            name: loadedUser.name || '',
+            bio: loadedUser.bio || '',
+            profileVisibility: loadedUser.profileVisibility || 'public',
+            showEmail: loadedUser.showEmail ?? false,
+            showWalletAddress: loadedUser.showWalletAddress ?? false,
+          });
+          setIsFollowing(nextIsFollowing);
+          setFollowerCount(loadedUser._count?.followers || 0);
+          setFollowingCount(loadedUser._count?.followings || 0);
+
+          if (nextCanView) {
+            const postsRes = await fetch(`/api/users/${userId}/posts`, {
+              cache: 'no-store',
+            });
+            if (postsRes.ok) {
+              const postsData = await postsRes.json();
+              const rawList = Array.isArray(postsData.data) ? postsData.data : [];
+              const mapped = rawList
+                .map((p: Record<string, unknown>) => mapApiPostToClientPost(p))
+                .filter(Boolean) as Post[];
+              setUserPosts(mapped);
+            } else {
+              setUserPosts([]);
+            }
+          } else {
+            setUserPosts([]);
+          }
         } else if (userRes.status === 404) {
           setProfileUser(null);
           setProfileError("The user you're looking for doesn't exist.");
         } else {
           throw new Error('Failed to load profile');
-        }
-
-        if (postsRes.ok) {
-          const postsData = await postsRes.json();
-          const rawList = Array.isArray(postsData.data) ? postsData.data : [];
-          const mapped = rawList
-            .map((p: Record<string, unknown>) => mapApiPostToClientPost(p))
-            .filter(Boolean) as Post[];
-          setUserPosts(mapped);
-        } else {
-          setUserPosts([]);
         }
       } catch (error) {
         console.error('Failed to load profile:', error);
@@ -106,7 +159,53 @@ export default function ProfilePage() {
     };
 
     if (userId) loadProfile();
-  }, [userId]);
+  }, [currentUser?.id, userId]);
+
+  const handleSaveProfile = async () => {
+    if (!currentUser?.id || !profileUser || isSavingProfile) return;
+
+    setIsSavingProfile(true);
+    try {
+      const res = await fetch(`/api/users/${currentUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save profile');
+      }
+
+      const updatedUser = data.data as Partial<ProfileUser>;
+      setProfileUser({ ...profileUser, ...updatedUser });
+      setCurrentUser({
+        ...currentUser,
+        ...(updatedUser.name !== undefined && { name: updatedUser.name }),
+        ...(updatedUser.bio !== undefined && { bio: updatedUser.bio }),
+        ...(updatedUser.avatarUrl !== undefined && {
+          avatarUrl: updatedUser.avatarUrl,
+        }),
+        ...(updatedUser.profileVisibility !== undefined && {
+          profileVisibility: updatedUser.profileVisibility,
+        }),
+        ...(updatedUser.showEmail !== undefined && {
+          showEmail: updatedUser.showEmail,
+        }),
+        ...(updatedUser.showWalletAddress !== undefined && {
+          showWalletAddress: updatedUser.showWalletAddress,
+        }),
+      });
+      setIsEditingProfile(false);
+      toast.success('Profile updated');
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to save profile',
+      );
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   const handleFollowToggle = async () => {
     if (!currentUser || isUpdatingFollow) return;
@@ -230,6 +329,165 @@ export default function ProfilePage() {
                 {profileUser.bio || 'No bio yet.'}
               </p>
 
+              {canViewProfileDetails && (
+                <div className="flex flex-wrap justify-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  {profileUser.showEmail && profileUser.email && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1 dark:border-gray-700">
+                      <Mail className="h-3 w-3" />
+                      {profileUser.email}
+                    </span>
+                  )}
+                  {profileUser.showWalletAddress && profileUser.walletAddress && (
+                    <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-gray-200 px-3 py-1 font-mono dark:border-gray-700">
+                      <Wallet className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{profileUser.walletAddress}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {isOwnProfile && (
+                <div className="w-full rounded-lg border border-gray-200 p-4 text-left dark:border-gray-800">
+                  {isEditingProfile ? (
+                    <div className="space-y-4">
+                      <AvatarUpload
+                        currentAvatarUrl={profileUser.avatarUrl}
+                        userId={currentUser?.id}
+                        onSuccess={(_, updatedUser) => {
+                          const nextUser = { ...profileUser, ...updatedUser };
+                          setProfileUser(nextUser);
+                          if (currentUser) {
+                            setCurrentUser({ ...currentUser, ...updatedUser });
+                          }
+                          toast.success('Avatar updated');
+                        }}
+                      />
+
+                      <div className="space-y-2">
+                        <Label htmlFor="profileName">Display Name</Label>
+                        <Input
+                          id="profileName"
+                          value={editForm.name}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, name: event.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="profileBio">Bio</Label>
+                        <Textarea
+                          id="profileBio"
+                          value={editForm.bio}
+                          rows={3}
+                          onChange={(event) =>
+                            setEditForm({ ...editForm, bio: event.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="profileVisibility">Profile Visibility</Label>
+                        <Select
+                          value={editForm.profileVisibility}
+                          onValueChange={(value) =>
+                            setEditForm({
+                              ...editForm,
+                              profileVisibility: value as ProfileVisibility,
+                            })
+                          }
+                        >
+                          <SelectTrigger id="profileVisibility">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="public">Public</SelectItem>
+                            <SelectItem value="followers">Followers only</SelectItem>
+                            <SelectItem value="private">Private</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Mail className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium">Show Email</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              Display your email on your profile
+                            </div>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={editForm.showEmail}
+                          onCheckedChange={(checked) =>
+                            setEditForm({ ...editForm, showEmail: checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <Wallet className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium">Show Wallet</div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              Display your wallet address on your profile
+                            </div>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={editForm.showWalletAddress}
+                          onCheckedChange={(checked) =>
+                            setEditForm({
+                              ...editForm,
+                              showWalletAddress: checked,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsEditingProfile(false)}
+                          disabled={isSavingProfile}
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleSaveProfile}
+                          disabled={isSavingProfile || !editForm.name.trim()}
+                        >
+                          <Save className="mr-2 h-4 w-4" />
+                          {isSavingProfile ? 'Saving…' : 'Save Profile'}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-gray-500" />
+                        <div>
+                          <div className="font-medium">Profile editing</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            Visibility: {profileUser.profileVisibility}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditingProfile(true)}
+                      >
+                        <Settings className="mr-2 h-4 w-4" />
+                        Edit Profile
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-center gap-8 text-sm">
                 <button
                   onClick={() => setShowFollowList({ open: true, type: 'followers' })}
@@ -317,48 +575,59 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Content Tabs */}
-        <Tabs defaultValue="posts" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="posts">Posts ({userPosts.length})</TabsTrigger>
-            <TabsTrigger value="giveaways">Gives ({givePosts})</TabsTrigger>
-            <TabsTrigger value="requests">Takes ({takePosts})</TabsTrigger>
-          </TabsList>
+        {canViewProfileDetails ? (
+          <Tabs defaultValue="posts" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="posts">Posts ({userPosts.length})</TabsTrigger>
+              <TabsTrigger value="giveaways">Gives ({givePosts})</TabsTrigger>
+              <TabsTrigger value="requests">Takes ({takePosts})</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="posts" className="space-y-4">
-            {userPosts.length > 0 ? (
-              userPosts.map((post) => <PostCard key={post.id} post={post} />)
-            ) : (
-              <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-                <CardContent className="p-8 text-center">
-                  <Gift className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {isOwnProfile
-                      ? 'Start creating giveaways or help requests!'
-                      : `${profileUser.name} hasn't posted anything yet.`}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+            <TabsContent value="posts" className="space-y-4">
+              {userPosts.length > 0 ? (
+                userPosts.map((post) => <PostCard key={post.id} post={post} />)
+              ) : (
+                <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                  <CardContent className="p-8 text-center">
+                    <Gift className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">No posts yet</h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      {isOwnProfile
+                        ? 'Start creating giveaways or help requests!'
+                        : `${profileUser.name} hasn't posted anything yet.`}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-          <TabsContent value="giveaways" className="space-y-4">
-            {userPosts
-              .filter((p) => p.type === 'giveaway')
-              .map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-          </TabsContent>
+            <TabsContent value="giveaways" className="space-y-4">
+              {userPosts
+                .filter((p) => p.type === 'giveaway')
+                .map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+            </TabsContent>
 
-          <TabsContent value="requests" className="space-y-4">
-            {userPosts
-              .filter((p) => p.type === 'request')
-              .map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="requests" className="space-y-4">
+              {userPosts
+                .filter((p) => p.type === 'request')
+                .map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <CardContent className="p-8 text-center">
+              <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Private profile</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Follow {profileUser.name} to see profile activity and posts.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <AchievementsDialog

@@ -22,6 +22,17 @@ export interface ExtendedNotification extends Notification {
   deliveryChannels?: Array<"in_app" | "email" | "push" | "websocket">;
 }
 
+export interface PaginatedNotificationsResult {
+  notifications: ExtendedNotification[];
+  total: number;
+  unreadCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
 // Default priority mapping for notification types
 const DEFAULT_PRIORITIES: Record<NotificationType, NotificationPriority> = {
   giveaway_entry: NotificationPriority.MEDIUM,
@@ -185,6 +196,60 @@ export async function getUnreadCount(userId: string): Promise<number> {
       isRead: false,
     },
   });
+}
+
+export async function getPaginatedNotifications({
+  userId,
+  page = 1,
+  pageSize = 20,
+  isRead,
+}: {
+  userId: string;
+  page?: number;
+  pageSize?: number;
+  isRead?: boolean;
+}): Promise<PaginatedNotificationsResult> {
+  const normalizedPage = Math.max(1, Math.floor(page));
+  const normalizedPageSize = Math.min(50, Math.max(1, Math.floor(pageSize)));
+  const where: { userId: string; isRead?: boolean } = { userId };
+
+  if (isRead !== undefined) {
+    where.isRead = isRead;
+  }
+
+  const [notifications, total, unreadCount] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (normalizedPage - 1) * normalizedPageSize,
+      take: normalizedPageSize,
+    }),
+    prisma.notification.count({ where }),
+    prisma.notification.count({
+      where: { userId, isRead: false },
+    }),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / normalizedPageSize));
+  const enrichedNotifications: ExtendedNotification[] = notifications.map(
+    (notification) => ({
+      ...notification,
+      priority:
+        DEFAULT_PRIORITIES[notification.type] || NotificationPriority.MEDIUM,
+      deliveryChannels: ["in_app"],
+    }),
+  );
+
+  return {
+    notifications: enrichedNotifications,
+    total,
+    unreadCount,
+    page: normalizedPage,
+    pageSize: normalizedPageSize,
+    totalPages,
+    hasNextPage: normalizedPage < totalPages,
+    hasPreviousPage: normalizedPage > 1,
+  };
 }
 
 /**

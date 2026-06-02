@@ -7,6 +7,7 @@ import {
   DollarSign,
   History,
   Plus,
+  Shield,
   Wallet,
 } from "lucide-react";
 import {
@@ -36,6 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { WalletTransaction } from "@/lib/types";
 import { toast } from "sonner";
 import { useAppContext } from "@/contexts/app-context";
@@ -67,6 +69,7 @@ export function WalletManagement() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [isLoadingTx, setIsLoadingTx] = useState(true);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -205,6 +208,36 @@ export function WalletManagement() {
     }
   };
 
+  const handleWalletVisibilityChange = async (checked: boolean) => {
+    if (!user?.id) return;
+
+    setIsSavingPrivacy(true);
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ showWalletAddress: checked }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error("Privacy update failed", {
+          description: data.error ?? "Please try again.",
+        });
+        return;
+      }
+
+      setCurrentUser({ ...user, showWalletAddress: data.data.showWalletAddress });
+      toast.success("Wallet privacy updated");
+    } catch {
+      toast.error("Something went wrong", {
+        description: "Please try again.",
+      });
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-orange-50 dark:bg-orange-950/20 rounded-xl p-6 space-y-4 border border-orange-100 dark:border-orange-800/30">
@@ -244,6 +277,27 @@ export function WalletManagement() {
           </Dialog>
         </div>
       </div>
+
+      <Card className="border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5 text-gray-500" />
+              <div>
+                <div className="font-medium">Show Wallet on Profile</div>
+                <div className="text-sm text-gray-500">
+                  Make your connected wallet address visible to profile viewers
+                </div>
+              </div>
+            </div>
+            <Switch
+              checked={user?.showWalletAddress ?? false}
+              disabled={isSavingPrivacy}
+              onCheckedChange={handleWalletVisibilityChange}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

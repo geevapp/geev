@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/auth";
 import {
-  getRecentNotifications,
+  getPaginatedNotifications,
   markAllAsRead,
   markAsRead,
   getUnreadCount,
@@ -10,43 +9,37 @@ import {
 
 // GET /api/notifications?isRead=false&page=1&pageSize=20
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser(req);
+  if (!currentUser?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = session.user.id;
+
   const { searchParams } = new URL(req.url);
   const isRead = searchParams.get("isRead");
-  const page = parseInt(searchParams.get("page") || "1", 10);
-  const pageSize = parseInt(searchParams.get("pageSize") || "20", 10);
+  const page = Number.parseInt(searchParams.get("page") || "1", 10);
+  const pageSize = Number.parseInt(searchParams.get("pageSize") || "20", 10);
 
-  const where: any = { userId };
-  if (isRead !== null) where.isRead = isRead === "true";
+  const result = await getPaginatedNotifications({
+    userId: currentUser.id,
+    page,
+    pageSize,
+    isRead: isRead === null ? undefined : isRead === "true",
+  });
 
-  const [notifications, total] = await Promise.all([
-    prisma.notification.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.notification.count({ where }),
-  ]);
-
-  return NextResponse.json({ notifications, total, page, pageSize });
+  return NextResponse.json(result);
 }
 
 // POST /api/notifications/read-all - Mark all notifications as read
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser(req);
+  if (!currentUser?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = session.user.id;
 
   try {
-    const count = await markAllAsRead(userId);
-    return NextResponse.json({ success: true, markedCount: count });
+    const count = await markAllAsRead(currentUser.id);
+    const unreadCount = await getUnreadCount(currentUser.id);
+    return NextResponse.json({ success: true, markedCount: count, unreadCount });
   } catch (error) {
     console.error("Error marking all notifications as read:", error);
     return NextResponse.json(
@@ -58,11 +51,10 @@ export async function POST(req: NextRequest) {
 
 // PATCH /api/notifications/read - Mark specific notifications as read
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser(req);
+  if (!currentUser?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = session.user.id;
 
   try {
     const body = await req.json();
@@ -75,8 +67,9 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const count = await markAsRead(userId, notificationIds);
-    return NextResponse.json({ success: true, markedCount: count });
+    const count = await markAsRead(currentUser.id, notificationIds);
+    const unreadCount = await getUnreadCount(currentUser.id);
+    return NextResponse.json({ success: true, markedCount: count, unreadCount });
   } catch (error) {
     console.error("Error marking notifications as read:", error);
     return NextResponse.json(
@@ -90,14 +83,13 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   // Note: Using DELETE to get unread count is a temporary pattern
   // This should be changed to GET /api/notifications/unread-count in the future
-  const session = await auth();
-  if (!session?.user?.id) {
+  const currentUser = await getCurrentUser(req);
+  if (!currentUser?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const userId = session.user.id;
 
   try {
-    const count = await getUnreadCount(userId);
+    const count = await getUnreadCount(currentUser.id);
     return NextResponse.json({ unreadCount: count });
   } catch (error) {
     console.error("Error getting unread count:", error);

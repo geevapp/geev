@@ -6,20 +6,23 @@ import { prisma } from "@/lib/prisma";
 
 // Mock auth module before importing routes
 const mockAuth = vi.hoisted(() => vi.fn());
+const mockGetCurrentUser = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth", () => ({
   auth: mockAuth,
-  getCurrentUser: vi.fn(),
+  getCurrentUser: mockGetCurrentUser,
 }));
 
 describe("Notifications API", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockAuth.mockReset();
+    mockGetCurrentUser.mockReset();
   });
 
   describe("GET /api/notifications", () => {
     it("should return 401 if not authenticated", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockGetCurrentUser.mockResolvedValue(null);
 
       const request = createMockRequest(
         "http://localhost:3000/api/notifications",
@@ -30,7 +33,7 @@ describe("Notifications API", () => {
     });
 
     it("should return notifications for authenticated user", async () => {
-      mockAuth.mockResolvedValue({ user: { id: "user_1" } });
+      mockGetCurrentUser.mockResolvedValue({ id: "user_1" });
 
       const mockNotifications = [
         {
@@ -56,10 +59,11 @@ describe("Notifications API", () => {
       expect(status).toBe(200);
       expect(data.notifications).toHaveLength(1);
       expect(data.total).toBe(1);
+      expect(data.unreadCount).toBe(1);
     });
 
     it("should filter by isRead parameter", async () => {
-      mockAuth.mockResolvedValue({ user: { id: "user_1" } });
+      mockGetCurrentUser.mockResolvedValue({ id: "user_1" });
 
       prisma.notification.findMany = vi.fn().mockResolvedValue([]);
       prisma.notification.count = vi.fn().mockResolvedValue(0);
@@ -82,7 +86,7 @@ describe("Notifications API", () => {
 
   describe("POST /api/notifications/read-all", () => {
     it("should return 401 if not authenticated", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockGetCurrentUser.mockResolvedValue(null);
 
       const request = createMockRequest(
         "http://localhost:3000/api/notifications",
@@ -96,7 +100,7 @@ describe("Notifications API", () => {
     });
 
     it("should mark all notifications as read", async () => {
-      mockAuth.mockResolvedValue({ user: { id: "user_1" } });
+      mockGetCurrentUser.mockResolvedValue({ id: "user_1" });
 
       vi.spyOn(notifications, "markAllAsRead").mockResolvedValue(5);
 
@@ -117,7 +121,7 @@ describe("Notifications API", () => {
 
   describe("PATCH /api/notifications/read", () => {
     it("should return 401 if not authenticated", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockGetCurrentUser.mockResolvedValue(null);
 
       const request = createMockRequest(
         "http://localhost:3000/api/notifications",
@@ -132,7 +136,7 @@ describe("Notifications API", () => {
     });
 
     it("should return 400 if notificationIds not provided", async () => {
-      mockAuth.mockResolvedValue({ user: { id: "user_1" } });
+      mockGetCurrentUser.mockResolvedValue({ id: "user_1" });
 
       const request = createMockRequest(
         "http://localhost:3000/api/notifications",
@@ -149,7 +153,7 @@ describe("Notifications API", () => {
     });
 
     it("should mark specific notifications as read", async () => {
-      mockAuth.mockResolvedValue({ user: { id: "user_1" } });
+      mockGetCurrentUser.mockResolvedValue({ id: "user_1" });
 
       vi.spyOn(notifications, "markAsRead").mockResolvedValue(2);
 
@@ -171,7 +175,7 @@ describe("Notifications API", () => {
 
   describe("DELETE /api/notifications/unread-count", () => {
     it("should return 401 if not authenticated", async () => {
-      mockAuth.mockResolvedValue(null);
+      mockGetCurrentUser.mockResolvedValue(null);
 
       const request = createMockRequest(
         "http://localhost:3000/api/notifications",
@@ -185,7 +189,7 @@ describe("Notifications API", () => {
     });
 
     it("should return unread count", async () => {
-      mockAuth.mockResolvedValue({ user: { id: "user_1" } });
+      mockGetCurrentUser.mockResolvedValue({ id: "user_1" });
 
       vi.spyOn(notifications, "getUnreadCount").mockResolvedValue(7);
 

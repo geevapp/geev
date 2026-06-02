@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import Image from "next/image"
 import { MediaUpload } from "./media-upload"
@@ -8,45 +8,54 @@ import type { PostMedia } from "@/lib/types"
 
 interface AvatarUploadProps {
   currentAvatarUrl?: string | null
-  onSuccess?: (newUrl: string) => void
+  userId?: string
+  onSuccess?: (newUrl: string, user?: Record<string, unknown>) => void
 }
 
-export function AvatarUpload({ currentAvatarUrl, onSuccess }: AvatarUploadProps) {
+export function AvatarUpload({ currentAvatarUrl, userId, onSuccess }: AvatarUploadProps) {
   const { data: session, update: updateSession } = useSession()
   const [avatarUrl, setAvatarUrl] = useState(currentAvatarUrl ?? null)
   const [saving,    setSaving]    = useState(false)
   const [error,     setError]     = useState<string | null>(null)
   const [success,   setSuccess]   = useState(false)
 
-  // MediaUpload fires onMediaChange once the file is uploaded to S3.
-  // media[0].url is a permanent CDN URL at this point — never a blob.
+  useEffect(() => {
+    setAvatarUrl(currentAvatarUrl ?? null)
+  }, [currentAvatarUrl])
+
+  // MediaUpload also emits local preview URLs while uploading; only persist the
+  // permanent URL returned by the upload endpoint.
   const handleMediaChange = async (media: PostMedia[]) => {
     const item = media[0]
-    if (!item?.url || !session?.user?.id) return
+    const targetUserId = userId ?? session?.user?.id
+    if (!item?.url || !targetUserId || item.url.startsWith("blob:")) return
 
     setSaving(true)
     setError(null)
     setSuccess(false)
 
     try {
-      const res = await fetch(`/api/users/${session.user.id}`, {
+      const res = await fetch(`/api/users/${targetUserId}`, {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ avatarUrl: item.url }),
       })
 
       if (!res.ok) {
-        const body = await res.json() as { message?: string }
-        throw new Error(body.message ?? 'Failed to save avatar')
+        const body = await res.json() as { error?: string; message?: string }
+        throw new Error(body.error ?? body.message ?? 'Failed to save avatar')
       }
 
       setAvatarUrl(item.url)
       setSuccess(true)
 
       // Refresh the NextAuth session so the avatar updates in the nav immediately
-      await updateSession({ user: { ...session.user, image: item.url } })
+      if (session?.user) {
+        await updateSession({ user: { ...session.user, image: item.url } })
+      }
 
-      onSuccess?.(item.url)
+      const body = await res.json() as { data?: Record<string, unknown> }
+      onSuccess?.(item.url, body.data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save avatar')
     } finally {

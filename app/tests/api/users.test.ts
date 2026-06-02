@@ -34,6 +34,13 @@ describe('Users API', () => {
     email: 'alice@example.com',
     avatarUrl: null,
     xp: 100,
+    walletBalance: 0,
+    profileVisibility: 'public',
+    showEmail: false,
+    showWalletAddress: false,
+    emailNotifications: true,
+    pushNotifications: false,
+    marketingNotifications: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     _count: { followers: 5, followings: 3 },
@@ -48,6 +55,13 @@ describe('Users API', () => {
     email: 'bob@example.com',
     avatarUrl: null,
     xp: 50,
+    walletBalance: 0,
+    profileVisibility: 'public',
+    showEmail: false,
+    showWalletAddress: false,
+    emailNotifications: true,
+    pushNotifications: false,
+    marketingNotifications: false,
     createdAt: new Date(),
     updatedAt: new Date(),
     _count: { followers: 1, followings: 2 },
@@ -205,6 +219,73 @@ describe('Users API', () => {
       expect(status).toBe(200);
       expect(data.data.bio).toBe('Updated bio');
       expect(data.data.email).toBe('newalice@example.com');
+    });
+
+    it('should update avatar, privacy, and notification preferences', async () => {
+      (getCurrentUser as any).mockResolvedValue(user1);
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.update.mockResolvedValue({
+        ...user1,
+        avatarUrl: 'https://cdn.example.com/avatar.png',
+        profileVisibility: 'followers',
+        showEmail: true,
+        showWalletAddress: true,
+        emailNotifications: false,
+        pushNotifications: true,
+        marketingNotifications: true,
+      });
+
+      const request = createMockRequest('http://localhost:3000/api/users/user_1', {
+        method: 'PATCH',
+        body: {
+          avatarUrl: 'https://cdn.example.com/avatar.png',
+          profileVisibility: 'followers',
+          showEmail: true,
+          showWalletAddress: true,
+          emailNotifications: false,
+          pushNotifications: true,
+          marketingNotifications: true,
+        },
+      });
+      const response = await PATCH(request, { params: Promise.resolve({ id: 'user_1' }) });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.avatarUrl).toBe('https://cdn.example.com/avatar.png');
+      expect(data.data.profileVisibility).toBe('followers');
+      expect(data.data.showEmail).toBe(true);
+      expect(data.data.showWalletAddress).toBe(true);
+      expect(data.data.emailNotifications).toBe(false);
+      expect(data.data.pushNotifications).toBe(true);
+      expect(data.data.marketingNotifications).toBe(true);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            profileVisibility: 'followers',
+            showEmail: true,
+            showWalletAddress: true,
+            emailNotifications: false,
+            pushNotifications: true,
+            marketingNotifications: true,
+          }),
+        }),
+      );
+    });
+
+    it('should reject invalid profile visibility values', async () => {
+      (getCurrentUser as any).mockResolvedValue(user1);
+
+      const request = createMockRequest('http://localhost:3000/api/users/user_1', {
+        method: 'PATCH',
+        body: { profileVisibility: 'everyone' },
+      });
+      const response = await PATCH(request, { params: Promise.resolve({ id: 'user_1' }) });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(400);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe('Invalid profile visibility');
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
     });
 
     it('should return 409 when the requested username is already taken', async () => {
