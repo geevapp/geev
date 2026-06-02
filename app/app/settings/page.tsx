@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
@@ -11,9 +10,7 @@ import {
 import {
   ArrowLeft,
   Bell,
-  Camera,
   CreditCard,
-  Loader2,
   Moon,
   Shield,
   Sun,
@@ -23,22 +20,29 @@ import {
 
 import { AuthGuard } from '@/components/auth-guard';
 import { Button } from '@/components/ui/button';
+import { AvatarUpload } from '@/components/avatar-upload';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppContext } from '@/contexts/app-context';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type React from 'react';
-import { useState, useRef } from 'react';
-import { uploadAvatar } from '@/lib/storage';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import type { ProfileVisibility } from '@/lib/types';
 
 export default function SettingsPage() {
   const { user, logout, toggleTheme, theme, setCurrentUser } = useAppContext();
   const router = useRouter();
-  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -49,11 +53,36 @@ export default function SettingsPage() {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const [notifications, setNotifications] = useState({
-    email: true,
-    push: false,
-    marketing: false,
+  const [privacy, setPrivacy] = useState({
+    profileVisibility: (user?.profileVisibility || 'public') as ProfileVisibility,
+    showEmail: user?.showEmail ?? false,
+    showWalletAddress: user?.showWalletAddress ?? false,
   });
+
+  const [notifications, setNotifications] = useState({
+    email: user?.emailNotifications ?? true,
+    push: user?.pushNotifications ?? false,
+    marketing: user?.marketingNotifications ?? false,
+  });
+
+  useEffect(() => {
+    setFormData({
+      name: user?.name || '',
+      username: user?.username || '',
+      bio: user?.bio || '',
+      email: user?.email || '',
+    });
+    setPrivacy({
+      profileVisibility: (user?.profileVisibility || 'public') as ProfileVisibility,
+      showEmail: user?.showEmail ?? false,
+      showWalletAddress: user?.showWalletAddress ?? false,
+    });
+    setNotifications({
+      email: user?.emailNotifications ?? true,
+      push: user?.pushNotifications ?? false,
+      marketing: user?.marketingNotifications ?? false,
+    });
+  }, [user]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -77,6 +106,12 @@ export default function SettingsPage() {
           username: formData.username,
           bio: formData.bio,
           email: formData.email,
+          profileVisibility: privacy.profileVisibility,
+          showEmail: privacy.showEmail,
+          showWalletAddress: privacy.showWalletAddress,
+          emailNotifications: notifications.email,
+          pushNotifications: notifications.push,
+          marketingNotifications: notifications.marketing,
         }),
       });
 
@@ -101,31 +136,6 @@ export default function SettingsPage() {
       toast.error('Network error', {
         description: 'Could not reach the server. Please check your connection.',
       });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleAvatarChange = async (file: File) => {
-    if (!user?.id) return;
-
-    setIsSaving(true);
-    try {
-      const avatarUrl = await uploadAvatar(file);
-      
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatarUrl }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update avatar');
-
-      const data = await response.json();
-      setCurrentUser({ ...user, avatarUrl: data.data.avatarUrl });
-      toast.success('Avatar updated successfully');
-    } catch (error) {
-      toast.error('Failed to update avatar');
     } finally {
       setIsSaving(false);
     }
@@ -168,49 +178,14 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Avatar */}
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <Avatar className="w-20 h-20 transition-opacity group-hover:opacity-50">
-                  <AvatarImage
-                    src={user?.avatarUrl || '/placeholder.svg'}
-                    alt={user?.name}
-                  />
-                  <AvatarFallback className="text-lg">
-                    {user?.name
-                      ? user.name.split(' ').map((n: string) => n[0]).join('')
-                      : 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                {isSaving && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => avatarInputRef.current?.click()}
-                  disabled={isSaving}
-                >
-                  <Camera className="w-4 h-4 mr-2" />
-                  Change Avatar
-                </Button>
-                <input
-                  type="file"
-                  ref={avatarInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleAvatarChange(file);
-                  }}
-                />
-                <p className="text-[10px] text-gray-500">Max 10MB • PNG, JPG, GIF</p>
-              </div>
-            </div>
+            <AvatarUpload
+              currentAvatarUrl={user?.avatarUrl}
+              userId={user?.id}
+              onSuccess={(_, updatedUser) => {
+                if (user && updatedUser) setCurrentUser({ ...user, ...updatedUser });
+                toast.success('Avatar updated successfully');
+              }}
+            />
 
             {/* Form Fields */}
             <div className="grid gap-4">
@@ -260,6 +235,79 @@ export default function SettingsPage() {
 
             <Button onClick={handleSaveProfile} disabled={isSaving}>
               {isSaving ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Privacy Settings */}
+        <Card className="border-0 shadow-lg bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle>Privacy</CardTitle>
+            <CardDescription>
+              Control who can view your profile and account details
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="profileVisibility">Profile Visibility</Label>
+              <Select
+                value={privacy.profileVisibility}
+                onValueChange={(value) =>
+                  setPrivacy({
+                    ...privacy,
+                    profileVisibility: value as ProfileVisibility,
+                  })
+                }
+              >
+                <SelectTrigger id="profileVisibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="public">Public</SelectItem>
+                  <SelectItem value="followers">Followers only</SelectItem>
+                  <SelectItem value="private">Private</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5" />
+                <div>
+                  <div className="font-medium">Show Email</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Let people see your email address on your profile
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={privacy.showEmail}
+                onCheckedChange={(checked) =>
+                  setPrivacy({ ...privacy, showEmail: checked })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-5 h-5" />
+                <div>
+                  <div className="font-medium">Show Wallet Address</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Let people see your connected wallet address
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={privacy.showWalletAddress}
+                onCheckedChange={(checked) =>
+                  setPrivacy({ ...privacy, showWalletAddress: checked })
+                }
+              />
+            </div>
+
+            <Button onClick={handleSaveProfile} disabled={isSaving}>
+              {isSaving ? 'Saving…' : 'Save Privacy'}
             </Button>
           </CardContent>
         </Card>
@@ -382,6 +430,28 @@ export default function SettingsPage() {
                 }
               />
             </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bell className="w-5 h-5" />
+                <div>
+                  <div className="font-medium">Product Updates</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Receive occasional feature and community updates
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={notifications.marketing}
+                onCheckedChange={(checked) =>
+                  setNotifications({ ...notifications, marketing: checked })
+                }
+              />
+            </div>
+
+            <Button onClick={handleSaveProfile} disabled={isSaving}>
+              {isSaving ? 'Saving…' : 'Save Notifications'}
+            </Button>
           </CardContent>
         </Card>
 

@@ -4,6 +4,8 @@ import { apiSuccess, apiError } from "@/lib/api-response";
 import { getCurrentUser } from "@/lib/auth";
 import { readJsonBody } from "@/lib/parse-json-body";
 
+const PROFILE_VISIBILITIES = new Set(["public", "followers", "private"]);
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -26,6 +28,12 @@ export async function GET(
           avatarUrl: true,
           xp: true,
           walletBalance: true,
+          profileVisibility: true,
+          showEmail: true,
+          showWalletAddress: true,
+          emailNotifications: true,
+          pushNotifications: true,
+          marketingNotifications: true,
           createdAt: true,
           updatedAt: true,
           _count: {
@@ -90,7 +98,27 @@ export async function PATCH(
 
     const raw = await readJsonBody<Record<string, unknown>>(request);
     if (!raw.ok) return raw.response;
-    const { name, username, bio, email } = raw.data;
+    const {
+      name,
+      username,
+      bio,
+      email,
+      avatarUrl,
+      profileVisibility,
+      showEmail,
+      showWalletAddress,
+      emailNotifications,
+      pushNotifications,
+      marketingNotifications,
+    } = raw.data;
+
+    if (
+      profileVisibility !== undefined &&
+      (typeof profileVisibility !== "string" ||
+        !PROFILE_VISIBILITIES.has(profileVisibility))
+    ) {
+      return apiError("Invalid profile visibility", 400);
+    }
 
     try {
       // --- Uniqueness checks ---
@@ -126,6 +154,17 @@ export async function PATCH(
           }),
           ...(bio !== undefined && { bio: bio as string | null }),
           ...(email !== undefined && { email: email as string | null }),
+          ...(avatarUrl !== undefined && { avatarUrl: avatarUrl as string | null }),
+          ...(profileVisibility !== undefined && {
+            profileVisibility: profileVisibility as string,
+          }),
+          ...(typeof showEmail === "boolean" && { showEmail }),
+          ...(typeof showWalletAddress === "boolean" && { showWalletAddress }),
+          ...(typeof emailNotifications === "boolean" && { emailNotifications }),
+          ...(typeof pushNotifications === "boolean" && { pushNotifications }),
+          ...(typeof marketingNotifications === "boolean" && {
+            marketingNotifications,
+          }),
           updatedAt: new Date(),
         },
         select: {
@@ -138,6 +177,12 @@ export async function PATCH(
           avatarUrl: true,
           xp: true,
           walletBalance: true,
+          profileVisibility: true,
+          showEmail: true,
+          showWalletAddress: true,
+          emailNotifications: true,
+          pushNotifications: true,
+          marketingNotifications: true,
           createdAt: true,
           updatedAt: true,
         },

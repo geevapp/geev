@@ -4,6 +4,12 @@ import { SignInResponse } from "next-auth/react"
 
 export type User = BaseUser & {
   walletBalance: number
+  profileVisibility?: ProfileVisibility
+  showEmail?: boolean
+  showWalletAddress?: boolean
+  emailNotifications?: boolean
+  pushNotifications?: boolean
+  marketingNotifications?: boolean
   rank: Rank
   badges: Badge[]
   _count: {
@@ -20,6 +26,8 @@ export type User = BaseUser & {
     sessions: number
   }
 }
+
+export type ProfileVisibility = "public" | "followers" | "private"
 
 export type UserRank = Rank
 
