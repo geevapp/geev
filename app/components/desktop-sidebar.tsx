@@ -9,6 +9,7 @@ import {
   Home,
   Plus,
   Settings,
+  ShieldCheck,
   TrendingUp,
   Trophy,
   Users,
@@ -33,6 +34,9 @@ export function DesktopSidebar() {
     { name: 'Feed', href: '/feed', icon: Home },
     { name: 'Activity', href: '/activity', icon: TrendingUp },
     { name: 'Leaderboard', href: '/leaderboard', icon: Trophy },
+    ...(['admin', 'moderator'].includes(user?.role ?? '')
+      ? [{ name: 'Moderation', href: '/admin/moderation', icon: ShieldCheck }]
+      : []),
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 

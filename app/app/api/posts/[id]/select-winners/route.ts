@@ -81,6 +81,9 @@ export const POST = async (
 
     if (!post) return apiError("Post not found", 404);
     if (post.userId !== user.id) return apiError("Forbidden", 403);
+    if (["suspended", "banned"].includes(post.moderationStatus)) {
+      return apiError("Cannot select winners for moderated content", 403);
+    }
 
     if (post.status === "completed") {
       return apiError("Winners already selected for this post", 400);

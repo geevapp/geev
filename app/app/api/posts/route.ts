@@ -219,6 +219,7 @@ const GET = async (request: NextRequest) => {
     const limit = parseInt(searchParams.get("limit") || "10");
 
     const where: Prisma.PostWhereInput = {};
+    where.moderationStatus = { notIn: ["suspended", "banned"] };
 
     if (filter === "active") {
       where.endsAt = { gt: new Date() };

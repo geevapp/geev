@@ -1,12 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  POST as likePost,
-  DELETE as unlikePost,
-} from "@/app/api/posts/[id]/like/route";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   POST as burnPost,
   DELETE as unburnPost,
 } from "@/app/api/posts/[id]/burn/route";
+import {
+  POST as likePost,
+  DELETE as unlikePost,
+} from "@/app/api/posts/[id]/like/route";
+
+import { getCurrentUser } from "@/lib/auth";
 import { GET as getStats } from "@/app/api/posts/[id]/stats/route";
 
 const mockAwardXp = vi.hoisted(() => vi.fn());
@@ -68,10 +70,9 @@ vi.mock("@/lib/notifications", () => ({
   createNotification: vi.fn().mockResolvedValue({}),
 }));
 
-import { getCurrentUser } from "@/lib/auth";
 
 // Helper to create request
-function createRequest(method = "GET") {
+function createRequest (method = "GET") {
   return new Request("http://localhost:3000", { method });
 }
 
@@ -189,6 +190,10 @@ describe("Interactions API (Unit)", () => {
     it("should burn a post", async () => {
       mockPrisma.interaction.upsert.mockResolvedValue({});
       mockPrisma.interaction.count.mockResolvedValue(5);
+      mockPrisma.post.findUnique.mockResolvedValue({
+        id: postId,
+        moderationStatus: "active",
+      });
 
       const request = createRequest("POST");
       const response = await burnPost(request as any, { params });
@@ -208,6 +213,10 @@ describe("Interactions API (Unit)", () => {
     it("should unburn a post", async () => {
       mockPrisma.interaction.deleteMany.mockResolvedValue({ count: 1 });
       mockPrisma.interaction.count.mockResolvedValue(4);
+      mockPrisma.post.findUnique.mockResolvedValue({
+        id: postId,
+        moderationStatus: "active",
+      });
 
       const request = createRequest("DELETE");
       const response = await unburnPost(request as any, { params });

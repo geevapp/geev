@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { Home, Plus, Settings, Trophy, User } from "lucide-react";
+import { Home, Plus, Settings, ShieldCheck, Trophy, User } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { CreateGiveawayModal } from "@/components/create-giveaway-modal";
-import { CreatePostModal } from "@/components/create-post-modal";
-import { CreateRequestModal } from "@/components/create-request-modal";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { useAppContext } from "@/contexts/app-context";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { Button } from '@/components/ui/button';
+import { CreateGiveawayModal } from '@/components/create-giveaway-modal';
+import { CreatePostModal } from '@/components/create-post-modal';
+import { CreateRequestModal } from '@/components/create-request-modal';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { useAppContext } from '@/contexts/app-context';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
 export function MobileBottomNav() {
   const { user } = useAppContext();
@@ -19,25 +19,28 @@ export function MobileBottomNav() {
   const [showGiveawayModal, setShowGiveawayModal] = useState(false);
   const [showRequestModal, setShowRequestModal] = useState(false);
 
-  const handleCreatePost = (type: "giveaway" | "request") => {
-    if (type === "giveaway") {
+  const handleCreatePost = (type: 'giveaway' | 'request') => {
+    if (type === 'giveaway') {
       setShowGiveawayModal(true);
     } else {
       setShowRequestModal(true);
     }
   };
 
+  const isAdmin = ['admin', 'moderator'].includes(user?.role ?? '');
   const navigation = [
-    { name: "Feed", href: "/feed", icon: Home },
-    { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
+    { name: 'Feed', href: '/feed', icon: Home },
+    { name: 'Leaderboard', href: '/leaderboard', icon: Trophy },
     {
-      name: "Create",
-      href: "#",
+      name: 'Create',
+      href: '#',
       icon: Plus,
       action: () => setShowCreateModal(true),
     },
-    { name: "Profile", href: `/profile/${user?.id}`, icon: User },
-    { name: "Settings", href: "/settings", icon: Settings },
+    isAdmin
+      ? { name: 'Moderation', href: '/admin/moderation', icon: ShieldCheck }
+      : { name: 'Profile', href: `/profile/${user?.id}`, icon: User },
+    { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
   return (
@@ -46,7 +49,7 @@ export function MobileBottomNav() {
         <div className="grid grid-cols-5 h-16">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
-            const isCreateButton = item.name === "Create";
+            const isCreateButton = item.name === 'Create';
 
             return (
               <div key={item.name} className="flex items-center justify-center">
@@ -56,9 +59,9 @@ export function MobileBottomNav() {
                     size="sm"
                     onClick={item.action}
                     className={cn(
-                      "flex flex-col items-center justify-center h-12 w-12 p-0",
+                      'flex flex-col items-center justify-center h-12 w-12 p-0',
                       isCreateButton &&
-                        "bg-orange-600 hover:bg-orange-700 text-white rounded-full",
+                        'bg-orange-600 hover:bg-orange-700 text-white rounded-full',
                     )}
                   >
                     <item.icon className="h-5 w-5" />
@@ -72,8 +75,8 @@ export function MobileBottomNav() {
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        "flex flex-col items-center justify-center h-12 w-12 p-0",
-                        isActive && "text-orange-600 dark:text-orange-400",
+                        'flex flex-col items-center justify-center h-12 w-12 p-0',
+                        isActive && 'text-orange-600 dark:text-orange-400',
                       )}
                     >
                       <item.icon className="h-5 w-5" />

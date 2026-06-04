@@ -16,12 +16,13 @@ model Notification {
   isRead    Boolean          @default(false) @map("is_read")
   createdAt DateTime         @default(now()) @map("created_at")
 
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([isRead])
   @@map("notifications")
 }
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -166,6 +167,41 @@ enum TransactionStatus {
   failed
 }
 
+/**
+ * User roles for authorization and access control
+ */
+enum UserRole {
+  user
+  moderator
+  admin
+}
+
+/**
+ * Reasons for flagging content
+ */
+enum FlagReason {
+  spam
+  harassment
+  abusive_language
+  misinformation
+  illegal_content
+  off_topic
+  scam
+  other
+}
+
+/**
+ * Status of moderation actions on content
+ */
+enum ModerationStatus {
+  none
+  flagged
+  under_review
+  suspended
+  banned
+  approved
+}
+
 model Activity {
   id          String       @id @default(uuid())
   userId      String
@@ -181,27 +217,27 @@ model Activity {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  rankId        String?   @map("rank_id")
-  username      String?   @unique @db.VarChar(50)
-  email         String?   @unique @db.VarChar(255)
-  walletAddress String    @unique @map("wallet_address") @db.VarChar(56)
-  name          String    @db.VarChar(255)
-  bio           String?
-  avatarUrl     String?   @map("avatar_url")
-  xp            Int       @default(0)
-  walletBalance Float    @default(0) @map("wallet_balance")
-  profileVisibility String @default("public") @map("profile_visibility") @db.VarChar(20)
-  showEmail     Boolean   @default(false) @map("show_email")
-  showWalletAddress Boolean @default(false) @map("show_wallet_address")
-  emailNotifications Boolean @default(true) @map("email_notifications")
-  pushNotifications Boolean @default(false) @map("push_notifications")
-  marketingNotifications Boolean @default(false) @map("marketing_notifications")
-  emailVerified DateTime? @map("email_verified")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  isVerified    Boolean   @default(false) @map("verified")
-
+  id                     String    @id @default(uuid())
+  rankId                 String?   @map("rank_id")
+  username               String?   @unique @db.VarChar(50)
+  email                  String?   @unique @db.VarChar(255)
+  walletAddress          String    @unique @map("wallet_address") @db.VarChar(56)
+  name                   String    @db.VarChar(255)
+  bio                    String?
+  avatarUrl              String?   @map("avatar_url")
+  xp                     Int       @default(0)
+  walletBalance          Float     @default(0) @map("wallet_balance")
+  profileVisibility      String    @default("public") @map("profile_visibility") @db.VarChar(20)
+  showEmail              Boolean   @default(false) @map("show_email")
+  showWalletAddress      Boolean   @default(false) @map("show_wallet_address")
+  emailNotifications     Boolean   @default(true) @map("email_notifications")
+  pushNotifications      Boolean   @default(false) @map("push_notifications")
+  marketingNotifications Boolean   @default(false) @map("marketing_notifications")
+  emailVerified          DateTime? @map("email_verified")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  isVerified             Boolean   @default(false) @map("verified")
+  role                   UserRole  @default(user)
 
   posts           Post[]           @relation("PostCreator")
   entries         Entry[]
@@ -210,16 +246,18 @@ model User {
   badges          UserBadge[]
   analyticsEvents AnalyticsEvent[]
 
-  notifications   Notification[]
+  notifications Notification[]
 
-  followings        Follow[]           @relation("UserFollowing")
-  followers         Follow[]           @relation("UserFollower")
-  rank              Rank?              @relation(fields: [rankId], references: [id])
-  helpContributions HelpContribution[]
-  accounts          Account[]
-  sessions          Session[]
-  wins              PostWinner[]       @relation("PostWinner")
+  followings         Follow[]            @relation("UserFollowing")
+  followers          Follow[]            @relation("UserFollower")
+  rank               Rank?               @relation(fields: [rankId], references: [id])
+  helpContributions  HelpContribution[]
+  accounts           Account[]
+  sessions           Session[]
+  wins               PostWinner[]        @relation("PostWinner")
   walletTransactions WalletTransaction[]
+  contentFlags       ContentFlag[]       @relation("FlaggedBy")
+  moderationActions  ModerationAction[]  @relation("ModerationPerformedBy")
 
   @@map("users")
 }
@@ -287,27 +325,28 @@ model Media {
 }
 
 model Post {
-  id                String          @id @default(uuid())
-  userId            String          @map("creator_id")
+  id                String           @id @default(uuid())
+  userId            String           @map("creator_id")
   type              PostType
-  slug              String          @unique @db.VarChar(50)
-  title             String          @db.VarChar(200)
+  slug              String           @unique @db.VarChar(50)
+  title             String           @db.VarChar(200)
   description       String?
-  duration          Int?            @map("duration") // Duration in seconds for time-limited posts
-  category          PostCategory?   @map("category")
-  helpType          HelpType?       @map("help_type")
-  urgency           Urgency?        @map("urgency")
-  status            PostStatus      @default(open)
-  selectionMethod   SelectionMethod @default(random) @map("selection_method")
-  entryRequirements Json?           @map("entry_requirements")
-  maxWinners        Int?            @map("max_winners") // Optional cap on winners for open-ended giveaways
-  currency          String?         @map("currency") @db.VarChar(10)
-  prizeAmount       Float?          @map("prize_amount")
-  targetAmount      Float?          @map("target_amount")
-  proofRequired     Boolean         @default(false) @map("proof_required")
-  endsAt            DateTime        @map("ends_at")
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
+  duration          Int?             @map("duration") // Duration in seconds for time-limited posts
+  category          PostCategory?    @map("category")
+  helpType          HelpType?        @map("help_type")
+  urgency           Urgency?         @map("urgency")
+  status            PostStatus       @default(open)
+  selectionMethod   SelectionMethod  @default(random) @map("selection_method")
+  entryRequirements Json?            @map("entry_requirements")
+  maxWinners        Int?             @map("max_winners") // Optional cap on winners for open-ended giveaways
+  currency          String?          @map("currency") @db.VarChar(10)
+  prizeAmount       Float?           @map("prize_amount")
+  targetAmount      Float?           @map("target_amount")
+  proofRequired     Boolean          @default(false) @map("proof_required")
+  moderationStatus  ModerationStatus @default(none) @map("moderation_status")
+  endsAt            DateTime         @map("ends_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
 
   user               User               @relation("PostCreator", fields: [userId], references: [id], onDelete: Cascade)
   entries            Entry[]
@@ -319,12 +358,51 @@ model Post {
   postRequirementsId String
   winners            PostWinner[]       @relation("WonPost")
   burns              Burn[]
+  contentFlags       ContentFlag[]
+  moderationActions  ModerationAction[]
 
   @@index([userId])
   @@index([status])
+  @@index([moderationStatus])
   @@index([category])
   @@index([createdAt(sort: Desc)])
   @@map("posts")
+}
+
+model ContentFlag {
+  id          String     @id @default(uuid())
+  postId      String     @map("post_id")
+  flaggedById String     @map("flagged_by_id")
+  reason      FlagReason
+  details     String?
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  flaggedBy User @relation("FlaggedBy", fields: [flaggedById], references: [id], onDelete: Cascade)
+
+  @@unique([postId, flaggedById])
+  @@index([postId])
+  @@index([flaggedById])
+  @@index([reason])
+  @@map("content_flags")
+}
+
+model ModerationAction {
+  id          String           @id @default(uuid())
+  postId      String           @map("post_id")
+  moderatorId String           @map("moderator_id")
+  action      ModerationStatus
+  note        String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  post      Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  moderator User @relation("ModerationPerformedBy", fields: [moderatorId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([moderatorId])
+  @@index([action])
+  @@index([createdAt(sort: Desc)])
+  @@map("moderation_actions")
 }
 
 model PostRequirements {
@@ -524,19 +602,19 @@ model AnalyticsEvent {
 }
 
 model WalletTransaction {
-  id        String            @id @default(uuid())
-  userId    String            @map("user_id")
-  type      TransactionType
-  amount    Float
-  currency  String            @default("USD") @db.VarChar(10)
-  status    TransactionStatus @default(pending)
-  method    String?           @db.VarChar(50)
-  reference String?           @db.VarChar(255)
-  note      String?
+  id             String            @id @default(uuid())
+  userId         String            @map("user_id")
+  type           TransactionType
+  amount         Float
+  currency       String            @default("USD") @db.VarChar(10)
+  status         TransactionStatus @default(pending)
+  method         String?           @db.VarChar(50)
+  reference      String?           @db.VarChar(255)
+  note           String?
   txHash         String?
   stellarAddress String?
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -566,11 +644,11 @@ model UsedChallenge {
  * Ensures idempotency and prevents duplicate processing on restart
  */
 model IndexerState {
-  id              String   @id @default("singleton")
-  lastLedgerSeq   Int      @map("last_ledger_seq")
-  contractId      String   @map("contract_id") @db.VarChar(70)
-  network         String   @default("testnet") @db.VarChar(20)
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id            String   @id @default("singleton")
+  lastLedgerSeq Int      @map("last_ledger_seq")
+  contractId    String   @map("contract_id") @db.VarChar(70)
+  network       String   @default("testnet") @db.VarChar(20)
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   @@map("indexer_state")
 }
@@ -579,20 +657,20 @@ model IndexerState {
  * On-chain Giveaway data synced from Soroban contract
  */
 model OnChainGiveaway {
-  id                String    @id @default(uuid())
-  giveawayId        BigInt    @unique @map("giveaway_id")
-  creatorAddress    String    @map("creator_address") @db.VarChar(70)
-  tokenAddress      String    @map("token_address") @db.VarChar(70)
-  amount            Decimal   @db.Decimal(30, 7)
-  title             String    @db.VarChar(255)
-  participantCount  Int       @default(0) @map("participant_count")
-  endTime           DateTime  @map("end_time")
-  status            GiveawayOnChainStatus @default(ACTIVE)
-  winnerAddress     String?   @map("winner_address") @db.VarChar(70)
-  txHash            String?   @map("tx_hash") @db.VarChar(128)
-  ledgerSeq         Int       @map("ledger_seq")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id               String                @id @default(uuid())
+  giveawayId       BigInt                @unique @map("giveaway_id")
+  creatorAddress   String                @map("creator_address") @db.VarChar(70)
+  tokenAddress     String                @map("token_address") @db.VarChar(70)
+  amount           Decimal               @db.Decimal(30, 7)
+  title            String                @db.VarChar(255)
+  participantCount Int                   @default(0) @map("participant_count")
+  endTime          DateTime              @map("end_time")
+  status           GiveawayOnChainStatus @default(ACTIVE)
+  winnerAddress    String?               @map("winner_address") @db.VarChar(70)
+  txHash           String?               @map("tx_hash") @db.VarChar(128)
+  ledgerSeq        Int                   @map("ledger_seq")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
 
   @@index([giveawayId])
   @@index([creatorAddress])
@@ -611,19 +689,19 @@ enum GiveawayOnChainStatus {
  * On-chain Help Request data synced from Soroban contract
  */
 model OnChainHelpRequest {
-  id              String                @id @default(uuid())
-  requestId       BigInt                @unique @map("request_id")
-  creatorAddress  String                @map("creator_address") @db.VarChar(70)
-  tokenAddress    String                @map("token_address") @db.VarChar(70)
-  goal            Decimal               @db.Decimal(30, 7)
-  raisedAmount    Decimal               @default(0) @db.Decimal(30, 7) @map("raised_amount")
-  status          HelpRequestOnChainStatus @default(OPEN)
-  txHash          String?               @map("tx_hash") @db.VarChar(128)
-  ledgerSeq       Int                   @map("ledger_seq")
-  createdAt       DateTime              @default(now()) @map("created_at")
-  updatedAt       DateTime              @updatedAt @map("updated_at")
+  id             String                   @id @default(uuid())
+  requestId      BigInt                   @unique @map("request_id")
+  creatorAddress String                   @map("creator_address") @db.VarChar(70)
+  tokenAddress   String                   @map("token_address") @db.VarChar(70)
+  goal           Decimal                  @db.Decimal(30, 7)
+  raisedAmount   Decimal                  @default(0) @map("raised_amount") @db.Decimal(30, 7)
+  status         HelpRequestOnChainStatus @default(OPEN)
+  txHash         String?                  @map("tx_hash") @db.VarChar(128)
+  ledgerSeq      Int                      @map("ledger_seq")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
 
-  donations       OnChainDonation[]
+  donations OnChainDonation[]
 
   @@index([requestId])
   @@index([creatorAddress])
@@ -643,16 +721,16 @@ enum HelpRequestOnChainStatus {
  * On-chain Donation data synced from Soroban contract
  */
 model OnChainDonation {
-  id              String   @id @default(uuid())
-  donationId      String   @unique @map("donation_id") @db.VarChar(128)
-  requestId       BigInt   @map("request_id")
-  donorAddress    String   @map("donor_address") @db.VarChar(70)
-  amount          Decimal  @db.Decimal(30, 7)
-  txHash          String   @map("tx_hash") @db.VarChar(128)
-  ledgerSeq       Int      @map("ledger_seq")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  donationId   String   @unique @map("donation_id") @db.VarChar(128)
+  requestId    BigInt   @map("request_id")
+  donorAddress String   @map("donor_address") @db.VarChar(70)
+  amount       Decimal  @db.Decimal(30, 7)
+  txHash       String   @map("tx_hash") @db.VarChar(128)
+  ledgerSeq    Int      @map("ledger_seq")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  helpRequest     OnChainHelpRequest @relation(fields: [requestId], references: [requestId], onDelete: Cascade)
+  helpRequest OnChainHelpRequest @relation(fields: [requestId], references: [requestId], onDelete: Cascade)
 
   @@index([requestId])
   @@index([donorAddress])

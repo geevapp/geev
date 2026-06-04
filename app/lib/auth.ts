@@ -23,10 +23,33 @@ const getCurrentUser = async (_request: NextRequest) => {
             walletBalance: true,
             createdAt: true,
             updatedAt: true,
+            role: true,
         },
     });
 
     return dbUser;
 };
 
-export { getCurrentUser };
+const getCurrentAdmin = async () => {
+    const session = await auth();
+    if (!session?.user?.id) {
+        return null;
+    }
+
+    const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+            id: true,
+            name: true,
+            role: true,
+        },
+    });
+
+    if (!dbUser || !['admin', 'moderator'].includes(dbUser.role)) {
+        return null;
+    }
+
+    return dbUser;
+};
+
+export { getCurrentUser, getCurrentAdmin };
