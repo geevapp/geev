@@ -16,16 +16,16 @@ pub enum Error {
     InvalidWinnerCount = 10,
     InsufficientParticipants = 11,
     HelpRequestNotFound = 12,
-    HelpRequestAlreadyFullyFunded = 10,
-    InvalidDonationAmount = 11,
-    AlreadyInitialized = 12,
-    ArithmeticOverflow = 13, // Added this to resolve the Clippy/Compile error
-    NotAdmin = 14,
-    InvalidGoalAmount = 15,
-    HelpRequestAlreadyExists = 16,
-    TokenNotSupported = 17,
-    UsernameTaken = 18,
-    AlreadyFlagged = 19,
+    HelpRequestAlreadyFullyFunded = 13,
+    InvalidDonationAmount = 14,
+    AlreadyInitialized = 15,
+    ArithmeticOverflow = 16,
+    NotAdmin = 17,
+    InvalidGoalAmount = 18,
+    HelpRequestAlreadyExists = 19,
+    TokenNotSupported = 20,
+    UsernameTaken = 21,
+    AlreadyFlagged = 22,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -39,9 +39,10 @@ pub enum GiveawayStatus {
 
 #[derive(Clone)]
 #[contracttype]
-pub enum ParticipantVerification {
-    Allowlist(Vec<Address>),
-    Reputation { min_reputation: u64 },
+pub struct ParticipantVerification {
+    pub allowlist: Vec<Address>,
+    pub min_reputation: u64,
+    pub uses_reputation: bool,
 }
 
 #[derive(Clone)]
@@ -57,7 +58,8 @@ pub struct Giveaway {
     pub status: GiveawayStatus,
     pub winner_count: u32,
     pub winners: Vec<Address>,
-    pub verification: Option<ParticipantVerification>,
+    pub verification_type: u32,
+    pub min_reputation: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -89,6 +91,7 @@ pub enum DataKey {
     Giveaway(u64),
     ParticipantIndex(u64, u32),
     HasEntered(u64, Address),
+    GiveawayAllowlist(u64, Address),
     HelpRequestCounter,
     HelpRequest(u64),
     Donation(u64, Address),

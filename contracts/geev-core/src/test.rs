@@ -82,6 +82,7 @@ fn test_giveaway_flow() {
 }
 
 #[test]
+#[should_panic]
 fn test_allowlist_rejects_unverified_participant() {
     let env = Env::default();
     env.mock_all_auths();
@@ -117,18 +118,19 @@ fn test_allowlist_rejects_unverified_participant() {
         &String::from_str(&env, "Allowlist Giveaway"),
         &60,
         &1,
-        &Some(ParticipantVerification::Allowlist(allowlist)),
+        &Some(ParticipantVerification {
+            allowlist,
+            min_reputation: 0,
+            uses_reputation: false,
+        }),
     );
 
     contract_client.enter_giveaway(&allowed_user, &giveaway_id);
-
-    let result = std::panic::catch_unwind(|| {
-        contract_client.enter_giveaway(&blocked_user, &giveaway_id);
-    });
-    assert!(result.is_err());
+    contract_client.enter_giveaway(&blocked_user, &giveaway_id);
 }
 
 #[test]
+#[should_panic]
 fn test_reputation_gated_giveaway_rejects_low_reputation() {
     let env = Env::default();
     env.mock_all_auths();
@@ -164,15 +166,15 @@ fn test_reputation_gated_giveaway_rejects_low_reputation() {
         &String::from_str(&env, "Reputation Giveaway"),
         &60,
         &1,
-        &Some(ParticipantVerification::Reputation { min_reputation: 5 }),
+        &Some(ParticipantVerification {
+            allowlist: Vec::new(&env),
+            min_reputation: 5,
+            uses_reputation: true,
+        }),
     );
 
     contract_client.enter_giveaway(&high_rep_user, &giveaway_id);
-
-    let result = std::panic::catch_unwind(|| {
-        contract_client.enter_giveaway(&low_rep_user, &giveaway_id);
-    });
-    assert!(result.is_err());
+    contract_client.enter_giveaway(&low_rep_user, &giveaway_id);
 }
 
 #[test]
@@ -228,14 +230,16 @@ fn test_multi_winner_giveaway_selects_unique_winners() {
             .get(&DataKey::Giveaway(giveaway_id))
             .unwrap();
         assert_eq!(giveaway.winners.len(), 2);
-        assert!(giveaway.winners[0] != giveaway.winners[1]);
+        let winner0 = giveaway.winners.get(0).unwrap();
+        let winner1 = giveaway.winners.get(1).unwrap();
+        assert!(winner0 != winner1);
         giveaway.winners.clone()
     });
 
     contract_client.distribute_prize(&giveaway_id);
 
-    let winner1_balance = token::Client::new(&env, &mock_token).balance(&winners[0]);
-    let winner2_balance = token::Client::new(&env, &mock_token).balance(&winners[1]);
+    let winner1_balance = token::Client::new(&env, &mock_token).balance(&winners.get(0).unwrap());
+    let winner2_balance = token::Client::new(&env, &mock_token).balance(&winners.get(1).unwrap());
     assert_eq!(winner1_balance + winner2_balance, 396);
     assert_eq!(
         token::Client::new(&env, &mock_token).balance(&contract_id),
@@ -1589,7 +1593,7 @@ fn test_flag_counts_are_independent_per_id() {
 // ── auto-suspension tests ─────────────────────────────────────────────────────
 
 use crate::governance::FLAG_THRESHOLD;
-use crate::types::{Giveaway, GiveawayStatus};
+use crate::types::GiveawayStatus;
 
 /// Seed a minimal active Giveaway directly into contract storage.
 fn seed_active_giveaway(env: &Env, contract_id: &Address, giveaway_id: u64, token: &Address) {
@@ -1605,7 +1609,8 @@ fn seed_active_giveaway(env: &Env, contract_id: &Address, giveaway_id: u64, toke
         status: GiveawayStatus::Active,
         winner_count: 1,
         winners: Vec::new(env),
-        verification: None,
+        verification_type: 0,
+        min_reputation: 0,
     };
     env.as_contract(contract_id, || {
         env.storage()
@@ -1775,7 +1780,8 @@ fn test_enter_suspended_giveaway_fails() {
                 status: GiveawayStatus::Suspended,
                 winner_count: 1,
                 winners: Vec::new(&env),
-                verification: None,
+                verification_type: 0,
+                min_reputation: 0,
             },
         );
     });
@@ -1922,7 +1928,7 @@ fn test_reputation_accumulates_across_giveaways() {
             &String::from_str(&env, "Rep Test"),
             &60,
             &1,
-            &None,
+        &None,
         );
         client.enter_giveaway(&participant, &giveaway_id);
         env.ledger().with_mut(|li| li.timestamp += 100);

@@ -29,8 +29,10 @@ pub struct GiveawayWinnerSelected {
     prize_amount: i128,
 }
 
+#[allow(clippy::too_many_arguments)]
 #[contractimpl]
 impl GiveawayContract {
+    #[allow(clippy::too_many_arguments)]
     pub fn create_giveaway(
         env: Env,
         creator: Address,
@@ -61,6 +63,16 @@ impl GiveawayContract {
         let giveaway_id = Self::generate_id(&env);
         let end_time = env.ledger().timestamp() + duration_seconds;
 
+        let verification_type = match &verification {
+            Some(v) if v.uses_reputation => 2,
+            Some(_) => 1,
+            None => 0,
+        };
+        let min_reputation = verification
+            .as_ref()
+            .map(|v| v.min_reputation)
+            .unwrap_or(0);
+
         let giveaway = Giveaway {
             id: giveaway_id,
             creator: creator.clone(),
@@ -72,8 +84,20 @@ impl GiveawayContract {
             status: GiveawayStatus::Active,
             winner_count,
             winners: Vec::new(&env),
-            verification,
+            verification_type,
+            min_reputation,
         };
+
+        if let Some(verification) = &verification {
+            if !verification.uses_reputation {
+                for addr in verification.allowlist.iter() {
+                    env.storage().persistent().set(
+                        &DataKey::GiveawayAllowlist(giveaway_id, addr.clone()),
+                        &true,
+                    );
+                }
+            }
+        }
 
         env.storage()
             .persistent()
@@ -125,28 +149,21 @@ impl GiveawayContract {
     }
 
     fn verify_participant(env: &Env, giveaway: &Giveaway, participant: &Address) {
-        if let Some(rule) = &giveaway.verification {
-            match rule {
-                ParticipantVerification::Allowlist(allowlist) => {
-                    let mut authorized = false;
-                    for addr in allowlist.iter() {
-                        if addr == participant {
-                            authorized = true;
-                            break;
-                        }
-                    }
-                    if !authorized {
-                        panic_with_error!(&env, Error::UnauthorizedParticipant);
-                    }
-                }
-                ParticipantVerification::Reputation { min_reputation } => {
-                    let reputation =
-                        ProfileContract::get_reputation(env.clone(), participant.clone());
-                    if reputation < *min_reputation {
-                        panic_with_error!(&env, Error::UnauthorizedParticipant);
-                    }
+        match giveaway.verification_type {
+            1 => {
+                let allowed_key = DataKey::GiveawayAllowlist(giveaway.id, participant.clone());
+                let authorized: bool = env.storage().persistent().get(&allowed_key).unwrap_or(false);
+                if !authorized {
+                    panic_with_error!(&env, Error::UnauthorizedParticipant);
                 }
             }
+            2 => {
+                let reputation = ProfileContract::get_reputation(env.clone(), participant.clone());
+                if reputation < giveaway.min_reputation {
+                    panic_with_error!(&env, Error::UnauthorizedParticipant);
+                }
+            }
+            _ => {}
         }
     }
 
@@ -183,7 +200,7 @@ impl GiveawayContract {
             while {
                 let mut duplicate = false;
                 for picked in selected_indexes.iter() {
-                    if picked == &index {
+                    if picked == index {
                         duplicate = true;
                         break;
                     }
@@ -244,9 +261,7 @@ impl GiveawayContract {
         env.storage().persistent().set(&giveaway_key, &giveaway);
 
         winners
-            .iter()
-            .next()
-            .cloned()
+            .first()
             .unwrap_or_else(|| panic_with_error!(&env, Error::NoParticipants))
     }
 
@@ -264,7 +279,7 @@ impl GiveawayContract {
             }
 
             let winners = giveaway.winners.clone();
-            if winners.len() == 0 {
+if winners.is_empty() {
                 panic_with_error!(&env, Error::NoParticipants);
             }
 
