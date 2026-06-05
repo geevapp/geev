@@ -140,7 +140,8 @@ impl GiveawayContract {
                     }
                 }
                 ParticipantVerification::Reputation { min_reputation } => {
-                    let reputation = ProfileContract::get_reputation(env.clone(), participant.clone());
+                    let reputation =
+                        ProfileContract::get_reputation(env.clone(), participant.clone());
                     if reputation < *min_reputation {
                         panic_with_error!(&env, Error::UnauthorizedParticipant);
                     }
@@ -220,7 +221,11 @@ impl GiveawayContract {
                 .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
             let prize_amount = if i == 0 {
                 net_prize
-                    .checked_sub(base_prize.checked_mul(winner_count - 1).unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow)))
+                    .checked_sub(
+                        base_prize
+                            .checked_mul(winner_count - 1)
+                            .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow)),
+                    )
                     .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow))
             } else {
                 base_prize
@@ -291,9 +296,12 @@ impl GiveawayContract {
             for (index, winner) in winners.iter().enumerate() {
                 let mut prize_amount = base_share;
                 if index == 0 {
-                    let remainder = net_prize
-                        .checked_sub(base_share.checked_mul(winner_count - 1).unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow)))
-                        .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+                    let remainder =
+                        net_prize
+                            .checked_sub(base_share.checked_mul(winner_count - 1).unwrap_or_else(
+                                || panic_with_error!(&env, Error::ArithmeticOverflow),
+                            ))
+                            .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
                     prize_amount = remainder;
                 }
                 distributed = distributed

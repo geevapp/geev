@@ -102,7 +102,9 @@ fn test_allowlist_rejects_unverified_participant() {
     token_admin_client.mint(&creator, &1000);
 
     env.as_contract(&contract_id, || {
-        env.storage().instance().set(&DataKey::AllowedToken(mock_token.clone()), &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
     });
 
     let mut allowlist: Vec<Address> = Vec::new(&env);
@@ -147,8 +149,12 @@ fn test_reputation_gated_giveaway_rejects_low_reputation() {
     token_admin_client.mint(&creator, &1000);
 
     env.as_contract(&contract_id, || {
-        env.storage().instance().set(&DataKey::AllowedToken(mock_token.clone()), &true);
-        env.storage().persistent().set(&DataKey::Reputation(high_rep_user.clone()), &10u64);
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
+        env.storage()
+            .persistent()
+            .set(&DataKey::Reputation(high_rep_user.clone()), &10u64);
     });
 
     let giveaway_id = contract_client.create_giveaway(
@@ -191,7 +197,9 @@ fn test_multi_winner_giveaway_selects_unique_winners() {
     token_admin_client.mint(&creator, &1000);
 
     env.as_contract(&contract_id, || {
-        env.storage().instance().set(&DataKey::AllowedToken(mock_token.clone()), &true);
+        env.storage()
+            .instance()
+            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
     });
 
     let giveaway_id = contract_client.create_giveaway(
@@ -214,7 +222,11 @@ fn test_multi_winner_giveaway_selects_unique_winners() {
     assert!(winner == participant1 || winner == participant2 || winner == participant3);
 
     let winners: Vec<Address> = env.as_contract(&contract_id, || {
-        let giveaway: Giveaway = env.storage().persistent().get(&DataKey::Giveaway(giveaway_id)).unwrap();
+        let giveaway: Giveaway = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Giveaway(giveaway_id))
+            .unwrap();
         assert_eq!(giveaway.winners.len(), 2);
         assert!(giveaway.winners[0] != giveaway.winners[1]);
         giveaway.winners.clone()
@@ -225,7 +237,10 @@ fn test_multi_winner_giveaway_selects_unique_winners() {
     let winner1_balance = token::Client::new(&env, &mock_token).balance(&winners[0]);
     let winner2_balance = token::Client::new(&env, &mock_token).balance(&winners[1]);
     assert_eq!(winner1_balance + winner2_balance, 396);
-    assert_eq!(token::Client::new(&env, &mock_token).balance(&contract_id), 4);
+    assert_eq!(
+        token::Client::new(&env, &mock_token).balance(&contract_id),
+        4
+    );
 }
 
 #[test]
