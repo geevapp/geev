@@ -68,10 +68,7 @@ impl GiveawayContract {
             Some(_) => 1,
             None => 0,
         };
-        let min_reputation = verification
-            .as_ref()
-            .map(|v| v.min_reputation)
-            .unwrap_or(0);
+        let min_reputation = verification.as_ref().map(|v| v.min_reputation).unwrap_or(0);
 
         let giveaway = Giveaway {
             id: giveaway_id,
@@ -152,7 +149,11 @@ impl GiveawayContract {
         match giveaway.verification_type {
             1 => {
                 let allowed_key = DataKey::GiveawayAllowlist(giveaway.id, participant.clone());
-                let authorized: bool = env.storage().persistent().get(&allowed_key).unwrap_or(false);
+                let authorized: bool = env
+                    .storage()
+                    .persistent()
+                    .get(&allowed_key)
+                    .unwrap_or(false);
                 if !authorized {
                     panic_with_error!(&env, Error::UnauthorizedParticipant);
                 }
@@ -279,7 +280,7 @@ impl GiveawayContract {
             }
 
             let winners = giveaway.winners.clone();
-if winners.is_empty() {
+            if winners.is_empty() {
                 panic_with_error!(&env, Error::NoParticipants);
             }
 

@@ -1928,7 +1928,7 @@ fn test_reputation_accumulates_across_giveaways() {
             &String::from_str(&env, "Rep Test"),
             &60,
             &1,
-        &None,
+            &None,
         );
         client.enter_giveaway(&participant, &giveaway_id);
         env.ledger().with_mut(|li| li.timestamp += 100);
