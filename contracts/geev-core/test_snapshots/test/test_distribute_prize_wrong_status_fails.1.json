@@ -71,7 +71,11 @@
                 },
                 {
                   "u64": "60"
-                }
+                },
+                {
+                  "u32": 1
+                },
+                "void"
               ]
             }
           },
@@ -244,6 +248,14 @@
                     },
                     {
                       "key": {
+                        "symbol": "min_reputation"
+                      },
+                      "val": {
+                        "u64": "0"
+                      }
+                    },
+                    {
+                      "key": {
                         "symbol": "participant_count"
                       },
                       "val": {
@@ -276,9 +288,27 @@
                     },
                     {
                       "key": {
-                        "symbol": "winner"
+                        "symbol": "verification_type"
                       },
-                      "val": "void"
+                      "val": {
+                        "u32": 0
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "winner_count"
+                      },
+                      "val": {
+                        "u32": 1
+                      }
+                    },
+                    {
+                      "key": {
+                        "symbol": "winners"
+                      },
+                      "val": {
+                        "vec": []
+                      }
                     }
                   ]
                 }
