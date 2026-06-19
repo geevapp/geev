@@ -8,26 +8,20 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { runIndexerOnce, getIndexerStats, resetIndexerState } from "@/lib/indexer";
-import { auth } from "@/lib/auth";
+import { getCurrentAdmin } from "@/lib/auth";
+import { apiError } from "@/lib/api-response";
 
 /**
  * POST handler - Trigger indexer run
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    // Check authentication for reset action
-    const session = await auth();
+    const admin = await getCurrentAdmin();
+    if (!admin) return apiError("Forbidden", 403);
+
     const body = await request.json().catch(() => ({}));
     
     if (body.action === "reset") {
-      // Only admins can reset
-      if (!session?.user) {
-        return NextResponse.json(
-          { error: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-      
       await resetIndexerState(body.startLedger);
       return NextResponse.json({
         success: true,
@@ -36,7 +30,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // Run indexer once
     await runIndexerOnce();
     
     return NextResponse.json({
@@ -60,6 +53,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  */
 export async function GET(): Promise<NextResponse> {
   try {
+    const admin = await getCurrentAdmin();
+    if (!admin) return apiError("Forbidden", 403);
+
     const stats = await getIndexerStats();
     
     return NextResponse.json({

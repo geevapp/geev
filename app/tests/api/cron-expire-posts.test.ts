@@ -13,24 +13,26 @@ describe("GET /api/cron/expire-posts", () => {
     } as Awaited<ReturnType<typeof notifications.createNotification>>);
   });
 
-  it("returns 401 without Vercel cron header or bearer secret", async () => {
+  it("returns 401 when CRON_SECRET is unset (fail closed)", async () => {
     const request = createMockRequest("http://localhost:3000/api/cron/expire-posts");
     const response = await GET(request);
     expect(response.status).toBe(401);
   });
 
-  it("allows Vercel cron header without CRON_SECRET", async () => {
-    prisma.post.findMany = vi.fn().mockResolvedValue([]);
-    prisma.post.updateMany = vi.fn().mockResolvedValue({ count: 0 });
-
+  it("returns 401 with spoofed x-vercel-cron header when CRON_SECRET is unset", async () => {
     const request = createMockRequest("http://localhost:3000/api/cron/expire-posts", {
       headers: { "x-vercel-cron": "1" },
     });
     const response = await GET(request);
-    const { status, data } = await parseResponse(response);
-    expect(status).toBe(200);
-    expect(data.success).toBe(true);
-    expect(data.data.expired).toBe(0);
+    expect(response.status).toBe(401);
+  });
+
+  it("returns 401 when authorization header is missing", async () => {
+    process.env.CRON_SECRET = "test-secret";
+
+    const request = createMockRequest("http://localhost:3000/api/cron/expire-posts");
+    const response = await GET(request);
+    expect(response.status).toBe(401);
   });
 
   it("expires open posts and notifies creators with bearer token", async () => {

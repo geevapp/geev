@@ -4,9 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 
 function isAuthorizedCron(request: NextRequest): boolean {
-  if (request.headers.get("x-vercel-cron") === "1") {
-    return true;
-  }
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return false;
