@@ -109,8 +109,8 @@ export function generateChallenge(
   const serverKeypair = getServerKeypair();
   const serverPublicKey = serverKeypair.publicKey();
 
-  // Create a dummy account with sequence number 0 for the challenge
-  const serverAccount = new Account(serverPublicKey, "0");
+  // Create a dummy account with sequence number -1 so the transaction sequence is 0 (as per SEP-10)
+  const serverAccount = new Account(serverPublicKey, "-1");
 
   const transaction = new TransactionBuilder(serverAccount, {
     fee: BASE_FEE,
