@@ -32,7 +32,6 @@ export async function GET () {
                         followers: true,
                         helpContributions: true,
                         accounts: true,
-                        sessions: true,
                     },
                 },
             },

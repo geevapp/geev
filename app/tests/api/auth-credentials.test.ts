@@ -8,10 +8,6 @@ vi.mock("@/lib/wallet-auth", () => ({
   authenticateWalletWithChallenge: mockAuthenticateWalletWithChallenge,
 }));
 
-vi.mock("@auth/prisma-adapter", () => ({
-  PrismaAdapter: vi.fn().mockReturnValue({}),
-}));
-
 const VALID_WALLET_ADDRESS =
   "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 

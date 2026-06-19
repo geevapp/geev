@@ -18,8 +18,7 @@ const GET = async () => {
                         followings: true,
                         followers: true,
                         helpContributions: true,
-                        accounts: true,
-                        sessions: true
+                        accounts: true
                     }
                 }
             },

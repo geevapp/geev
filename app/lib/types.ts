@@ -23,7 +23,6 @@ export type User = BaseUser & {
     followers: number
     helpContributions: number
     accounts: number
-    sessions: number
   }
 }
 

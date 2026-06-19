@@ -253,7 +253,6 @@ model User {
   rank               Rank?               @relation(fields: [rankId], references: [id])
   helpContributions  HelpContribution[]
   accounts           Account[]
-  sessions           Session[]
   wins               PostWinner[]        @relation("PostWinner")
   walletTransactions WalletTransaction[]
   contentFlags       ContentFlag[]       @relation("FlaggedBy")
@@ -280,25 +279,6 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
-}
-
-model Session {
-  identifier String
-  token      String
-  expires    DateTime
-  user       User?    @relation(fields: [userId], references: [id])
-  userId     String?
-
-  @@unique([identifier, token])
-  @@map("verification_tokens")
-}
-
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-
-  @@id([identifier, token])
 }
 
 model Follow {

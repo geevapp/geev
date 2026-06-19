@@ -85,7 +85,6 @@ describe('GET /api/auth/me', () => {
         followers: 6,
         helpContributions: 0,
         accounts: 1,
-        sessions: 1,
       },
     };
 
@@ -124,7 +123,6 @@ describe('GET /api/auth/me', () => {
         followers: 0,
         helpContributions: 0,
         accounts: 1,
-        sessions: 1,
       },
     };
 
@@ -161,7 +159,6 @@ describe('GET /api/auth/me', () => {
         followers: 0,
         helpContributions: 0,
         accounts: 1,
-        sessions: 1,
       },
     };
 

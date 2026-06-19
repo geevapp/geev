@@ -1,31 +1,9 @@
 import { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { JWT } from "next-auth/jwt";
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
-import { PrismaAdapter } from "@auth/prisma-adapter"
 import { authenticateWalletWithChallenge } from "@/lib/wallet-auth";
 
-// JWT payload structure
-interface UserJWT extends JWT {
-  id: string;
-  walletAddress: string;
-  username: string;
-}
-
-// User session structure
-interface UserSession {
-  id: string;
-  walletAddress: string;
-  username: string;
-  email: string | null;
-  avatar: string | null;
-  bio: string | null;
-  joinDate: Date;
-}
-
 export const authConfig = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     Credentials({
       name: "Wallet",
@@ -85,7 +63,7 @@ export const authConfig = {
     }),
   ],
   callbacks: {
-    async jwt ({ token, user }): Promise<JWT> {
+    async jwt ({ token, user }) {
       if (user) {
         token.id = user.id;
         // Store walletAddress and username in token
