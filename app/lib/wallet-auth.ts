@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { verifyChallenge } from "@/lib/sep10";
+import { getNetworkPassphrase } from "@/lib/stellar";
 
 export type WalletAuthOptions = {
   walletAddress: string;
@@ -118,7 +119,7 @@ export async function authenticateWalletWithChallenge(
 }
 
 export async function getTransactionHash(signedXDR: string): Promise<string> {
-  const { TransactionBuilder, Networks } = await import("@stellar/stellar-sdk");
-  const transaction = TransactionBuilder.fromXDR(signedXDR, Networks.PUBLIC);
+  const { TransactionBuilder } = await import("@stellar/stellar-sdk");
+  const transaction = TransactionBuilder.fromXDR(signedXDR, getNetworkPassphrase());
   return transaction.hash().toString("hex");
 }

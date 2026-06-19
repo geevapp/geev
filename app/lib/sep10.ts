@@ -12,10 +12,10 @@ import {
   Transaction,
   TransactionBuilder,
   Operation,
-  Networks,
   BASE_FEE,
   Account,
 } from "@stellar/stellar-sdk";
+import { getNetworkPassphrase } from "@/lib/stellar";
 
 // Lazy-loaded server keypair to avoid errors during module initialization in tests
 let _serverKeypair: Keypair | null = null;
@@ -109,14 +109,13 @@ export function generateChallenge(
   const serverKeypair = getServerKeypair();
   const serverPublicKey = serverKeypair.publicKey();
 
-  // Create a dummy account with sequence number 0 for the challenge
-  const serverAccount = new Account(serverPublicKey, "0");
+  // Create a dummy account with sequence number -1 so the transaction sequence is 0 (as per SEP-10)
+  const serverAccount = new Account(serverPublicKey, "-1");
 
   const transaction = new TransactionBuilder(serverAccount, {
     fee: BASE_FEE,
-    networkPassphrase: Networks.PUBLIC,
+    networkPassphrase: getNetworkPassphrase(),
   })
-    .setTimeout(CHALLENGE_EXPIRATION_SECONDS)
     .addOperation(
       Operation.manageData({
         name: `${homeDomain} auth`,
@@ -165,7 +164,7 @@ export function verifyChallenge(
     // Decode the transaction
     const transaction = TransactionBuilder.fromXDR(
       signedXDR,
-      Networks.PUBLIC,
+      getNetworkPassphrase(),
     ) as Transaction;
 
     const serverKeypair = getServerKeypair();
@@ -286,7 +285,7 @@ export function extractClientPublicKey(signedXDR: string): string | null {
   try {
     const transaction = TransactionBuilder.fromXDR(
       signedXDR,
-      Networks.PUBLIC,
+      getNetworkPassphrase(),
     ) as Transaction;
 
     const firstOp = transaction.operations[0];

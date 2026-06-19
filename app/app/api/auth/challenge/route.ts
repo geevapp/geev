@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateChallenge } from "@/lib/sep10";
+import { getNetworkPassphrase } from "@/lib/stellar";
 import { z } from "zod";
 
 // Validation schema for the request
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(
       {
         transaction: challenge.transactionXDR,
-        network_passphrase: "Public Global Stellar Network ; September 2015",
+        network_passphrase: getNetworkPassphrase(),
         // Include additional metadata for client convenience
         expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 minutes
       },

@@ -16,10 +16,14 @@ import {
 
 const HORIZON_URL =
   process.env.STELLAR_HORIZON_URL ?? "https://horizon.stellar.org";
-const NETWORK_PASSPHRASE =
-  process.env.STELLAR_NETWORK === "testnet"
+
+export function getNetworkPassphrase(): string {
+  return process.env.STELLAR_NETWORK === "testnet"
     ? Networks.TESTNET
     : Networks.PUBLIC;
+}
+
+const NETWORK_PASSPHRASE = getNetworkPassphrase();
 
 const horizon = new Horizon.Server(HORIZON_URL);
 

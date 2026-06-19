@@ -43,6 +43,7 @@ export function WalletLoginForm({
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [challengeXdr, setChallengeXdr] = useState("");
+  const [networkPassphrase, setNetworkPassphrase] = useState("");
   const [signedTransaction, setSignedTransaction] = useState("");
 
   const fetchChallenge = async () => {
@@ -63,6 +64,7 @@ export function WalletLoginForm({
       }
 
       setChallengeXdr(data.transaction);
+      setNetworkPassphrase(data.network_passphrase);
       return data as { transaction: string; network_passphrase: string };
     } catch (error) {
       console.error("Challenge error:", error);
@@ -84,10 +86,15 @@ export function WalletLoginForm({
         return;
       }
 
+      const defaultPassphrase =
+        process.env.NEXT_PUBLIC_STELLAR_NETWORK === "testnet"
+          ? "Test Stellar Public Network ; September 2015"
+          : "Public Global Stellar Network ; September 2015";
+
       const challenge = challengeXdr
         ? {
             transaction: challengeXdr,
-            network_passphrase: "Public Global Stellar Network ; September 2015",
+            network_passphrase: networkPassphrase || defaultPassphrase,
           }
         : await fetchChallenge();
 

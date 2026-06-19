@@ -24,6 +24,10 @@ vi.mock("@/lib/sep10", () => ({
   verifyChallenge: mockVerifyChallenge,
 }));
 
+vi.mock("@/lib/stellar", () => ({
+  getNetworkPassphrase: () => "Public Global Stellar Network ; September 2015",
+}));
+
 vi.mock("@stellar/stellar-sdk", () => ({
   Networks: {
     PUBLIC: "Public Global Stellar Network ; September 2015",
