@@ -8,21 +8,21 @@ import type {
   Post,
   Reply,
   User,
-} from "@/lib/types";
+} from '@/lib/types';
 import {
   createContext,
   useContext,
   useEffect,
   useReducer,
   useState,
-} from "react";
-import { mapApiPostToClientPost } from "@/lib/map-api-post";
-import { deserializeState, serializeState } from "@/lib/utils";
-import { signIn, signOut } from "next-auth/react";
+} from 'react';
+import { mapApiPostToClientPost } from '@/lib/map-api-post';
+import { deserializeState, serializeState } from '@/lib/utils';
+import { signIn, signOut } from 'next-auth/react';
 
-import type React from "react";
-import { useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
+import type React from 'react';
+import { useSession } from 'next-auth/react';
+import { useTheme } from 'next-themes';
 
 const initialState: AppState = {
   likes: new Set<string>(),
@@ -34,44 +34,44 @@ const initialState: AppState = {
   contributions: [],
   comments: [],
   isLoading: false,
-  theme: "light",
+  theme: 'light',
   showCreateModal: false,
   showGiveawayModal: false,
   showRequestModal: false,
 };
 
 /** LocalStorage key for persisting application state */
-const STORAGE_KEY = "geev_app_state";
+const STORAGE_KEY = 'geev_app_state';
 
 type AppAction =
-  | { type: "SET_USER"; payload: User | null }
-  | { type: "SET_POSTS"; payload: Post[] }
-  | { type: "ADD_POST"; payload: Post }
-  | { type: "UPDATE_POST"; payload: { id: string; updates: Partial<Post> } }
-  | { type: "DELETE_POST"; payload: string }
-  | { type: "BURN_POST"; payload: string }
-  | { type: "BURN_REPLY"; payload: string }
-  | { type: "ADD_ENTRY"; payload: Entry }
-  | { type: "ADD_CONTRIBUTION"; payload: HelpContribution }
-  | { type: "SET_LOADING"; payload: boolean }
-  | { type: "TOGGLE_THEME" }
-  | { type: "SET_THEME"; payload: "light" | "dark" }
-  | { type: "SET_CREATE_MODAL"; payload: boolean }
-  | { type: "SET_GIVEAWAY_MODAL"; payload: boolean }
-  | { type: "SET_REQUEST_MODAL"; payload: boolean }
-  | { type: "HYDRATE_STATE"; payload: Partial<AppState> };
+  | { type: 'SET_USER'; payload: User | null }
+  | { type: 'SET_POSTS'; payload: Post[] }
+  | { type: 'ADD_POST'; payload: Post }
+  | { type: 'UPDATE_POST'; payload: { id: string; updates: Partial<Post> } }
+  | { type: 'DELETE_POST'; payload: string }
+  | { type: 'BURN_POST'; payload: string }
+  | { type: 'BURN_REPLY'; payload: string }
+  | { type: 'ADD_ENTRY'; payload: Entry }
+  | { type: 'ADD_CONTRIBUTION'; payload: HelpContribution }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'TOGGLE_THEME' }
+  | { type: 'SET_THEME'; payload: 'light' | 'dark' }
+  | { type: 'SET_CREATE_MODAL'; payload: boolean }
+  | { type: 'SET_GIVEAWAY_MODAL'; payload: boolean }
+  | { type: 'SET_REQUEST_MODAL'; payload: boolean }
+  | { type: 'HYDRATE_STATE'; payload: Partial<AppState> };
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case "SET_USER":
+    case 'SET_USER':
       return { ...state, user: action.payload };
-    case "HYDRATE_STATE":
+    case 'HYDRATE_STATE':
       return { ...state, ...action.payload };
-    case "SET_POSTS":
+    case 'SET_POSTS':
       return { ...state, posts: action.payload };
-    case "ADD_POST":
+    case 'ADD_POST':
       return { ...state, posts: [action.payload, ...state.posts] };
-    case "UPDATE_POST":
+    case 'UPDATE_POST':
       return {
         ...state,
         posts: state.posts.map((post) =>
@@ -80,12 +80,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
             : post,
         ),
       };
-    case "DELETE_POST":
+    case 'DELETE_POST':
       return {
         ...state,
         posts: state.posts.filter((post) => post.id !== action.payload),
       };
-    case "BURN_POST":
+    case 'BURN_POST':
       return {
         ...state,
         posts: state.posts.map((post) =>
@@ -94,24 +94,24 @@ function appReducer(state: AppState, action: AppAction): AppState {
             : post,
         ),
       };
-    case "ADD_ENTRY":
+    case 'ADD_ENTRY':
       return { ...state, entries: [...state.entries, action.payload] };
-    case "ADD_CONTRIBUTION":
+    case 'ADD_CONTRIBUTION':
       return {
         ...state,
         contributions: [...state.contributions, action.payload],
       };
-    case "SET_LOADING":
+    case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
-    case "TOGGLE_THEME":
-      return { ...state, theme: state.theme === "light" ? "dark" : "light" };
-    case "SET_THEME":
+    case 'TOGGLE_THEME':
+      return { ...state, theme: state.theme === 'light' ? 'dark' : 'light' };
+    case 'SET_THEME':
       return { ...state, theme: action.payload };
-    case "SET_CREATE_MODAL":
+    case 'SET_CREATE_MODAL':
       return { ...state, showCreateModal: action.payload };
-    case "SET_GIVEAWAY_MODAL":
+    case 'SET_GIVEAWAY_MODAL':
       return { ...state, showGiveawayModal: action.payload };
-    case "SET_REQUEST_MODAL":
+    case 'SET_REQUEST_MODAL':
       return { ...state, showRequestModal: action.payload };
     default:
       return state;
@@ -127,31 +127,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const { theme: nextTheme, resolvedTheme, setTheme } = useTheme();
   
   // Combine next-themes state to guarantee a synchronous true theme value
-  const currentTheme = (resolvedTheme || nextTheme || "light") as "light" | "dark";
+  const currentTheme = (resolvedTheme || nextTheme || 'light') as 'light' | 'dark';
   useEffect(() => {
     let isMounted = true;
 
     const syncSessionUser = async () => {
       if (!session?.user?.id) {
         if (isMounted) {
-          dispatch({ type: "SET_USER", payload: null });
+          dispatch({ type: 'SET_USER', payload: null });
         }
         return;
       }
 
       try {
-        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        const response = await fetch('/api/auth/me', { cache: 'no-store' });
         if (!response.ok) {
-          throw new Error("Failed to fetch current user");
+          throw new Error('Failed to fetch current user');
         }
 
         const result = await response.json();
         if (isMounted) {
-          dispatch({ type: "SET_USER", payload: result?.data ?? null });
+          dispatch({ type: 'SET_USER', payload: result?.data ?? null });
         }
       } catch {
         if (isMounted) {
-          dispatch({ type: "SET_USER", payload: null });
+          dispatch({ type: 'SET_USER', payload: null });
         }
       }
     };
@@ -164,10 +164,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     if (savedTheme) {
       dispatch({
-        type: "SET_THEME",
+        type: 'SET_THEME',
         payload: savedTheme,
       });
     }
@@ -180,11 +180,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedState) {
         const hydrated = deserializeState(savedState);
         if (hydrated) {
-          dispatch({ type: "HYDRATE_STATE", payload: hydrated });
+          dispatch({ type: 'HYDRATE_STATE', payload: hydrated });
         }
       }
     } catch (error) {
-      console.error("Failed to load state from localStorage:", error);
+      console.error('Failed to load state from localStorage:', error);
     }
 
     setIsHydrated(true);
@@ -198,7 +198,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         localStorage.setItem(STORAGE_KEY, serializeState(state));
       } catch (error) {
-        console.error("Failed to save state to localStorage:", error);
+        console.error('Failed to save state to localStorage:', error);
       }
     }, 100); // Debounce by 100ms to avoid excessive writes
 
@@ -209,9 +209,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadPosts = async () => {
       try {
-        const postRes = await fetch("/api/posts");
+        const postRes = await fetch('/api/posts');
         if (!postRes.ok) {
-          throw new Error("Failed to fetch posts");
+          throw new Error('Failed to fetch posts');
         }
 
         const postData = await postRes.json();
@@ -222,11 +222,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .map((p: Record<string, unknown>) => mapApiPostToClientPost(p))
           .filter(Boolean) as Post[];
         dispatch({
-          type: "SET_POSTS",
+          type: 'SET_POSTS',
           payload: mapped,
         });
       } catch (error) {
-        console.error("Failed to load data from API", error);
+        console.error('Failed to load data from API', error);
       }
     };
 
@@ -238,7 +238,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     theme: currentTheme,
     refreshPosts: async () => {
       try {
-        const res = await fetch("/api/posts", { cache: "no-store" });
+        const res = await fetch('/api/posts', { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         const rawList = Array.isArray(data.data)
@@ -248,7 +248,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .map((p: Record<string, unknown>) => mapApiPostToClientPost(p))
           .filter(Boolean) as Post[];
         dispatch({
-          type: "SET_POSTS",
+          type: 'SET_POSTS',
           payload: mapped,
         });
       } catch {
@@ -257,7 +257,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     },
     refreshPostDetail: async (postId: string) => {
       try {
-        const res = await fetch(`/api/posts/${postId}`, { cache: "no-store" });
+        const res = await fetch(`/api/posts/${postId}`, { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         const raw = data.data ?? data.post ?? null;
@@ -266,7 +266,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           : null;
         if (post) {
           dispatch({
-            type: "UPDATE_POST",
+            type: 'UPDATE_POST',
             payload: { id: postId, updates: post },
           });
         }
@@ -283,7 +283,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         message?: string;
       } = {},
     ) => {
-      const url = await signIn("credentials", {
+      const url = await signIn('credentials', {
         email: user.email ?? undefined,
         redirect: false,
         ...credentials,
@@ -291,21 +291,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (!url?.error) {
         try {
-          const response = await fetch("/api/auth/me", { cache: "no-store" });
+          const response = await fetch('/api/auth/me', { cache: 'no-store' });
           const result = await response.json();
-          dispatch({ type: "SET_USER", payload: result?.data ?? user });
+          dispatch({ type: 'SET_USER', payload: result?.data ?? user });
         } catch {
-          dispatch({ type: "SET_USER", payload: user });
+          dispatch({ type: 'SET_USER', payload: user });
         }
       }
       return url;
     },
     logout: async () => {
       await signOut({ redirect: false });
-      dispatch({ type: "SET_USER", payload: null });
+      dispatch({ type: 'SET_USER', payload: null });
     },
     setCurrentUser: (user: User | null) => {
-      dispatch({ type: "SET_USER", payload: user });
+      dispatch({ type: 'SET_USER', payload: user });
     },
     createPost: (postData) => {
       const newPost: Post = {
@@ -322,16 +322,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         entries: [],
         contributions: [],
       };
-      dispatch({ type: "ADD_POST", payload: newPost });
+      dispatch({ type: 'ADD_POST', payload: newPost });
     },
     updatePost: (postId: string, updates: Partial<Post>) => {
-      dispatch({ type: "UPDATE_POST", payload: { id: postId, updates } });
+      dispatch({ type: 'UPDATE_POST', payload: { id: postId, updates } });
     },
     deletePost: (postId: string) => {
-      dispatch({ type: "DELETE_POST", payload: postId });
+      dispatch({ type: 'DELETE_POST', payload: postId });
     },
     burnPost: (postId: string) => {
-      dispatch({ type: "BURN_POST", payload: postId });
+      dispatch({ type: 'BURN_POST', payload: postId });
     },
     submitEntry: (entryData) => {
       const newEntry: Entry = {
@@ -340,7 +340,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         submittedAt: new Date(),
         user: state.user!,
       };
-      dispatch({ type: "ADD_ENTRY", payload: newEntry });
+      dispatch({ type: 'ADD_ENTRY', payload: newEntry });
     },
     makeContribution: (contributionData) => {
       const newContribution: HelpContribution = {
@@ -349,22 +349,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         contributedAt: new Date(),
         user: state.user!,
       };
-      dispatch({ type: "ADD_CONTRIBUTION", payload: newContribution });
+      dispatch({ type: 'ADD_CONTRIBUTION', payload: newContribution });
     },
     toggleTheme: () => {
-      const newTheme = currentTheme === "light" ? "dark" : "light";
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
       setTheme(newTheme);
       document.cookie = `theme=${newTheme}; path=/; max-age=31536000`;
-      dispatch({ type: "SET_THEME", payload: newTheme });
+      dispatch({ type: 'SET_THEME', payload: newTheme });
     },
     setShowCreateModal: (show: boolean) => {
-      dispatch({ type: "SET_CREATE_MODAL", payload: show });
+      dispatch({ type: 'SET_CREATE_MODAL', payload: show });
     },
     setShowGiveawayModal: (show: boolean) => {
-      dispatch({ type: "SET_GIVEAWAY_MODAL", payload: show });
+      dispatch({ type: 'SET_GIVEAWAY_MODAL', payload: show });
     },
     setShowRequestModal: (show: boolean) => {
-      dispatch({ type: "SET_REQUEST_MODAL", payload: show });
+      dispatch({ type: 'SET_REQUEST_MODAL', payload: show });
     },
     isHydrated,
   };
@@ -377,7 +377,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 export function useAppContext(): AppContextType {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error("useAppContext must be used within an AppProvider");
+    throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;
 }
