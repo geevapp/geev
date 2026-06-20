@@ -1,39 +1,66 @@
-# Pull Request Template
+## Summary
 
-## Description
+<!--
+Briefly describe what this PR does and *why*.
+Keep it short — reviewers should understand the intent in one minute.
+-->
 
-Please include a summary of the change and which issue is fixed. Also include relevant motivation and context.
+## Related Issues
 
----
+<!--
+Link any issues this PR closes, fixes, or relates to.
+
+- Closes #
+- Fixes #
+- Related to #
+-->
+
+## Changes
+
+<!--
+List the user-visible or notable technical changes made in this PR.
+Group by area (frontend, backend, contracts, docs) when it helps clarity.
+
+- ...
+- ...
+-->
+
+## Test Plan / Verification
+
+<!--
+How was this change validated? Include:
+
+- Unit / integration tests added or updated
+- Manual QA steps
+- On-chain / Stellar testnet transaction hashes (if applicable)
+
+-->
+
+## Screenshots / Recordings
+
+<!--
+For UI changes, attach before/after screenshots or short screen recordings.
+Delete this section if not applicable.
+-->
 
 ## Checklist
-- [ ] I have tested my changes locally
-- [ ] I have updated documentation as needed
-- [ ] I have run `npx prisma generate` after schema changes
-- [ ] I have run `npx prisma migrate dev` or `npx prisma migrate deploy` as appropriate
 
----
+- [ ] PR title follows Conventional Commits (e.g. `feat(frontend): …`, `fix: …`, `chore: …`, `docs: …`)
+- [ ] Changeset added at repo root (`pnpm changeset`) for any user-facing change — packages are bucketed automatically in this monorepo
+- [ ] Tests added or updated for behavior changes
+- [ ] Docs updated (if behavior is user-facing)
+- [ ] No new warnings from `pnpm lint` / `cargo clippy`
+- [ ] If backwards-incompatible, the **Breaking Changes** section below is filled in
 
-## Post-Merge Steps for Maintainers
+## Breaking Changes
 
-**If this PR includes changes to the Prisma schema:**
+<!--
+Describe any breaking or migration-impacting changes.
+If none, write "None".
+-->
 
-1. Run the following command to apply the migration to your database:
-   
-   ```sh
-   npx prisma migrate deploy
-   ```
-   or, for local development:
-   ```sh
-   npx prisma migrate dev
-   ```
-2. Ensure your CI pipeline runs the migration before tests (add this step if missing):
-   ```yaml
-   - name: Run Prisma Migrate
-     run: npx prisma migrate deploy
-   ```
-3. Make sure the database user in CI has permission to run migrations.
+## Notes for Reviewers
 
----
-
-If you have any questions, please comment on this PR.
+<!--
+Anything reviewers should focus on, known limitations, or follow-ups.
+-->
