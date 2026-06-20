@@ -1,0 +1,26 @@
+# GitHub issue-chooser configuration.
+# Disables blank issues and routes questions and community help to
+# channels outside the issue tracker. Files alongside
+# `bug_report.md` and `feature_request.md` in this directory.
+#
+# Once Discussions are enabled on this repo (Settings → Features → Discussions),
+# uncomment the "GitHub Discussions" entry below so reporters get a working link.
+blank_issues_enabled: false
+
+contact_links:
+  # - name: GitHub Discussions
+  #   url: https://github.com/geevapp/geev/discussions
+  #   about: |
+  #     For questions, ideas, or feedback that don't fit a clear
+  #     bug or feature request, please open a thread in Discussions
+  #     so the community can weigh in.
+  - name: Telegram Community
+    url: https://t.me/geevapp
+    about: |
+      For real-time chat and quick questions, join the Geev
+      Telegram group.
+  - name: Discord
+    url: https://discord.gg/wQP2CkHj
+    about: |
+      For live support and community discussion, drop into the
+      Geev Discord server.
