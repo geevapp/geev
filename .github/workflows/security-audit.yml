@@ -1,0 +1,68 @@
+name: Supply-Chain Security Audit
+
+# This workflow enforces two supply-chain hygiene checks described in
+# SECURITY.md ("npm / pnpm Supply Chain"):
+#
+#   1. `pnpm install --frozen-lockfile` — fails if the lockfile has drifted
+#      from `package.json` / `app/package.json` (i.e. someone bumped a dep
+#      without regenerating the lockfile, OR regenerated it in a way the
+#      repo didn't accept).
+#   2. `pnpm audit --prod --audit-level=high` — fails if any *production*
+#      dependency (excluding devDependencies) has a known high or critical
+#      CVE in the GitHub Advisory Database.
+#
+# Triggers on every PR to `main` and on manual dispatch (for ad-hoc checks).
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+# Permissions intentionally narrow: this workflow only reads.
+permissions:
+  contents: read
+
+jobs:
+  pnpm-audit:
+    name: pnpm audit (frozen lockfile + high/critical CVEs)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # pnpm v10 default timezone
+      TZ: UTC
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          # Pin a major rather than a full version so floating patches still
+          # apply. Adjust if the project moves to a different pnpm major.
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # The repo's `.gitignore` currently excludes `pnpm-lock.yaml`, so the
+      # strict frozen-lockfile check is gated on whether the file actually
+      # exists in the working tree. Once the maintainer un-ignores the
+      # lockfile and commits it, this `if:` flips to the strict check
+      # automatically without further edits to the workflow.
+      - name: Install with frozen lockfile (strict — only when committed)
+        if: hashFiles('pnpm-lock.yaml') != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Install (lockfile not committed yet — soft warning)
+        if: hashFiles('pnpm-lock.yaml') == ''
+        run: |
+          echo "::warning::pnpm-lock.yaml is not committed; falling back to a non-frozen install. Un-ignore the lockfile in .gitignore and commit it to enable the strict frozen-lockfile check."
+          pnpm install
+
+      # `--audit-level=high` makes pnpm exit non-zero on ANY high-severity
+      # OR critical finding in the audited tree. `--prod` skips
+      # devDependencies (test tooling, lints, etc.).
+      - name: Audit production deps (fail on high / critical)
+        run: pnpm audit --prod --audit-level=high
