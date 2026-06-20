@@ -1,0 +1,63 @@
+name: "CodeQL Analysis"
+
+# Triggers:
+#  - On every push to `main`
+#  - On every PR targeting `main`
+#  - Weekly schedule (matches GitHub-default CodeQL cadence)
+#
+# NOTE: Code Scanning itself must be enabled at the repo level by a
+# maintainer under `Settings → Code security and analysis → Code scanning`.
+# Until then, this workflow will run but SARIF uploads will not surface
+# alerts in the Security tab. The configure-side has a "Default setup"
+# option that picks this file up automatically.
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # Every Monday at 06:17 UTC.
+    - cron: "17 6 * * 1"
+
+# Minimal permissions — CodeQL only needs to write security events and
+# read repo contents. This narrows the workflow's blast radius.
+permissions:
+  security-events: write
+  contents: read
+  # Avoid elevating to write-all; don't grant packages / actions / id-token
+  # by default.
+
+jobs:
+  analyze:
+    name: "Analyze (${{ matrix.language }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # The Next.js app lives in `app/`. Rust (Soroban) contracts are
+        # analyzed separately via Cargo + clippy in the existing
+        # `.github/workflows/rust.yml` workflow; CodeQL doesn't analyze
+        # Rust directly here, so we keep this matrix narrow.
+        language: ["javascript-typescript"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # Use the bundled "security-and-quality" query pack — covers the
+          # default OWASP/CWE categories without writing our own packs.
+          queries: security-and-quality
+          # JS/TS analysis runs without explicit build because CodeQL
+          # can drive its own extraction. If adding C/C++ or Go later,
+          # switch this back to "autobuild".
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

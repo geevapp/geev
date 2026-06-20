@@ -1,0 +1,62 @@
+# Dependabot configuration.
+#
+# This file configures the cadence and grouping of Dependabot pull requests
+# (npm version updates, GitHub Actions version updates). It does NOT
+# by itself enable Dependabot security alerts — that Settings toggle must be
+# flipped under:
+#
+#   `https://github.com/geevapp/geev/settings/security_analysis`
+#
+# Once a maintainer enables Dependabot (alerts + version updates + security
+# updates) the settings below will begin producing PRs.
+#
+# Reference: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 8
+    groups:
+      app-minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    labels:
+      - "dependencies"
+      - "app"
+      - "area: app"
+    commit-message:
+      prefix: "chore(deps)"
+    # Auto-rebase once conflicts appear so we don't accumulate stale PRs.
+    rebase-strategy: "auto"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-and-patch:
+        applies-to: version-updates
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"
+    rebase-strategy: "auto"
+
+# NOTE: The `contracts/` Cargo workspace is not currently covered by this
+# config because Dependabot does not yet ship robust first-class cargo
+# support. We will add a `cargo audit` (and ideally `cargo update` review)
+# CI workflow in a separate follow-up — see SECURITY.md "Supply Chain".
