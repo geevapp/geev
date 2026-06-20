@@ -22,6 +22,17 @@ Geev is a decentralized social platform built on the Stellar blockchain that ena
 - [Theme System](docs/theme.md) - Light/dark mode implementation and usage guide
 - [Components](docs/components.md) - Component library documentation
 
+## COMMUNITY & CONTRIBUTING
+
+Bug reports, feature ideas, security disclosures, and pull requests are welcome.
+
+- [Contributing guide](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Bug report template](.github/ISSUE_TEMPLATE/bug_report.md)
+- [Feature request template](.github/ISSUE_TEMPLATE/feature_request.md)
+- [Pull request template](.github/pull_request_template.md)
+- Community chat: [Telegram](https://t.me/geevapp) · [Discord](https://discord.gg/wQP2CkHj)
+
 ## BACKEND INFRASTRUCTURE
 
 The backend is integrated into the Next.js application using API Routes.
