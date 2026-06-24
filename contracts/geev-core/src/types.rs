@@ -37,6 +37,14 @@ pub enum GiveawayStatus {
     Suspended = 3,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[contracttype]
+pub enum SelectionMethod {
+    Random = 0,
+    Manual = 1,
+    Merit = 2,
+}
+
 #[derive(Clone)]
 #[contracttype]
 pub struct ParticipantVerification {
@@ -58,6 +66,7 @@ pub struct Giveaway {
     pub status: GiveawayStatus,
     pub winner_count: u32,
     pub winners: Vec<Address>,
+    pub selection_method: SelectionMethod,
     pub verification_type: u32,
     pub min_reputation: u64,
 }
