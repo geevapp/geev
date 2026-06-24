@@ -4,7 +4,9 @@ use crate::giveaway::{GiveawayContract, GiveawayContractClient};
 use crate::governance::{GovernanceContract, GovernanceContractClient};
 use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
 use crate::profile::{ProfileContract, ProfileContractClient};
-use crate::types::{DataKey, Giveaway, HelpRequest, HelpRequestStatus, ParticipantVerification};
+use crate::types::{
+    DataKey, Giveaway, HelpRequest, HelpRequestStatus, ParticipantVerification, SelectionMethod,
+};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
     testutils::{Address as _, Events as _, Ledger},
@@ -1609,6 +1611,7 @@ fn seed_active_giveaway(env: &Env, contract_id: &Address, giveaway_id: u64, toke
         status: GiveawayStatus::Active,
         winner_count: 1,
         winners: Vec::new(env),
+        selection_method: SelectionMethod::Random,
         verification_type: 0,
         min_reputation: 0,
     };
@@ -1780,6 +1783,7 @@ fn test_enter_suspended_giveaway_fails() {
                 status: GiveawayStatus::Suspended,
                 winner_count: 1,
                 winners: Vec::new(&env),
+                selection_method: SelectionMethod::Random,
                 verification_type: 0,
                 min_reputation: 0,
             },
