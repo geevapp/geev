@@ -51,20 +51,46 @@ export async function POST(request: NextRequest) {
       if (user.walletBalance < amount)
         return apiError("Insufficient wallet balance", 400);
 
-      // Create a pending record before submitting (idempotency anchor)
-      const pendingTx = await prisma.walletTransaction.create({
-        data: {
-          userId: currentUser.id,
-          type: "withdraw",
-          amount,
-          currency: asset,
-          status: "pending",
-          method,
-          note: note ?? null,
-          stellarAddress: destinationAddress,
-        },
+      // Reserve the balance atomically before submitting, then create the pending transaction.
+      const reservation = await prisma.$transaction(async (tx) => {
+        const reservationResult = await tx.user.updateMany({
+          where: {
+            id: currentUser.id,
+            walletBalance: { gte: amount },
+          },
+          data: {
+            walletBalance: { decrement: amount },
+          },
+        });
+
+        if (reservationResult.count === 0) return null;
+
+        const pendingTx = await tx.walletTransaction.create({
+          data: {
+            userId: currentUser.id,
+            type: "withdraw",
+            amount,
+            currency: asset,
+            status: "pending",
+            method,
+            note: note ?? null,
+            stellarAddress: destinationAddress,
+          },
+        });
+
+        const updatedUser = await tx.user.findUnique({
+          where: { id: currentUser.id },
+          select: { walletBalance: true, updatedAt: true },
+        });
+
+        return { pendingTx, updatedUser };
       });
 
+      if (!reservation) {
+        return apiError("Insufficient wallet balance", 400);
+      }
+
+      const { pendingTx, updatedUser } = reservation;
       let txHash: string;
       try {
         txHash = await submitStellarWithdrawal({
@@ -74,29 +100,27 @@ export async function POST(request: NextRequest) {
           asset,
         });
       } catch (err) {
-        // Mark the pending record as failed — do NOT touch balance
-        await prisma.walletTransaction.update({
-          where: { id: pendingTx.id },
-          data: { status: "failed" },
-        });
+        await prisma.$transaction([
+          prisma.walletTransaction.update({
+            where: { id: pendingTx.id },
+            data: { status: "failed" },
+          }),
+          prisma.user.update({
+            where: { id: currentUser.id },
+            data: { walletBalance: { increment: amount } },
+          }),
+        ]);
+
         return apiError(
           err instanceof Error ? err.message : "Stellar submission failed",
           502,
         );
       }
 
-      // Settle: mark completed and decrement balance atomically
-      const [completedTx, updatedUser] = await prisma.$transaction([
-        prisma.walletTransaction.update({
-          where: { id: pendingTx.id },
-          data: { status: "completed", txHash },
-        }),
-        prisma.user.update({
-          where: { id: currentUser.id },
-          data: { walletBalance: { decrement: amount } },
-          select: { walletBalance: true, updatedAt: true },
-        }),
-      ]);
+      const completedTx = await prisma.walletTransaction.update({
+        where: { id: pendingTx.id },
+        data: { status: "completed", txHash },
+      });
 
       return apiSuccess(
         {
