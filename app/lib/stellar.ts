@@ -206,14 +206,30 @@ export async function getUSDtoXLMRate(): Promise<number> {
   try {
     // Try to fetch rate from horizon price data endpoint
     // This uses Stellar's internal price oracle
-    const response = await fetch(
-      `${HORIZON_URL}/assets?asset_code=USDC&asset_issuer=GA5ZSEJYB37JRC5AVCIA5MOP4IUSHVGSVZNTQWICE6SCRUNQOE7CVOM`,
-    );
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-    if (response.ok) {
-      const data = await response.json();
-      // Stellar price data available in records
-      // For now, use a reasonable fallback
+    try {
+      const response = await fetch(
+        `${HORIZON_URL}/assets?asset_code=USDC&asset_issuer=GA5ZSEJYB37JRC5AVCIA5MOP4IUSHVGSVZNTQWICE6SCRUNQOE7CVOM`,
+        { signal: controller.signal },
+      );
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        // Stellar price data available in records
+        // For now, use a reasonable fallback
+      }
+    } catch (err) {
+      clearTimeout(timeoutId);
+      // API timeout or network error, use fallback
+      if (err instanceof Error && err.name === "AbortError") {
+        console.warn("Exchange rate fetch timed out, using fallback rate");
+      } else {
+        console.warn(`Exchange rate fetch error: ${err instanceof Error ? err.message : String(err)}, using fallback`);
+      }
     }
   } catch {
     // API unavailable, use fallback
@@ -232,10 +248,38 @@ export async function getUSDtoXLMRate(): Promise<number> {
  * @returns Equivalent amount in XLM
  */
 export async function convertUSDtoXLM(usdAmount: number): Promise<number> {
-  const rate = await getUSDtoXLMRate();
-  const xlmAmount = usdAmount / rate;
-  // Round to 7 decimals (Stellar's maximum precision)
-  return Math.round(xlmAmount * 10000000) / 10000000;
+  if (!Number.isFinite(usdAmount)) {
+    throw new Error(`Invalid USD amount: ${usdAmount}`);
+  }
+  if (usdAmount < 0) {
+    throw new Error(`USD amount cannot be negative: ${usdAmount}`);
+  }
+
+  try {
+    const rate = await getUSDtoXLMRate();
+    
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error(`Invalid exchange rate: ${rate}`);
+    }
+
+    const xlmAmount = usdAmount / rate;
+    
+    if (!Number.isFinite(xlmAmount)) {
+      throw new Error(`Conversion resulted in invalid amount: ${xlmAmount}`);
+    }
+
+    // Round to 7 decimals (Stellar's maximum precision)
+    const rounded = Math.round(xlmAmount * 10000000) / 10000000;
+    
+    if (!Number.isFinite(rounded)) {
+      throw new Error(`Rounding resulted in invalid amount: ${rounded}`);
+    }
+
+    return rounded;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    throw new Error(`USD to XLM conversion failed: ${errorMsg}`);
+  }
 }
 
 /**

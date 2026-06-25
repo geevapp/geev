@@ -56,9 +56,23 @@ export async function POST(request: NextRequest) {
       if (asset === "XLM") {
         try {
           xlmAmount = await convertUSDtoXLM(amount);
+          
+          // Validate that converted amount is a valid number
+          if (!Number.isFinite(xlmAmount) || xlmAmount <= 0) {
+            console.error(`Invalid converted XLM amount: ${xlmAmount} from USD ${amount}`);
+            return apiError(
+              "Conversion resulted in invalid amount",
+              502,
+            );
+          }
         } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : String(err);
+          console.error(`USD to XLM conversion failed: ${errorMsg}`, {
+            usdAmount: amount,
+            error: err,
+          });
           return apiError(
-            "Failed to get exchange rate for conversion",
+            `Failed to convert USD to XLM: ${errorMsg}`,
             502,
           );
         }
@@ -82,6 +96,14 @@ export async function POST(request: NextRequest) {
 
       let txHash: string;
       try {
+        // Validate parameters before submission
+        if (!user.walletAddress) {
+          throw new Error("User wallet address not configured");
+        }
+        if (!Number.isFinite(xlmAmount) || xlmAmount <= 0) {
+          throw new Error(`Invalid XLM amount for submission: ${xlmAmount}`);
+        }
+
         txHash = await submitStellarWithdrawal({
           sourceAddress: user.walletAddress,
           destinationAddress,
@@ -90,12 +112,15 @@ export async function POST(request: NextRequest) {
         });
       } catch (err) {
         // Mark the pending record as failed — do NOT touch balance
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error(`Stellar submission failed: ${errorMsg}`, { error: err });
+        
         await prisma.walletTransaction.update({
           where: { id: pendingTx.id },
           data: { status: "failed" },
         });
         return apiError(
-          err instanceof Error ? err.message : "Stellar submission failed",
+          `Stellar submission failed: ${errorMsg}`,
           502,
         );
       }
@@ -146,8 +171,16 @@ export async function POST(request: NextRequest) {
       let xlmAmount = amount;
       try {
         xlmAmount = await convertUSDtoXLM(amount);
-      } catch {
+        
+        // Validate the converted amount
+        if (!Number.isFinite(xlmAmount) || xlmAmount <= 0) {
+          console.warn(`Invalid simulated conversion result: ${xlmAmount} from USD ${amount}, using fallback`);
+          xlmAmount = amount;
+        }
+      } catch (err) {
         // If conversion fails, fallback to 1:1 (for testing)
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`Simulated withdrawal conversion failed, using fallback: ${errorMsg}`);
         xlmAmount = amount;
       }
 
@@ -195,12 +228,15 @@ export async function POST(request: NextRequest) {
       "Withdrawal initiated successfully",
     );
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`Withdrawal POST handler error: ${errorMsg}`, { error });
+    
     if (error instanceof Error) {
       if (error.message === "INSUFFICIENT_BALANCE")
         return apiError("Insufficient wallet balance", 400);
       if (error.message === "USER_NOT_FOUND")
         return apiError("User not found", 404);
     }
-    return apiError("Failed to process withdrawal", 500);
+    return apiError(`Failed to process withdrawal: ${errorMsg}`, 500);
   }
 }
