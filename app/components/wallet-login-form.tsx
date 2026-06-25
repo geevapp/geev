@@ -1,24 +1,34 @@
 "use client";
 
 import {
+  Copy,
+  Key,
+  LogOut,
+  Mail,
+  User,
+  Wallet,
+  XCircle,
+} from "lucide-react";
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Copy, Key, Mail, User, Wallet } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
+  requestAccess,
   isConnected,
+  getAddress,
   signTransaction as freighterSignTransaction,
 } from "@stellar/freighter-api";
+
 
 /**
  * Wallet-based login and registration form
@@ -40,112 +50,74 @@ export function WalletLoginForm({
 
   const [isLoading, setIsLoading] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [challengeXdr, setChallengeXdr] = useState("");
-  const [networkPassphrase, setNetworkPassphrase] = useState("");
-  const [signedTransaction, setSignedTransaction] = useState("");
 
-  const fetchChallenge = async () => {
-    if (!walletAddress) {
-      showToast("Please enter your wallet address first", "error");
-      return null;
-    }
-
+  const handleConnectWallet = async () => {
+    setIsLoading(true);
     try {
-      const response = await fetch(
-        `/api/auth/challenge?publicKey=${encodeURIComponent(walletAddress)}`,
-        { cache: "no-store" },
-      );
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.message || "Failed to fetch challenge");
-      }
-
-      setChallengeXdr(data.transaction);
-      setNetworkPassphrase(data.network_passphrase);
-      return data as { transaction: string; network_passphrase: string };
-    } catch (error) {
-      console.error("Challenge error:", error);
-      showToast("Could not generate a secure challenge. Please try again.", "error");
-      return null;
-    }
-  };
-
-  const handleSignChallenge = async () => {
-    if (!walletAddress) {
-      showToast("Please enter your wallet address first", "error");
-      return;
-    }
-
-    try {
-      const connected = await isConnected();
-      if (!connected) {
+      const { isConnected: freighterIsConnected } = await isConnected();
+      if (!freighterIsConnected) {
         showToast("Freighter wallet is not installed or not connected", "error");
         return;
       }
 
-      const defaultPassphrase =
-        process.env.NEXT_PUBLIC_STELLAR_NETWORK === "testnet"
-          ? "Test Stellar Public Network ; September 2015"
-          : "Public Global Stellar Network ; September 2015";
-
-      const challenge = challengeXdr
-        ? {
-            transaction: challengeXdr,
-            network_passphrase: networkPassphrase || defaultPassphrase,
-          }
-        : await fetchChallenge();
-
-      if (!challenge) {
-        return;
+      await requestAccess();
+      const publicKey = await getAddress();
+      if (publicKey) {
+        setWalletAddress(publicKey.address);
+        setIsWalletConnected(true);
+        showToast("Wallet connected successfully!", "success");
+      } else {
+        showToast("Could not retrieve wallet address.", "error");
       }
-
-      const signedResult = await (freighterSignTransaction as any)(
-        challenge.transaction,
-        {
-          networkPassphrase: challenge.network_passphrase,
-        },
-      );
-
-      const signedXdr =
-        typeof signedResult === "string"
-          ? signedResult
-          : signedResult?.signedTxXdr ||
-            signedResult?.signedTransaction ||
-            signedResult?.txXdr ||
-            null;
-
-      if (!signedXdr) {
-        throw new Error("Freighter did not return a signed transaction");
-      }
-
-      setSignedTransaction(signedXdr);
-      showToast("Challenge signed successfully", "success");
     } catch (error) {
-      console.error("Signing error:", error);
-      showToast("Error signing the challenge", "error");
+      console.error("Wallet connection error:", error);
+      showToast("Failed to connect wallet. Please try again.", "error");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const authenticate = async (mode: "login" | "register") => {
-    if (!walletAddress || !signedTransaction) {
-      showToast("Please sign the wallet challenge first", "error");
-      return;
-    }
-
     if (mode === "register" && !username) {
       showToast("Please fill in all required fields", "error");
       return;
     }
 
     setIsLoading(true);
-
     try {
+      // 1. Fetch challenge
+      const challengeResponse = await fetch(
+        `/api/auth/challenge?publicKey=${encodeURIComponent(walletAddress)}`,
+        { cache: "no-store" },
+      );
+      const challengeData = await challengeResponse.json();
+      if (!challengeResponse.ok) {
+        throw new Error(challengeData?.message || "Failed to fetch challenge");
+      }
+
+      // 2. Sign challenge
+      const signedResult = await freighterSignTransaction(
+        challengeData.transaction,
+        {
+          networkPassphrase: challengeData.network_passphrase,
+        },
+      );
+
+      if (signedResult.error) {
+        throw new Error(signedResult.error);
+      }
+
+      if (!signedResult.signedTxXdr) {
+        throw new Error("Freighter did not return a signed transaction.");
+      }
+
+      // 3. Authenticate with NextAuth
       const result = await signIn("credentials", {
         walletAddress,
-        transaction: signedTransaction,
+        transaction: signedResult.signedTxXdr,
         username: mode === "register" ? username : undefined,
         email: mode === "register" ? email || undefined : undefined,
         redirect: false,
@@ -168,13 +140,11 @@ export function WalletLoginForm({
         "error",
       );
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred";
+      showToast(errorMessage, "error");
+      // Also log the full error for debugging
       console.error("Authentication error:", error);
-      showToast(
-        mode === "login"
-          ? "Login failed. Please try again."
-          : "Registration failed. Please try again.",
-        "error",
-      );
     } finally {
       setIsLoading(false);
     }
@@ -205,11 +175,11 @@ export function WalletLoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={() => router.push("/feed")} className="w-full">
+          <Button onClick={() => router.push("/feed")} className="w-full cursor-pointer">
             Go to Feed
           </Button>
-          <Button variant="outline" onClick={handleLogout} className="w-full">
-            Logout
+          <Button variant="outline" onClick={handleLogout} className="w-full cursor-pointer">
+            <LogOut className="w-4 h-4 mr-2" /> Logout
           </Button>
         </CardContent>
       </Card>
@@ -218,169 +188,104 @@ export function WalletLoginForm({
 
   return (
     <div className="w-full mx-auto">
-      {authType === "login" && (
+      {!isWalletConnected ? (
+        <Button
+          onClick={handleConnectWallet}
+          disabled={isLoading}
+          className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white cursor-pointer"
+        >
+          <Wallet className="w-4 h-4 mr-2" />
+          {isLoading ? "Connecting..." : "Connect Freighter Wallet"}
+        </Button>
+      ) : (
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Wallet Address</label>
-            <div className="relative">
-              <Wallet className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="G..."
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Signed Challenge</label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Signed transaction from Freighter"
-                value={signedTransaction}
-                onChange={(e) => setSignedTransaction(e.target.value)}
-                className="flex-1"
-              />
+            <div className="flex items-center gap-2 p-3 rounded-md border bg-gray-50 dark:bg-gray-800">
+              <Wallet className="h-4 w-4 text-gray-500" />
+              <span className="font-mono text-sm truncate flex-1">
+                {walletAddress}
+              </span>
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleSignChallenge}
+                size="icon"
+                className="h-7 w-7 cursor-pointer"
+                onClick={() => {
+                  navigator.clipboard.writeText(walletAddress);
+                  showToast("Address copied to clipboard");
+                }}
               >
-                <Key className="h-4 w-4" />
+                <Copy className="h-4 w-4" />
               </Button>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Challenge Transaction</label>
-            <div className="relative">
-              <textarea
-                value={challengeXdr}
-                onChange={(e) => setChallengeXdr(e.target.value)}
-                className="flex min-h-20 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-0"
-                placeholder="Server-issued challenge transaction..."
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="absolute top-2 right-2"
-                onClick={() => fetchChallenge()}
-              >
-                Fetch
-              </Button>
-            </div>
-          </div>
+          {authType === "register" && (
+            <>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Username</label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Choose a username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
 
-          <Button
-            onClick={() => authenticate("login")}
-            disabled={isLoading}
-            className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
-          >
-            <Wallet className="w-4 h-4 mr-2" />
-            {isLoading ? "Logging in..." : "Login"}
-          </Button>
-        </div>
-      )}
-
-      {authType === "register" && (
-        <div className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Wallet Address</label>
-            <div className="relative">
-              <Wallet className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="G..."
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email (Optional)</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Username</label>
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Choose a username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            <Button
+              onClick={() => authenticate(authType)}
+              disabled={isLoading}
+              className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white cursor-pointer"
+            >
+              <Key className="w-4 h-4 mr-2" />
+              {isLoading
+                ? "Waiting for signature..."
+                : authType === "login"
+                  ? "Login with Wallet"
+                  : "Create Account with Wallet"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground cursor-pointer"
+              onClick={() => {
+                setIsWalletConnected(false);
+                setWalletAddress("");
+              }}
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Use a different wallet
+            </Button>
           </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Email (Optional)</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Signed Challenge</label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Signed transaction from Freighter"
-                value={signedTransaction}
-                onChange={(e) => setSignedTransaction(e.target.value)}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleSignChallenge}
-              >
-                <Key className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Challenge Transaction</label>
-            <div className="relative">
-              <textarea
-                value={challengeXdr}
-                onChange={(e) => setChallengeXdr(e.target.value)}
-                className="flex min-h-20 w-full rounded-md border border-input px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder="Server-issued challenge transaction..."
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="absolute top-2 right-2"
-                onClick={() => fetchChallenge()}
-              >
-                Fetch
-              </Button>
-            </div>
-          </div>
-
-          <Button
-            onClick={() => authenticate("register")}
-            disabled={isLoading}
-            className="w-full bg-linear-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white"
-          >
-            <Wallet className="w-4 h-4 mr-2" />
-            {isLoading ? "Creating account..." : "Create Account"}
-          </Button>
         </div>
       )}
 
       <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
-        <p className="text-sm text-orange-700 dark:text-orange-300">
-          <strong>Note:</strong> Wallet auth now uses a signed Stellar
-          challenge transaction before a session is issued.
+        <p className="text-sm text-orange-700 dark:text-orange-300 leading-relaxed">
+          <strong>How it works:</strong> You will
+          be prompted by your Freighter wallet to sign a secure, one-time
+          challenge. This proves you own the wallet without revealing your keys.
         </p>
       </div>
     </div>
