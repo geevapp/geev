@@ -27,24 +27,16 @@ const GET = async (request: NextRequest) => {
   const now = new Date();
   const challengeCutoff = new Date(now.getTime() - CHALLENGE_WINDOW_MS);
 
-  const [usedChallengesResult, authNoncesResult] = await prisma.$transaction([
-    prisma.usedChallenge.deleteMany({
-      where: {
-        usedAt: {
-          lt: challengeCutoff,
-        },
+  const usedChallengesResult = await prisma.usedChallenge.deleteMany({
+    where: {
+      usedAt: {
+        lt: challengeCutoff,
       },
-    }),
-    prisma.authNonce.deleteMany({
-      where: {
-        OR: [{ expiresAt: { lt: now } }, { used: true }],
-      },
-    }),
-  ]);
+    },
+  });
 
   return apiSuccess({
     prunedUsedChallenges: usedChallengesResult.count,
-    prunedAuthNonces: authNoncesResult.count,
     challengeCutoff: challengeCutoff.toISOString(),
   });
 };
