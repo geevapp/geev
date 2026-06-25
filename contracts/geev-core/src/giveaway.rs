@@ -8,6 +8,17 @@ use soroban_sdk::{
 #[contract]
 pub struct GiveawayContract;
 
+/// Parameters for creating a new giveaway
+pub struct CreateGiveawayArgs {
+    pub creator: Address,
+    pub token: Address,
+    pub amount: i128,
+    pub title: String,
+    pub duration_seconds: u64,
+    pub winner_count: u32,
+    pub verification: Option<ParticipantVerification>,
+}
+
 #[contractevent]
 pub struct GiveawayCreated {
     giveaway_id: u64,
@@ -31,60 +42,53 @@ pub struct GiveawayWinnerSelected {
 
 #[contractimpl]
 impl GiveawayContract {
-    #[allow(clippy::too_many_arguments)]
     pub fn create_giveaway(
         env: Env,
-        creator: Address,
-        token: Address,
-        amount: i128,
-        title: String,
-        duration_seconds: u64,
-        winner_count: u32,
-        verification: Option<ParticipantVerification>,
+        args: CreateGiveawayArgs,
     ) -> u64 {
-        creator.require_auth();
+        args.creator.require_auth();
 
-        if winner_count == 0 {
+        if args.winner_count == 0 {
             panic_with_error!(&env, Error::InvalidWinnerCount);
         }
 
         // Check if token is whitelisted
-        let token_key = DataKey::AllowedToken(token.clone());
+        let token_key = DataKey::AllowedToken(args.token.clone());
         let is_allowed: bool = env.storage().instance().get(&token_key).unwrap_or(false);
 
         if !is_allowed {
             panic_with_error!(&env, Error::TokenNotSupported);
         }
 
-        let token_client = token::Client::new(&env, &token);
-        token_client.transfer(&creator, env.current_contract_address(), &amount);
+        let token_client = token::Client::new(&env, &args.token);
+        token_client.transfer(&args.creator, env.current_contract_address(), &args.amount);
 
         let giveaway_id = Self::generate_id(&env);
-        let end_time = env.ledger().timestamp() + duration_seconds;
+        let end_time = env.ledger().timestamp() + args.duration_seconds;
 
-        let verification_type = match &verification {
+        let verification_type = match &args.verification {
             Some(v) if v.uses_reputation => 2,
             Some(_) => 1,
             None => 0,
         };
-        let min_reputation = verification.as_ref().map(|v| v.min_reputation).unwrap_or(0);
+        let min_reputation = args.verification.as_ref().map(|v| v.min_reputation).unwrap_or(0);
 
         let giveaway = Giveaway {
             id: giveaway_id,
-            creator: creator.clone(),
-            token: token.clone(),
-            amount,
-            title,
+            creator: args.creator.clone(),
+            token: args.token.clone(),
+            amount: args.amount,
+            title: args.title,
             participant_count: 0,
             end_time,
             status: GiveawayStatus::Active,
-            winner_count,
+            winner_count: args.winner_count,
             winners: Vec::new(&env),
             verification_type,
             min_reputation,
         };
 
-        if let Some(verification) = &verification {
+        if let Some(verification) = &args.verification {
             if !verification.uses_reputation {
                 for addr in verification.allowlist.iter() {
                     env.storage().persistent().set(
@@ -101,9 +105,9 @@ impl GiveawayContract {
 
         GiveawayCreated {
             giveaway_id,
-            creator,
-            token_address: token,
-            total_amount: amount,
+            creator: args.creator,
+            token_address: args.token,
+            total_amount: args.amount,
             end_time,
         }
         .publish(&env);
