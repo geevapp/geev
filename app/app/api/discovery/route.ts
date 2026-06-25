@@ -375,16 +375,49 @@ async function searchTopics(args: {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = normalizeQuery(searchParams.get("q"));
-    const page = parsePaginationParam(searchParams.get("page"), {
+    
+    // Parse and validate pagination parameters
+    const rawPage = searchParams.get("page");
+    const rawLimit = searchParams.get("limit");
+    
+    const page = parsePaginationParam(rawPage, {
       defaultValue: 1,
       min: 1,
     });
-    const limit = parsePaginationParam(searchParams.get("limit"), {
+    const limit = parsePaginationParam(rawLimit, {
       defaultValue: DEFAULT_LIMIT,
       min: 1,
       max: MAX_LIMIT,
     });
+
+    // Validate that page and limit are valid numbers
+    if (!Number.isFinite(page) || page < 1 || !Number.isFinite(limit) || limit < 1) {
+      console.error("[discovery] Invalid pagination after parsing", {
+        rawPage,
+        rawLimit,
+        page,
+        limit,
+      });
+      // Return gracefully with defaults instead of 500
+      return apiSuccess({
+        query: null,
+        results: [],
+        pagination: {
+          page: 1,
+          limit: DEFAULT_LIMIT,
+          total: 0,
+          totalPages: 0,
+          hasMore: false,
+        },
+        ranking: {
+          rankBy: "relevance",
+          period: "all-time",
+        },
+        counts: { post: 0, user: 0, topic: 0 },
+      });
+    }
+
+    const query = normalizeQuery(searchParams.get("q"));
     const rankBy = (searchParams.get("rankBy") || "relevance") as DiscoveryRankBy;
     const period = searchParams.get("period") || "all-time";
     const postType = searchParams.get("postType");
@@ -437,7 +470,14 @@ export async function GET(request: NextRequest) {
     const resultSets = await Promise.all(tasks);
     const combinedResults = rankResults(resultSets.flat(), rankBy);
     const total = combinedResults.length;
-    const paginatedResults = combinedResults.slice((page - 1) * limit, page * limit);
+    
+    // Validate calculations before using them
+    const skip = (page - 1) * limit;
+    const paginatedResults = combinedResults.slice(skip, skip + limit);
+    
+    // Ensure limit is never 0 to avoid division by zero
+    const safeLimit = Math.max(limit, 1);
+    const totalPages = Math.ceil(total / safeLimit);
 
     const counts = combinedResults.reduce(
       (acc, result) => {
@@ -454,7 +494,7 @@ export async function GET(request: NextRequest) {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages,
         hasMore: page * limit < total,
       },
       ranking: {
@@ -464,7 +504,7 @@ export async function GET(request: NextRequest) {
       counts,
     });
   } catch (error) {
-    console.error("Discovery API error:", error);
+    console.error("[discovery] route error:", error);
     return apiError("Failed to fetch discovery results", 500);
   }
 }
