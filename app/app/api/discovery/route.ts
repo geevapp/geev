@@ -374,18 +374,19 @@ async function searchTopics(args: {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    
+    // Parse and validate pagination parameters directly
+    const rawPage = Number(searchParams.get("page"));
+    const rawLimit = Number(searchParams.get("limit"));
+    const page = Number.isNaN(rawPage) || rawPage < 1 ? 1 : Math.floor(rawPage);
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(Math.floor(rawLimit), 100);
+
     const query = normalizeQuery(searchParams.get("q"));
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || String(DEFAULT_LIMIT), 10);
     const rankBy = (searchParams.get("rankBy") || "relevance") as DiscoveryRankBy;
     const period = searchParams.get("period") || "all-time";
     const postType = searchParams.get("postType");
     const postStatus = searchParams.get("status");
     const requestedTypes = parseRequestedTypes(searchParams.get("types"));
-
-    if (page < 1 || limit < 1 || limit > MAX_LIMIT) {
-      return apiError("Invalid pagination parameters", 400);
-    }
 
     if (!["relevance", "recent", "popular"].includes(rankBy)) {
       return apiError("Invalid ranking option", 400);
@@ -433,7 +434,11 @@ export async function GET(request: NextRequest) {
     const resultSets = await Promise.all(tasks);
     const combinedResults = rankResults(resultSets.flat(), rankBy);
     const total = combinedResults.length;
-    const paginatedResults = combinedResults.slice((page - 1) * limit, page * limit);
+    
+    // Use sanitized page and limit values
+    const skip = (page - 1) * limit;
+    const paginatedResults = combinedResults.slice(skip, skip + limit);
+    const totalPages = Math.ceil(total / limit);
 
     const counts = combinedResults.reduce(
       (acc, result) => {
@@ -450,7 +455,7 @@ export async function GET(request: NextRequest) {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
+        totalPages,
         hasMore: page * limit < total,
       },
       ranking: {
@@ -460,7 +465,7 @@ export async function GET(request: NextRequest) {
       counts,
     });
   } catch (error) {
-    console.error("Discovery API error:", error);
+    console.error("[discovery] route error:", error);
     return apiError("Failed to fetch discovery results", 500);
   }
 }

@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readJsonBody } from "@/lib/parse-json-body";
 import { checkAndAwardBadges } from "@/lib/badges";
+import { parsePaginationParam } from "@/lib/validation";
 import {
   createNotificationInTransaction,
   fanOutNotificationsInTransaction,
@@ -303,14 +304,16 @@ export async function GET(
     const { id: postId } = await params;
     const { searchParams } = new URL(request.url);
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = parsePaginationParam(searchParams.get("page"), {
+      defaultValue: 1,
+      min: 1,
+    });
+    const limit = parsePaginationParam(searchParams.get("limit"), {
+      defaultValue: 10,
+      min: 1,
+      max: 100,
+    });
     const skip = (page - 1) * limit;
-
-    // Validate pagination params
-    if (page < 1 || limit < 1 || limit > 100) {
-      return apiError("Invalid pagination parameters", 400);
-    }
 
     // Check if post exists
     const post = await prisma.post.findUnique({

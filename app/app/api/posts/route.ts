@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { readJsonBody } from "@/lib/parse-json-body";
 import { POST_SLUG_MAX_LENGTH, sanitizePostSlug } from "@/lib/post-slug";
 import { checkAndAwardBadges } from "@/lib/badges";
+import { parsePaginationParam } from "@/lib/validation";
 
 const SLUG_SUFFIX_LENGTH = 6;
 
@@ -215,8 +216,15 @@ const GET = async (request: NextRequest) => {
     const status = searchParams.get("status");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = parsePaginationParam(searchParams.get("page"), {
+      defaultValue: 1,
+      min: 1,
+    });
+    const limit = parsePaginationParam(searchParams.get("limit"), {
+      defaultValue: 10,
+      min: 1,
+      max: 100,
+    });
 
     const where: Prisma.PostWhereInput = {};
     where.moderationStatus = { notIn: ["suspended", "banned"] };

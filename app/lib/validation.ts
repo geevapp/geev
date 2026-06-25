@@ -108,3 +108,52 @@ export const validateTargetAmount = (amount: number | string): ValidationResult 
   }
   return { isValid: true };
 };
+
+/**
+ * Safely parse pagination parameters from query strings.
+ * Returns default values if parsing fails or values are invalid.
+ * @param value The query parameter value
+ * @param defaultValue The default value if parsing fails (default: based on param type)
+ * @param min Minimum allowed value (default: 0 for skip, 1 for page, 1 for limit)
+ * @param max Maximum allowed value (optional)
+ * @returns The parsed integer or default value
+ */
+export const parsePaginationParam = (
+  value: string | null,
+  options?: {
+    defaultValue?: number;
+    min?: number;
+    max?: number;
+  }
+): number => {
+  const defaultValue = options?.defaultValue ?? 1;
+  const min = options?.min ?? 1;
+  const max = options?.max;
+
+  // If no value provided, return default
+  if (!value) {
+    return defaultValue;
+  }
+
+  // Try to parse as number
+  const rawParsed = Number(value);
+
+  // Check if parsing failed (result is NaN)
+  if (Number.isNaN(rawParsed)) {
+    return defaultValue;
+  }
+
+  // Floor to integer
+  const parsed = Math.floor(rawParsed);
+
+  // Check bounds
+  if (parsed < min) {
+    return defaultValue;
+  }
+
+  if (max !== undefined && parsed > max) {
+    return max;
+  }
+
+  return parsed;
+};

@@ -234,7 +234,22 @@ describe("Discovery API", () => {
     const response = await GET(request);
     const { status, data } = await parseResponse(response);
 
+    // rankBy=unknown should return 400, but pagination params now default gracefully
     expect(status).toBe(400);
     expect(data.success).toBe(false);
   });
+
+  it("handles invalid pagination parameters gracefully", async () => {
+    const request = createMockRequest(
+      "http://localhost:3000/api/discovery?q=test&page=abc&limit=xyz",
+    );
+    const response = await GET(request);
+    const { status, data } = await parseResponse(response);
+
+    expect(status).toBe(200);
+    expect(data.success).toBe(true);
+    expect(data.data.pagination.page).toBe(1);
+    expect(data.data.pagination.limit).toBe(10);
+  });
+
 });

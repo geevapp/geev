@@ -723,9 +723,14 @@ describe('Entry API Endpoints', () => {
       });
     });
 
-    it('should reject invalid pagination parameters', async () => {
+    it('should handle invalid pagination parameters gracefully by using defaults', async () => {
+      const mockEntries = [];
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findMany = vi.fn().mockResolvedValue(mockEntries);
+      prisma.entry.count = vi.fn().mockResolvedValue(0);
+
       const request = createMockRequest(
-        `http://localhost:3000/api/posts/${post.id}/entries?page=0&limit=-1`,
+        `http://localhost:3000/api/posts/${post.id}/entries?page=abc&limit=xyz`,
       );
 
       const response = await GetEntries(request, {
@@ -733,12 +738,18 @@ describe('Entry API Endpoints', () => {
       });
       const { status, data } = await parseResponse(response);
 
-      expect(status).toBe(400);
-      expect(data.success).toBe(false);
-      expect(data.error).toBe('Invalid pagination parameters');
+      expect(status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.pagination.page).toBe(1);
+      expect(data.data.pagination.limit).toBe(10);
     });
 
-    it('should reject limit greater than 100', async () => {
+    it('should cap limit at 100', async () => {
+      const mockEntries = [];
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findMany = vi.fn().mockResolvedValue(mockEntries);
+      prisma.entry.count = vi.fn().mockResolvedValue(0);
+
       const request = createMockRequest(
         `http://localhost:3000/api/posts/${post.id}/entries?limit=101`,
       );
@@ -748,9 +759,9 @@ describe('Entry API Endpoints', () => {
       });
       const { status, data } = await parseResponse(response);
 
-      expect(status).toBe(400);
-      expect(data.success).toBe(false);
-      expect(data.error).toBe('Invalid pagination parameters');
+      expect(status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.pagination.limit).toBe(100);
     });
 
     it('should return 404 for non-existent post', async () => {
