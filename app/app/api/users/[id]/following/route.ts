@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiSuccess, apiError } from '@/lib/api-response';
+import { parsePaginationParam } from '@/lib/validation';
 
 export async function GET(
   request: NextRequest,
@@ -9,8 +10,15 @@ export async function GET(
   try {
     const { id: targetUserId } = await params;
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const skip = parseInt(searchParams.get('skip') || '0');
+    const limit = parsePaginationParam(searchParams.get('limit'), {
+      defaultValue: 20,
+      min: 1,
+      max: 100,
+    });
+    const skip = parsePaginationParam(searchParams.get('skip'), {
+      defaultValue: 0,
+      min: 0,
+    });
 
     // Following are users the target user follows
     // i.e., userId = targetUserId, followingId != null

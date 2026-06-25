@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { parsePaginationParam } from "@/lib/validation";
 import {
   getPaginatedNotifications,
   markAllAsRead,
@@ -16,8 +17,15 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const isRead = searchParams.get("isRead");
-  const page = Number.parseInt(searchParams.get("page") || "1", 10);
-  const pageSize = Number.parseInt(searchParams.get("pageSize") || "20", 10);
+  const page = parsePaginationParam(searchParams.get("page"), {
+    defaultValue: 1,
+    min: 1,
+  });
+  const pageSize = parsePaginationParam(searchParams.get("pageSize"), {
+    defaultValue: 20,
+    min: 1,
+    max: 100,
+  });
 
   const result = await getPaginatedNotifications({
     userId: currentUser.id,

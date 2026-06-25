@@ -3,6 +3,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLiveTransactions } from "@/lib/stellar";
+import { parsePaginationParam } from "@/lib/validation";
 
 /**
  * GET /api/wallet/transactions
@@ -20,11 +21,15 @@ export async function GET(request: NextRequest) {
     if (!currentUser) return apiError("Unauthorized", 401);
 
     const { searchParams } = new URL(request.url);
-    const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-    const limit = Math.min(
-      50,
-      Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)),
-    );
+    const page = parsePaginationParam(searchParams.get("page"), {
+      defaultValue: 1,
+      min: 1,
+    });
+    const limit = parsePaginationParam(searchParams.get("limit"), {
+      defaultValue: 20,
+      min: 1,
+      max: 50,
+    });
     const skip = (page - 1) * limit;
 
     const [transactions, total, user] = await Promise.all([

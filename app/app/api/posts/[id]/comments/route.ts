@@ -4,6 +4,7 @@ import { apiSuccess, apiError } from "@/lib/api-response";
 import { getCurrentUser } from "@/lib/auth";
 import { readJsonBody } from "@/lib/parse-json-body";
 import { createNotification } from "@/lib/notifications";
+import { parsePaginationParam } from "@/lib/validation";
 
 export async function GET(
   request: NextRequest,
@@ -12,8 +13,15 @@ export async function GET(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const page = parsePaginationParam(searchParams.get("page"), {
+      defaultValue: 1,
+      min: 1,
+    });
+    const limit = parsePaginationParam(searchParams.get("limit"), {
+      defaultValue: 50,
+      min: 1,
+      max: 100,
+    });
     const skip = (page - 1) * limit;
 
     const [comments, total] = await Promise.all([

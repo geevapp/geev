@@ -2,18 +2,21 @@ import { apiError, apiSuccess } from '@/lib/api-response';
 
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { parsePaginationParam } from '@/lib/validation';
 
 export async function GET (request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'all-time';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-
-    // Validate pagination parameters
-    if (page < 1 || limit < 1 || limit > 100) {
-      return apiError('Invalid pagination parameters', 400);
-    }
+    const page = parsePaginationParam(searchParams.get('page'), {
+      defaultValue: 1,
+      min: 1,
+    });
+    const limit = parsePaginationParam(searchParams.get('limit'), {
+      defaultValue: 50,
+      min: 1,
+      max: 100,
+    });
 
     let dateFilter: Date | undefined;
     if (period === 'weekly') {

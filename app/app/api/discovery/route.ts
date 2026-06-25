@@ -2,6 +2,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
+import { parsePaginationParam } from "@/lib/validation";
 
 type DiscoveryResultType = "post" | "user" | "topic";
 type DiscoveryRankBy = "relevance" | "recent" | "popular";
@@ -375,17 +376,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const query = normalizeQuery(searchParams.get("q"));
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || String(DEFAULT_LIMIT), 10);
+    const page = parsePaginationParam(searchParams.get("page"), {
+      defaultValue: 1,
+      min: 1,
+    });
+    const limit = parsePaginationParam(searchParams.get("limit"), {
+      defaultValue: DEFAULT_LIMIT,
+      min: 1,
+      max: MAX_LIMIT,
+    });
     const rankBy = (searchParams.get("rankBy") || "relevance") as DiscoveryRankBy;
     const period = searchParams.get("period") || "all-time";
     const postType = searchParams.get("postType");
     const postStatus = searchParams.get("status");
     const requestedTypes = parseRequestedTypes(searchParams.get("types"));
-
-    if (page < 1 || limit < 1 || limit > MAX_LIMIT) {
-      return apiError("Invalid pagination parameters", 400);
-    }
 
     if (!["relevance", "recent", "popular"].includes(rankBy)) {
       return apiError("Invalid ranking option", 400);
