@@ -135,13 +135,16 @@ export const parsePaginationParam = (
     return defaultValue;
   }
 
-  // Try to parse as integer
-  const parsed = parseInt(value, 10);
+  // Try to parse as number
+  const rawParsed = Number(value);
 
   // Check if parsing failed (result is NaN)
-  if (isNaN(parsed)) {
+  if (Number.isNaN(rawParsed)) {
     return defaultValue;
   }
+
+  // Floor to integer
+  const parsed = Math.floor(rawParsed);
 
   // Check bounds
   if (parsed < min) {
