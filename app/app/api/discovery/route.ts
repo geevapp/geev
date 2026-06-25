@@ -2,7 +2,6 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
-import { parsePaginationParam } from "@/lib/validation";
 
 type DiscoveryResultType = "post" | "user" | "topic";
 type DiscoveryRankBy = "relevance" | "recent" | "popular";
@@ -376,46 +375,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
-    // Parse and validate pagination parameters
-    const rawPage = searchParams.get("page");
-    const rawLimit = searchParams.get("limit");
-    
-    const page = parsePaginationParam(rawPage, {
-      defaultValue: 1,
-      min: 1,
-    });
-    const limit = parsePaginationParam(rawLimit, {
-      defaultValue: DEFAULT_LIMIT,
-      min: 1,
-      max: MAX_LIMIT,
-    });
-
-    // Validate that page and limit are valid numbers
-    if (!Number.isFinite(page) || page < 1 || !Number.isFinite(limit) || limit < 1) {
-      console.error("[discovery] Invalid pagination after parsing", {
-        rawPage,
-        rawLimit,
-        page,
-        limit,
-      });
-      // Return gracefully with defaults instead of 500
-      return apiSuccess({
-        query: null,
-        results: [],
-        pagination: {
-          page: 1,
-          limit: DEFAULT_LIMIT,
-          total: 0,
-          totalPages: 0,
-          hasMore: false,
-        },
-        ranking: {
-          rankBy: "relevance",
-          period: "all-time",
-        },
-        counts: { post: 0, user: 0, topic: 0 },
-      });
-    }
+    // Parse and validate pagination parameters directly
+    const rawPage = Number(searchParams.get("page"));
+    const rawLimit = Number(searchParams.get("limit"));
+    const page = Number.isNaN(rawPage) || rawPage < 1 ? 1 : Math.floor(rawPage);
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(Math.floor(rawLimit), 100);
 
     const query = normalizeQuery(searchParams.get("q"));
     const rankBy = (searchParams.get("rankBy") || "relevance") as DiscoveryRankBy;
@@ -471,13 +435,10 @@ export async function GET(request: NextRequest) {
     const combinedResults = rankResults(resultSets.flat(), rankBy);
     const total = combinedResults.length;
     
-    // Validate calculations before using them
+    // Use sanitized page and limit values
     const skip = (page - 1) * limit;
     const paginatedResults = combinedResults.slice(skip, skip + limit);
-    
-    // Ensure limit is never 0 to avoid division by zero
-    const safeLimit = Math.max(limit, 1);
-    const totalPages = Math.ceil(total / safeLimit);
+    const totalPages = Math.ceil(total / limit);
 
     const counts = combinedResults.reduce(
       (acc, result) => {
