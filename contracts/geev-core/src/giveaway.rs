@@ -4,7 +4,8 @@ use crate::types::{
 };
 use crate::utils::with_reentrancy_guard;
 use soroban_sdk::{
-    contract, contractevent, contractimpl, panic_with_error, token, Address, Env, String, Vec,
+    contract, contractevent, contractimpl, panic_with_error, token, Address, Bytes, Env, String,
+    Vec,
 };
 
 #[contract]
@@ -165,6 +166,43 @@ impl GiveawayContract {
         giveaway_id
     }
 
+    /// Commit phase of the commit-reveal scheme for cryptographically secure winner selection.
+    ///
+    /// The giveaway creator must call this **before the giveaway ends** to store
+    /// `sha256(secret)` on-chain.  The secret is revealed in `pick_winner` and
+    /// verified against this commitment, so no party (including validators) can
+    /// choose a favorable seed after entries close.
+    ///
+    /// # Arguments
+    /// * `creator`     – must match the giveaway creator; auth is required.
+    /// * `giveaway_id` – the target giveaway.
+    /// * `commit_hash` – exactly 32 bytes containing `sha256(secret)`.
+    pub fn commit_entropy(env: Env, creator: Address, giveaway_id: u64, commit_hash: Bytes) {
+        creator.require_auth();
+
+        let giveaway_key = DataKey::Giveaway(giveaway_id);
+        let giveaway: Giveaway = env
+            .storage()
+            .persistent()
+            .get(&giveaway_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+
+        // Only the creator may commit, and only while the giveaway is still active.
+        if giveaway.creator != creator {
+            panic_with_error!(&env, Error::NotCreator);
+        }
+        if giveaway.status != GiveawayStatus::Active {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+        if giveaway.selection_method != SelectionMethod::Random {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::CommitHash(giveaway_id), &commit_hash);
+    }
+
     pub fn enter_giveaway(env: Env, participant: Address, giveaway_id: u64) {
         participant.require_auth();
 
@@ -221,7 +259,7 @@ impl GiveawayContract {
         }
     }
 
-    pub fn pick_winner(env: Env, giveaway_id: u64) -> Address {
+    pub fn pick_winner(env: Env, giveaway_id: u64, reveal: Bytes) -> Address {
         let giveaway_key = DataKey::Giveaway(giveaway_id);
         let mut giveaway: Giveaway = env
             .storage()
@@ -245,7 +283,48 @@ impl GiveawayContract {
             panic_with_error!(&env, Error::InsufficientParticipants);
         }
 
-        let random_seed = env.prng().gen::<u64>();
+        // ── Commit-reveal verification ────────────────────────────────────────
+        // Retrieve and remove the stored commitment so it cannot be reused.
+        let commit_key = DataKey::CommitHash(giveaway_id);
+        let stored_hash: Bytes = env
+            .storage()
+            .persistent()
+            .get(&commit_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NoCommitHash));
+        env.storage().persistent().remove(&commit_key);
+
+        // Recompute sha256(reveal) and compare to the stored commitment.
+        let reveal_hash = env.crypto().sha256(&reveal);
+        let reveal_hash_bytes = Bytes::from_array(&env, &reveal_hash.to_array());
+        if reveal_hash_bytes != stored_hash {
+            panic_with_error!(&env, Error::CommitMismatch);
+        }
+
+        // ── Derive a cryptographically mixed seed ─────────────────────────────
+        // Mix the revealed secret with on-chain data that was unknown at commit
+        // time (ledger sequence + timestamp), plus giveaway-specific values.
+        // Using sha256 as a one-way mixing function prevents any single source
+        // from controlling the output.
+        let timestamp = env.ledger().timestamp();
+        let sequence = env.ledger().sequence();
+
+        let mut preimage = Bytes::new(&env);
+        preimage.append(&reveal);
+        preimage.extend_from_array(&timestamp.to_be_bytes());
+        preimage.extend_from_array(&sequence.to_be_bytes());
+        preimage.extend_from_array(&giveaway_id.to_be_bytes());
+        preimage.extend_from_array(&(giveaway.participant_count as u64).to_be_bytes());
+
+        let seed_hash = env.crypto().sha256(&preimage);
+        let seed_bytes = seed_hash.to_array();
+
+        // Fold the 32-byte hash into a u64 seed via XOR of four 8-byte chunks.
+        let random_seed = u64::from_be_bytes(seed_bytes[0..8].try_into().unwrap())
+            ^ u64::from_be_bytes(seed_bytes[8..16].try_into().unwrap())
+            ^ u64::from_be_bytes(seed_bytes[16..24].try_into().unwrap())
+            ^ u64::from_be_bytes(seed_bytes[24..32].try_into().unwrap());
+
+        // ── Winner selection (index logic unchanged) ──────────────────────────
         let mut selected_indexes: Vec<u32> = Vec::new(&env);
         let mut winners: Vec<Address> = Vec::new(&env);
 
@@ -413,13 +492,11 @@ impl GiveawayContract {
         }
 
         winners
-            .first()
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NoParticipants))
     }
 
     fn address_in_vec(addresses: &Vec<Address>, address: &Address) -> bool {
         for existing in addresses.iter() {
-            if existing == address {
+            if &existing == address {
                 return true;
             }
         }
