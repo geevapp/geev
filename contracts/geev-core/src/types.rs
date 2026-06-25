@@ -26,6 +26,10 @@ pub enum Error {
     TokenNotSupported = 20,
     UsernameTaken = 21,
     AlreadyFlagged = 22,
+    /// No commit hash was stored for this giveaway before pick_winner was called.
+    NoCommitHash = 23,
+    /// The revealed secret does not match the previously committed hash.
+    CommitMismatch = 24,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -35,6 +39,14 @@ pub enum GiveawayStatus {
     Claimable = 1,
     Completed = 2,
     Suspended = 3,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[contracttype]
+pub enum SelectionMethod {
+    Random = 0,
+    Manual = 1,
+    Merit = 2,
 }
 
 #[derive(Clone)]
@@ -58,6 +70,7 @@ pub struct Giveaway {
     pub status: GiveawayStatus,
     pub winner_count: u32,
     pub winners: Vec<Address>,
+    pub selection_method: SelectionMethod,
     pub verification_type: u32,
     pub min_reputation: u64,
 }
@@ -104,6 +117,9 @@ pub enum DataKey {
     FlagRecord(u64, Address),
     FlagCount(u64),
     Reputation(Address),
+    /// sha256(secret) committed by the giveaway creator before the draw.
+    /// Stored during the active phase; consumed (and removed) by pick_winner.
+    CommitHash(u64),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

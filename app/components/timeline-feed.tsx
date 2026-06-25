@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Gift, Heart, TrendingUp } from "lucide-react";
@@ -168,7 +168,7 @@ export function TimelineFeed() {
         onSelectType={handleCreatePost}
       />
       <CreateGiveawayModal
-        open={true}
+        open={showGiveawayModal}
         onOpenChange={setShowGiveawayModal} // Use context method
       />
       <CreateRequestModal
