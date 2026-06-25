@@ -251,3 +251,5 @@ describe("Discovery API", () => {
     expect(data.data.pagination.page).toBe(1);
     expect(data.data.pagination.limit).toBe(10);
   });
+
+});
