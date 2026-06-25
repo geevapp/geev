@@ -303,14 +303,11 @@ export async function GET(
     const { id: postId } = await params;
     const { searchParams } = new URL(request.url);
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const rawPage = Number(searchParams.get("page"));
+    const rawLimit = Number(searchParams.get("limit"));
+    const page = Number.isNaN(rawPage) || rawPage < 1 ? 1 : Math.floor(rawPage);
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(Math.floor(rawLimit), 100);
     const skip = (page - 1) * limit;
-
-    // Validate pagination params
-    if (page < 1 || limit < 1 || limit > 100) {
-      return apiError("Invalid pagination parameters", 400);
-    }
 
     // Check if post exists
     const post = await prisma.post.findUnique({

@@ -9,8 +9,10 @@ export async function GET(
   try {
     const { id: targetUserId } = await params;
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const skip = parseInt(searchParams.get('skip') || '0');
+    const rawLimit = Number(searchParams.get('limit'));
+    const rawSkip = Number(searchParams.get('skip'));
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(Math.floor(rawLimit), 100);
+    const skip = Number.isNaN(rawSkip) || rawSkip < 0 ? 0 : Math.floor(rawSkip);
 
     // Followers are users who follow the target user
     // i.e., followingId = targetUserId

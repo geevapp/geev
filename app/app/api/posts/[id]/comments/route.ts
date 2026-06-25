@@ -12,8 +12,10 @@ export async function GET(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const rawPage = Number(searchParams.get("page"));
+    const rawLimit = Number(searchParams.get("limit"));
+    const page = Number.isNaN(rawPage) || rawPage < 1 ? 1 : Math.floor(rawPage);
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(Math.floor(rawLimit), 100);
     const skip = (page - 1) * limit;
 
     const [comments, total] = await Promise.all([
