@@ -112,10 +112,15 @@ export interface WalletTransaction {
   type: "fund" | "withdraw" | "contribution_out" | "prize_in"
   amount: number
   currency: string
+  convertedAmount?: number // For currency conversions (e.g., USD to XLM)
+  convertedCurrency?: string // Target currency for conversion
+  exchangeRate?: number // Rate applied for conversion
   status: "pending" | "completed" | "failed"
   method?: string | null
   reference?: string | null
   note?: string | null
+  txHash?: string | null // Stellar transaction hash for on-chain txs
+  stellarAddress?: string | null // Destination Stellar address
   createdAt: Date
   updatedAt: Date
 }

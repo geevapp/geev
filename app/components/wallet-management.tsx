@@ -170,7 +170,7 @@ export function WalletManagement() {
       const res = await fetch("/api/wallet/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, method: "bank" }),
+        body: JSON.stringify({ amount, method: "bank", simulated: true }),
       });
 
       const data = await res.json();
@@ -193,9 +193,17 @@ export function WalletManagement() {
         setCurrentUser({ ...user, walletBalance: data.data.balance });
       }
 
-      toast("Withdrawal initiated", {
-        description: `$${amount.toFixed(2)} withdrawal is being processed.`,
-      });
+      // Show conversion info if available
+      const conversionInfo = data.data.conversionInfo;
+      if (conversionInfo) {
+        toast("Withdrawal initiated", {
+          description: `${conversionInfo.originalAmount.toFixed(2)} USD ≈ ${conversionInfo.convertedAmount.toFixed(7)} XLM`,
+        });
+      } else {
+        toast("Withdrawal initiated", {
+          description: `$${amount.toFixed(2)} withdrawal is being processed.`,
+        });
+      }
 
       setWithdrawAmount("");
       setShowWithdrawModal(false);
