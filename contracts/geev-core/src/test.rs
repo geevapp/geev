@@ -387,12 +387,12 @@ fn test_pick_winner_early_fails() {
 
     contract_client.enter_giveaway(&user, &id);
 
-    // No timestamp advance — should panic with GiveawayStillActive.
+    // No timestamp advance Ã¢â‚¬â€ should panic with GiveawayStillActive.
     let secret = Bytes::from_array(&env, &[0u8; 32]);
     contract_client.pick_winner(&id, &secret);
 }
 
-// ─── Commit-reveal error path tests ──────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Commit-reveal error path tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 #[test]
 #[should_panic]
@@ -433,7 +433,7 @@ fn test_pick_winner_without_commit_fails() {
 
     contract_client.enter_giveaway(&user, &id);
 
-    // Advance past end_time without calling commit_entropy — must panic.
+    // Advance past end_time without calling commit_entropy Ã¢â‚¬â€ must panic.
     env.ledger().with_mut(|li| li.timestamp += 100);
     let secret = Bytes::from_array(&env, &[42u8; 32]);
     contract_client.pick_winner(&id, &secret);
@@ -480,13 +480,12 @@ fn test_pick_winner_wrong_reveal_fails() {
 
     // Commit sha256(correct_secret).
     let correct_secret = Bytes::from_array(&env, &[10u8; 32]);
-    let commit_hash =
-        Bytes::from_array(&env, &env.crypto().sha256(&correct_secret).to_array());
+    let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&correct_secret).to_array());
     contract_client.commit_entropy(&creator, &id, &commit_hash);
 
     env.ledger().with_mut(|li| li.timestamp += 100);
 
-    // Reveal a *different* secret — must panic with CommitMismatch.
+    // Reveal a *different* secret Ã¢â‚¬â€ must panic with CommitMismatch.
     let wrong_secret = Bytes::from_array(&env, &[99u8; 32]);
     contract_client.pick_winner(&id, &wrong_secret);
 }
@@ -1258,7 +1257,7 @@ fn test_create_giveaway_with_non_whitelisted_token_fails() {
     );
 }
 
-// ── Profile Registry tests ────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Profile Registry tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 #[test]
 fn test_set_and_get_profile() {
@@ -1633,7 +1632,7 @@ fn test_donate_event_emits_exact_amount_and_total() {
     );
 }
 
-// ── Governance / flag_content tests ──────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Governance / flag_content tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 #[test]
 fn test_flag_content_increments_count() {
     let env = Env::default();
@@ -1718,7 +1717,7 @@ fn test_flag_counts_are_independent_per_id() {
     assert_eq!(client.get_flag_count(&1u64), 1);
 }
 
-// ── auto-suspension tests ─────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ auto-suspension tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 use crate::governance::FLAG_THRESHOLD;
 use crate::types::GiveawayStatus;
@@ -1784,7 +1783,7 @@ fn test_giveaway_suspended_at_threshold() {
     let giveaway_id: u64 = 42;
     seed_active_giveaway(&env, &contract_id, giveaway_id, &token);
 
-    // Flag FLAG_THRESHOLD - 1 times — should still be Active.
+    // Flag FLAG_THRESHOLD - 1 times Ã¢â‚¬â€ should still be Active.
     for _ in 0..FLAG_THRESHOLD - 1 {
         let flagger = Address::generate(&env);
         gov.flag_content(&flagger, &giveaway_id);
@@ -1960,7 +1959,7 @@ fn test_donate_to_suspended_request_fails() {
     aid_client.donate(&donor, &request_id, &100);
 }
 
-// ── reputation tests ──────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ reputation tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 #[test]
 fn test_reputation_starts_at_zero() {
@@ -2084,4 +2083,3 @@ fn test_reputation_accumulates_across_giveaways() {
         assert_eq!(score, 2);
     });
 }
-
