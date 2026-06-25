@@ -305,8 +305,13 @@ export async function GET(
 
     const rawPage = Number(searchParams.get("page"));
     const rawLimit = Number(searchParams.get("limit"));
-    const page = Number.isNaN(rawPage) || rawPage < 1 ? 1 : Math.floor(rawPage);
-    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(Math.floor(rawLimit), 100);
+    const page = searchParams.get("page") === null ? 1 : Math.floor(rawPage);
+    const limit = searchParams.get("limit") === null ? 10 : Math.floor(rawLimit);
+
+    if (Number.isNaN(page) || page < 1 || Number.isNaN(limit) || limit < 1 || limit > 100) {
+      return apiError("Invalid pagination parameters", 400);
+    }
+
     const skip = (page - 1) * limit;
 
     // Check if post exists
