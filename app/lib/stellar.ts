@@ -30,13 +30,14 @@ const horizon = new Horizon.Server(HORIZON_URL);
 /**
  * Verify that a given transaction hash represents a payment to `destinationAddress`
  * of at least `expectedAmount` in any supported asset.
+ * Returns the payment's `from` address along with verified amount and asset.
  * Throws with a human-readable message on failure.
  */
 export async function verifyStellarPayment(
   txHash: string,
   destinationAddress: string,
   expectedAmount: number,
-): Promise<{ amount: number; asset: string }> {
+): Promise<{ amount: number; asset: string; from: string }> {
   let tx: any;
   try {
     tx = await horizon.transactions().transaction(txHash).call();
@@ -69,7 +70,7 @@ export async function verifyStellarPayment(
   const asset =
     payment.asset_type === "native" ? "XLM" : payment.asset_code ?? "UNKNOWN";
 
-  return { amount: onChainAmount, asset };
+  return { amount: onChainAmount, asset, from: payment.from };
 }
 
 interface WithdrawalParams {
