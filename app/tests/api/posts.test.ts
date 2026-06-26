@@ -180,6 +180,34 @@ describe("Posts API", () => {
       );
     });
 
+    it("should return currentAmount as sum of helpContributions for each post", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([
+        { id: "post_help_1", title: "Help Request Post", type: "request", user: testUser },
+        { id: "post_help_2", title: "Another Help Post", type: "request", user: testUser },
+        { id: "post_no_contrib", title: "No Contributions Post", type: "request", user: testUser },
+      ]);
+      prisma.post.count = vi.fn().mockResolvedValue(3);
+      (prisma.helpContribution as any).groupBy = vi.fn().mockResolvedValue([
+        { postId: "post_help_1", _sum: { amount: 1250 } },
+        { postId: "post_help_2", _sum: { amount: 300 } },
+      ]);
+
+      const request = createMockRequest("http://localhost:3000/api/posts?type=request");
+      const response = await GET(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.posts).toHaveLength(3);
+
+      const post1 = data.data.posts.find((p: any) => p.id === "post_help_1");
+      const post2 = data.data.posts.find((p: any) => p.id === "post_help_2");
+      const post3 = data.data.posts.find((p: any) => p.id === "post_no_contrib");
+
+      expect(post1.currentAmount).toBe(1250);
+      expect(post2.currentAmount).toBe(300);
+      expect(post3.currentAmount).toBe(0);
+    });
+
     it("applies deadline active filter when filter=active", async () => {
       prisma.post.findMany = vi.fn().mockResolvedValue([]);
       prisma.post.count = vi.fn().mockResolvedValue(0);
