@@ -313,14 +313,6 @@
                     },
                     {
                       "key": {
-                        "symbol": "selection_method"
-                      },
-                      "val": {
-                        "u32": 0
-                      }
-                    },
-                    {
-                      "key": {
                         "symbol": "status"
                       },
                       "val": {
