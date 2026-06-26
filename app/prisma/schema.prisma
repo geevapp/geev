@@ -582,19 +582,22 @@ model AnalyticsEvent {
 }
 
 model WalletTransaction {
-  id             String            @id @default(uuid())
-  userId         String            @map("user_id")
-  type           TransactionType
-  amount         Float
-  currency       String            @default("USD") @db.VarChar(10)
-  status         TransactionStatus @default(pending)
-  method         String?           @db.VarChar(50)
-  reference      String?           @db.VarChar(255)
-  note           String?
-  txHash         String?           @unique
-  stellarAddress String?
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
+  id                String            @id @default(uuid())
+  userId            String            @map("user_id")
+  type              TransactionType
+  amount            Float             // Original amount in original currency
+  currency          String            @default("USD") @db.VarChar(10)
+  convertedAmount   Float?            // Converted amount (for USD->XLM conversions)
+  convertedCurrency String?           @db.VarChar(10) // Target currency for conversion
+  exchangeRate      Float?            // Exchange rate applied (for audit trail)
+  status            TransactionStatus @default(pending)
+  method            String?           @db.VarChar(50)
+  reference         String?           @db.VarChar(255)
+  note              String?
+  txHash            String?           // Stellar transaction hash
+  stellarAddress    String?           // Destination Stellar address
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

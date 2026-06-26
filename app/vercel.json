@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/expire-posts",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/prune-auth",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
