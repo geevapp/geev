@@ -1,8 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const secret = new TextEncoder().encode(
-  process.env.NEXTAUTH_SECRET || "your-secret-key-change-in-production",
-);
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error("NEXTAUTH_SECRET is missing. It must be set in production config.");
+}
+
+const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
 
 export interface JWTPayload {
   userId: string;
@@ -45,18 +47,6 @@ export function getTokenFromRequest(request: Request): string | null {
   const authHeader = request.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
     return authHeader.slice(7);
-  }
-
-  // Try to get from cookies
-  const cookieHeader = request.headers.get("cookie");
-  if (cookieHeader) {
-    const cookies = cookieHeader.split(";");
-    for (const cookie of cookies) {
-      const [name, value] = cookie.trim().split("=");
-      if (name === "token" || name === "auth-token") {
-        return value;
-      }
-    }
   }
 
   return null;

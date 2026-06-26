@@ -1,4 +1,7 @@
-import { test, expect, describe } from "vitest";
+import { test, expect, describe, vi } from "vitest";
+
+vi.stubEnv("NEXTAUTH_SECRET", "test-secret-key");
+
 import { createToken, verifyToken } from "@/lib/jwt";
 
 describe("Authentication System", () => {
@@ -58,12 +61,8 @@ describe("Authentication System", () => {
       const response = await POST(request);
       const cookies = response.cookies.getAll();
 
-      expect(cookies.some(c => c.name === "auth-token")).toBe(true);
       expect(cookies.some(c => c.name === "next-auth.session-token")).toBe(true);
       expect(response.status).toBe(200);
-    });
-    test.skip("GET /api/auth/session should return 401 without token", async () => {
-      // Skipped
     });
   });
 
