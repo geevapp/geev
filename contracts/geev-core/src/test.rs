@@ -4,13 +4,11 @@ use crate::giveaway::{GiveawayContract, GiveawayContractClient};
 use crate::governance::{GovernanceContract, GovernanceContractClient};
 use crate::mutual_aid::{MutualAidContract, MutualAidContractClient};
 use crate::profile::{ProfileContract, ProfileContractClient};
-use crate::types::{
-    DataKey, Giveaway, HelpRequest, HelpRequestStatus, ParticipantVerification, SelectionMethod,
-};
+use crate::types::{DataKey, Giveaway, HelpRequest, HelpRequestStatus, ParticipantVerification};
 use soroban_sdk::symbol_short;
 use soroban_sdk::{
     testutils::{Address as _, Events as _, Ledger},
-    token, vec, Address, Bytes, Env, FromVal, IntoVal, String, Symbol, Val, Vec,
+    token, vec, Address, Env, FromVal, IntoVal, String, Symbol, Val, Vec,
 };
 
 #[test]
@@ -63,16 +61,11 @@ fn test_giveaway_flow() {
     contract_client.enter_giveaway(&user1, &target_giveaway_id);
     contract_client.enter_giveaway(&user2, &target_giveaway_id);
 
-    // Commit a secret hash before the giveaway ends.
-    let secret = Bytes::from_array(&env, &[1u8; 32]);
-    let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&secret).to_array());
-    contract_client.commit_entropy(&creator, &target_giveaway_id, &commit_hash);
-
     env.ledger().with_mut(|li| {
         li.timestamp += 100;
     });
 
-    let winner = contract_client.pick_winner(&target_giveaway_id, &secret);
+    let winner = contract_client.pick_winner(&target_giveaway_id);
 
     assert!(winner == user1 || winner == user2);
 
@@ -225,14 +218,9 @@ fn test_multi_winner_giveaway_selects_unique_winners() {
     contract_client.enter_giveaway(&participant2, &giveaway_id);
     contract_client.enter_giveaway(&participant3, &giveaway_id);
 
-    // Commit a secret hash before the giveaway ends.
-    let secret = Bytes::from_array(&env, &[2u8; 32]);
-    let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&secret).to_array());
-    contract_client.commit_entropy(&creator, &giveaway_id, &commit_hash);
-
     env.ledger().with_mut(|li| li.timestamp += 100);
 
-    let winner = contract_client.pick_winner(&giveaway_id, &secret);
+    let winner = contract_client.pick_winner(&giveaway_id);
     assert!(winner == participant1 || winner == participant2 || winner == participant3);
 
     let winners: Vec<Address> = env.as_contract(&contract_id, || {
@@ -387,107 +375,7 @@ fn test_pick_winner_early_fails() {
 
     contract_client.enter_giveaway(&user, &id);
 
-    // No timestamp advance Ã¢â‚¬â€ should panic with GiveawayStillActive.
-    let secret = Bytes::from_array(&env, &[0u8; 32]);
-    contract_client.pick_winner(&id, &secret);
-}
-
-// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Commit-reveal error path tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-
-#[test]
-#[should_panic]
-fn test_pick_winner_without_commit_fails() {
-    // pick_winner must panic when no commit hash was stored (NoCommitHash).
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
-
-    let token_admin = Address::generate(&env);
-    let mock_token = env
-        .register_stellar_asset_contract_v2(token_admin.clone())
-        .address();
-    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
-
-    let creator = Address::generate(&env);
-    let user = Address::generate(&env);
-
-    token_admin_client.mint(&creator, &1000);
-
-    env.as_contract(&contract_id, || {
-        env.storage()
-            .instance()
-            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
-    });
-
-    let id = contract_client.create_giveaway(
-        &creator,
-        &mock_token,
-        &500,
-        &String::from_str(&env, "No Commit Test"),
-        &60,
-        &1,
-        &None,
-    );
-
-    contract_client.enter_giveaway(&user, &id);
-
-    // Advance past end_time without calling commit_entropy Ã¢â‚¬â€ must panic.
-    env.ledger().with_mut(|li| li.timestamp += 100);
-    let secret = Bytes::from_array(&env, &[42u8; 32]);
-    contract_client.pick_winner(&id, &secret);
-}
-
-#[test]
-#[should_panic]
-fn test_pick_winner_wrong_reveal_fails() {
-    // pick_winner must panic when the revealed secret does not match the commit (CommitMismatch).
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let contract_id = env.register(GiveawayContract, ());
-    let contract_client = GiveawayContractClient::new(&env, &contract_id);
-
-    let token_admin = Address::generate(&env);
-    let mock_token = env
-        .register_stellar_asset_contract_v2(token_admin.clone())
-        .address();
-    let token_admin_client = token::StellarAssetClient::new(&env, &mock_token);
-
-    let creator = Address::generate(&env);
-    let user = Address::generate(&env);
-
-    token_admin_client.mint(&creator, &1000);
-
-    env.as_contract(&contract_id, || {
-        env.storage()
-            .instance()
-            .set(&DataKey::AllowedToken(mock_token.clone()), &true);
-    });
-
-    let id = contract_client.create_giveaway(
-        &creator,
-        &mock_token,
-        &500,
-        &String::from_str(&env, "Mismatch Test"),
-        &60,
-        &1,
-        &None,
-    );
-
-    contract_client.enter_giveaway(&user, &id);
-
-    // Commit sha256(correct_secret).
-    let correct_secret = Bytes::from_array(&env, &[10u8; 32]);
-    let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&correct_secret).to_array());
-    contract_client.commit_entropy(&creator, &id, &commit_hash);
-
-    env.ledger().with_mut(|li| li.timestamp += 100);
-
-    // Reveal a *different* secret Ã¢â‚¬â€ must panic with CommitMismatch.
-    let wrong_secret = Bytes::from_array(&env, &[99u8; 32]);
-    contract_client.pick_winner(&id, &wrong_secret);
+    contract_client.pick_winner(&id);
 }
 
 #[test]
@@ -810,16 +698,11 @@ fn test_distribute_prize() {
 
     contract_client.enter_giveaway(&winner, &giveaway_id);
 
-    // Commit a secret hash before the giveaway ends.
-    let secret = Bytes::from_array(&env, &[3u8; 32]);
-    let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&secret).to_array());
-    contract_client.commit_entropy(&creator, &giveaway_id, &commit_hash);
-
     env.ledger().with_mut(|li| {
         li.timestamp += 100;
     });
 
-    let picked_winner = contract_client.pick_winner(&giveaway_id, &secret);
+    let picked_winner = contract_client.pick_winner(&giveaway_id);
     assert_eq!(picked_winner, winner);
 
     assert_eq!(token_client.balance(&winner), 0);
@@ -1113,16 +996,11 @@ fn test_distribute_prize_reentrancy_protection() {
 
     contract_client.enter_giveaway(&winner, &giveaway_id);
 
-    // Commit a secret hash before the giveaway ends.
-    let secret = Bytes::from_array(&env, &[4u8; 32]);
-    let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&secret).to_array());
-    contract_client.commit_entropy(&creator, &giveaway_id, &commit_hash);
-
     env.ledger().with_mut(|li| {
         li.timestamp += 100;
     });
 
-    contract_client.pick_winner(&giveaway_id, &secret);
+    contract_client.pick_winner(&giveaway_id);
 
     // Simulate the lock already being held before distribute_prize is called
     // as if a reentrant call is in progress
@@ -1257,7 +1135,7 @@ fn test_create_giveaway_with_non_whitelisted_token_fails() {
     );
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Profile Registry tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Profile Registry tests ────────────────────────────────────────────────────
 
 #[test]
 fn test_set_and_get_profile() {
@@ -1421,16 +1299,11 @@ fn test_withdraw_fees() {
 
     giveaway_client.enter_giveaway(&winner, &giveaway_id);
 
-    // Commit a secret hash before the giveaway ends.
-    let secret = Bytes::from_array(&env, &[5u8; 32]);
-    let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&secret).to_array());
-    giveaway_client.commit_entropy(&creator, &giveaway_id, &commit_hash);
-
     env.ledger().with_mut(|li| {
         li.timestamp += 100;
     });
 
-    giveaway_client.pick_winner(&giveaway_id, &secret);
+    giveaway_client.pick_winner(&giveaway_id);
     giveaway_client.distribute_prize(&giveaway_id);
 
     // Verify fees were collected (5 tokens = 1% of 500)
@@ -1632,7 +1505,7 @@ fn test_donate_event_emits_exact_amount_and_total() {
     );
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Governance / flag_content tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Governance / flag_content tests ──────────────────────────────────────────
 #[test]
 fn test_flag_content_increments_count() {
     let env = Env::default();
@@ -1717,7 +1590,7 @@ fn test_flag_counts_are_independent_per_id() {
     assert_eq!(client.get_flag_count(&1u64), 1);
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ auto-suspension tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── auto-suspension tests ─────────────────────────────────────────────────────
 
 use crate::governance::FLAG_THRESHOLD;
 use crate::types::GiveawayStatus;
@@ -1736,7 +1609,6 @@ fn seed_active_giveaway(env: &Env, contract_id: &Address, giveaway_id: u64, toke
         status: GiveawayStatus::Active,
         winner_count: 1,
         winners: Vec::new(env),
-        selection_method: SelectionMethod::Random,
         verification_type: 0,
         min_reputation: 0,
     };
@@ -1783,7 +1655,7 @@ fn test_giveaway_suspended_at_threshold() {
     let giveaway_id: u64 = 42;
     seed_active_giveaway(&env, &contract_id, giveaway_id, &token);
 
-    // Flag FLAG_THRESHOLD - 1 times Ã¢â‚¬â€ should still be Active.
+    // Flag FLAG_THRESHOLD - 1 times — should still be Active.
     for _ in 0..FLAG_THRESHOLD - 1 {
         let flagger = Address::generate(&env);
         gov.flag_content(&flagger, &giveaway_id);
@@ -1908,7 +1780,6 @@ fn test_enter_suspended_giveaway_fails() {
                 status: GiveawayStatus::Suspended,
                 winner_count: 1,
                 winners: Vec::new(&env),
-                selection_method: SelectionMethod::Random,
                 verification_type: 0,
                 min_reputation: 0,
             },
@@ -1959,7 +1830,7 @@ fn test_donate_to_suspended_request_fails() {
     aid_client.donate(&donor, &request_id, &100);
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ reputation tests Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── reputation tests ──────────────────────────────────────────────────────────
 
 #[test]
 fn test_reputation_starts_at_zero() {
@@ -2009,13 +1880,8 @@ fn test_reputation_increments_after_distribute_prize() {
 
     client.enter_giveaway(&participant, &giveaway_id);
 
-    // Commit a secret hash before the giveaway ends.
-    let secret = Bytes::from_array(&env, &[6u8; 32]);
-    let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&secret).to_array());
-    client.commit_entropy(&creator, &giveaway_id, &commit_hash);
-
     env.ledger().with_mut(|li| li.timestamp += 100);
-    client.pick_winner(&giveaway_id, &secret);
+    client.pick_winner(&giveaway_id);
     client.distribute_prize(&giveaway_id);
 
     // Creator's reputation should now be 1.
@@ -2054,7 +1920,7 @@ fn test_reputation_accumulates_across_giveaways() {
     });
 
     // Complete two giveaways with the same creator.
-    for i in 0..2u32 {
+    for _ in 0..2u32 {
         let giveaway_id = client.create_giveaway(
             &creator,
             &mock_token,
@@ -2065,12 +1931,8 @@ fn test_reputation_accumulates_across_giveaways() {
             &None,
         );
         client.enter_giveaway(&participant, &giveaway_id);
-        // Each iteration uses a distinct secret byte to avoid hash collisions.
-        let secret = Bytes::from_array(&env, &[7u8 + i as u8; 32]);
-        let commit_hash = Bytes::from_array(&env, &env.crypto().sha256(&secret).to_array());
-        client.commit_entropy(&creator, &giveaway_id, &commit_hash);
         env.ledger().with_mut(|li| li.timestamp += 100);
-        client.pick_winner(&giveaway_id, &secret);
+        client.pick_winner(&giveaway_id);
         client.distribute_prize(&giveaway_id);
     }
 
