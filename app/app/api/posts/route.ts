@@ -288,7 +288,29 @@ const GET = async (request: NextRequest) => {
       prisma.post.count({ where }),
     ]);
 
-    return apiSuccess({ posts, page, limit, total });
+    const postIds = posts.map((p: { id: string }) => p.id);
+    const contributionAggregates =
+      postIds.length > 0
+        ? await prisma.helpContribution.groupBy({
+            by: ["postId"],
+            where: { postId: { in: postIds } },
+            _sum: { amount: true },
+          })
+        : [];
+
+    const contributionMap = new Map<string, number>(
+      contributionAggregates.map((agg: { postId: string; _sum: { amount: number | null } }) => [
+        agg.postId,
+        agg._sum.amount ?? 0,
+      ]),
+    );
+
+    const postsWithCurrentAmount = posts.map((post: { id: string }) => ({
+      ...post,
+      currentAmount: contributionMap.get(post.id) ?? 0,
+    }));
+
+    return apiSuccess({ posts: postsWithCurrentAmount, page, limit, total });
   } catch (error) {
     return apiError("Failed to fetch posts", 500);
   }

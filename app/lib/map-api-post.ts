@@ -40,6 +40,7 @@ export function mapApiPostToClientPost(apiPost: Record<string, unknown> | null |
       (apiPost.entriesCount as number) ??
       (typeof _count?.entries === "number" ? _count.entries : 0) ??
       (Array.isArray(apiPost.entries) ? apiPost.entries.length : 0),
+    currentAmount: (apiPost.currentAmount as number | undefined) ?? 0,
     author: {
       id: (user?.id as string) ?? (apiPost.userId as string) ?? "",
       name: (user?.name as string) ?? "Unknown User",
