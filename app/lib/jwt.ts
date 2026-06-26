@@ -1,10 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 
-if (!process.env.NEXTAUTH_SECRET) {
+const secretValue = process.env.NEXTAUTH_SECRET;
+if (!secretValue) {
   throw new Error("NEXTAUTH_SECRET is missing. It must be set in production config.");
 }
 
-const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+const secret = new TextEncoder().encode(secretValue);
 
 export interface JWTPayload {
   userId: string;
