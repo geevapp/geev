@@ -45,6 +45,14 @@ pub struct ParticipantVerification {
     pub uses_reputation: bool,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[contracttype]
+pub enum SelectionMethod {
+    Random = 0,
+    Manual = 1,
+    Merit = 2,
+}
+
 #[derive(Clone)]
 #[contracttype]
 pub struct Giveaway {
@@ -60,6 +68,7 @@ pub struct Giveaway {
     pub winners: Vec<Address>,
     pub verification_type: u32,
     pub min_reputation: u64,
+    pub selection_method: SelectionMethod,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

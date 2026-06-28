@@ -1,5 +1,5 @@
 use crate::profile::ProfileContract;
-use crate::types::{DataKey, Error, Giveaway, GiveawayStatus, ParticipantVerification};
+use crate::types::{DataKey, Error, Giveaway, GiveawayStatus, ParticipantVerification, SelectionMethod};
 use crate::utils::with_reentrancy_guard;
 use soroban_sdk::{
     contract, contractevent, contractimpl, panic_with_error, token, Address, Env, String, Vec,
@@ -43,6 +43,31 @@ impl GiveawayContract {
         winner_count: u32,
         verification: Option<ParticipantVerification>,
     ) -> u64 {
+        Self::create_giveaway_with_selection(
+            env,
+            creator,
+            token,
+            amount,
+            title,
+            duration_seconds,
+            winner_count,
+            verification,
+            SelectionMethod::Random,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn create_giveaway_with_selection(
+        env: Env,
+        creator: Address,
+        token: Address,
+        amount: i128,
+        title: String,
+        duration_seconds: u64,
+        winner_count: u32,
+        verification: Option<ParticipantVerification>,
+        selection_method: SelectionMethod,
+    ) -> u64 {
         creator.require_auth();
 
         if winner_count == 0 {
@@ -83,6 +108,7 @@ impl GiveawayContract {
             winners: Vec::new(&env),
             verification_type,
             min_reputation,
+            selection_method,
         };
 
         if let Some(verification) = &verification {
@@ -170,24 +196,17 @@ impl GiveawayContract {
 
     pub fn pick_winner(env: Env, giveaway_id: u64) -> Address {
         let giveaway_key = DataKey::Giveaway(giveaway_id);
-        let mut giveaway: Giveaway = env
+        let giveaway: Giveaway = env
             .storage()
             .persistent()
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
-        if giveaway.status != GiveawayStatus::Active {
+        if giveaway.selection_method != SelectionMethod::Random {
             panic_with_error!(&env, Error::InvalidStatus);
         }
-        if env.ledger().timestamp() <= giveaway.end_time {
-            panic_with_error!(&env, Error::GiveawayStillActive);
-        }
-        if giveaway.participant_count == 0 {
-            panic_with_error!(&env, Error::NoParticipants);
-        }
-        if giveaway.participant_count < giveaway.winner_count {
-            panic_with_error!(&env, Error::InsufficientParticipants);
-        }
+
+        ensure_ready_for_selection(&env, &giveaway);
 
         let random_seed = env.prng().gen::<u64>();
         let mut selected_indexes: Vec<u32> = Vec::new(&env);
@@ -220,50 +239,9 @@ impl GiveawayContract {
                 .get(&participant_key)
                 .unwrap_or_else(|| panic_with_error!(&env, Error::InvalidIndex));
             winners.push_back(winner_address.clone());
-
-            // Publish the approximate prize share for each winner.
-            let fee_key = DataKey::Fee;
-            let fee_bps: u32 = env.storage().instance().get(&fee_key).unwrap_or(100);
-            let fee_amount = giveaway
-                .amount
-                .checked_mul(fee_bps as i128)
-                .and_then(|v| v.checked_div(10_000))
-                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
-            let net_prize = giveaway
-                .amount
-                .checked_sub(fee_amount)
-                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
-            let winner_count = target_count as i128;
-            let base_prize = net_prize
-                .checked_div(winner_count)
-                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
-            let prize_amount = if i == 0 {
-                net_prize
-                    .checked_sub(
-                        base_prize
-                            .checked_mul(winner_count - 1)
-                            .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow)),
-                    )
-                    .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow))
-            } else {
-                base_prize
-            };
-
-            GiveawayWinnerSelected {
-                winner: winner_address.clone(),
-                giveaway_id,
-                prize_amount,
-            }
-            .publish(&env);
         }
 
-        giveaway.winners = winners.clone();
-        giveaway.status = GiveawayStatus::Claimable;
-        env.storage().persistent().set(&giveaway_key, &giveaway);
-
-        winners
-            .first()
-            .unwrap_or_else(|| panic_with_error!(&env, Error::NoParticipants))
+        finalize_winners(&env, &giveaway_key, giveaway, winners)
     }
 
     pub fn distribute_prize(env: Env, giveaway_id: u64) {
@@ -413,5 +391,203 @@ impl GiveawayContract {
             // 4. Set 'CollectedFees(token)' to 0
             env.storage().persistent().set(&collected_fees_key, &0i128);
         }
+    }
+
+    // Helper function to ensure the giveaway is ready for selection
+    fn ensure_ready_for_selection(env: &Env, giveaway: &Giveaway) {
+        if giveaway.status != GiveawayStatus::Active {
+            panic_with_error!(env, Error::InvalidStatus);
+        }
+        if env.ledger().timestamp() <= giveaway.end_time {
+            panic_with_error!(env, Error::GiveawayStillActive);
+        }
+        if giveaway.participant_count == 0 {
+            panic_with_error!(env, Error::NoParticipants);
+        }
+        if giveaway.participant_count < giveaway.winner_count {
+            panic_with_error!(env, Error::InsufficientParticipants);
+        }
+    }
+
+    // Helper function to check if caller is creator or admin
+    fn ensure_creator_or_admin(env: &Env, caller: &Address, giveaway: &Giveaway) {
+        if *caller == giveaway.creator {
+            return;
+        }
+        let admin_key = DataKey::Admin;
+        let admin: Option<Address> = env.storage().instance().get(&admin_key);
+        if let Some(admin) = admin {
+            if *caller == admin {
+                return;
+            }
+        }
+        panic_with_error!(env, Error::NotCreator);
+    }
+
+    // Helper function to validate manual winners are all valid participants
+    fn validate_manual_winners(env: &Env, giveaway_id: u64, winners: &Vec<Address>) {
+        for winner in winners.iter() {
+            let has_entered_key = DataKey::HasEntered(giveaway_id, winner.clone());
+            let has_entered: bool = env.storage().persistent().get(&has_entered_key).unwrap_or(false);
+            if !has_entered {
+                panic_with_error!(env, Error::InvalidIndex);
+            }
+        }
+        // Check for duplicates
+        for i in 0..winners.len() {
+            for j in i+1..winners.len() {
+                if winners.get_unchecked(i) == winners.get_unchecked(j) {
+                    panic_with_error!(env, Error::InvalidIndex);
+                }
+            }
+        }
+    }
+
+    // Helper function to select winners by merit (reputation)
+    fn select_merit_winners(env: &Env, giveaway_id: u64, winner_count: u32, participant_count: u32) -> Vec<Address> {
+        let mut participants_with_reputation = Vec::new(env);
+        for i in 0..participant_count {
+            let participant_key = DataKey::ParticipantIndex(giveaway_id, i);
+            let participant: Address = env.storage().persistent().get(&participant_key).unwrap();
+            let reputation = ProfileContract::get_reputation(env.clone(), participant.clone());
+            participants_with_reputation.push_back((participant, reputation));
+        }
+        // Sort by reputation descending (very simple sort)
+        let mut sorted = Vec::new(env);
+        for pr in participants_with_reputation.iter() {
+            let mut inserted = false;
+            for i in 0..sorted.len() {
+                let existing = sorted.get_unchecked(i);
+                if pr.1 > existing.1 {
+                    let mut temp = Vec::new(env);
+                    for j in 0..i {
+                        temp.push_back(sorted.get_unchecked(j));
+                    }
+                    temp.push_back(pr);
+                    for j in i..sorted.len() {
+                        temp.push_back(sorted.get_unchecked(j));
+                    }
+                    sorted = temp;
+                    inserted = true;
+                    break;
+                }
+            }
+            if !inserted {
+                sorted.push_back(pr);
+            }
+        }
+        // Take top N winners
+        let mut winners = Vec::new(env);
+        for i in 0..winner_count {
+            winners.push_back(sorted.get_unchecked(i as usize).0.clone());
+        }
+        winners
+    }
+
+    // Helper function to finalize winners and emit events
+    fn finalize_winners(env: &Env, giveaway_key: &DataKey, mut giveaway: Giveaway, winners: Vec<Address>) -> Address {
+        // Emit winner events
+        let fee_key = DataKey::Fee;
+        let fee_bps: u32 = env.storage().instance().get(&fee_key).unwrap_or(100);
+        let fee_amount = giveaway
+            .amount
+            .checked_mul(fee_bps as i128)
+            .and_then(|v| v.checked_div(10_000))
+            .unwrap_or_else(|| panic_with_error!(env, Error::ArithmeticOverflow));
+        let net_prize = giveaway
+            .amount
+            .checked_sub(fee_amount)
+            .unwrap_or_else(|| panic_with_error!(env, Error::ArithmeticOverflow));
+        let winner_count = giveaway.winner_count as i128;
+        let base_prize = net_prize
+            .checked_div(winner_count)
+            .unwrap_or_else(|| panic_with_error!(env, Error::ArithmeticOverflow));
+        
+        for (index, winner) in winners.iter().enumerate() {
+            let prize_amount = if index == 0 {
+                net_prize
+                    .checked_sub(
+                        base_prize
+                            .checked_mul(winner_count - 1)
+                            .unwrap_or_else(|| panic_with_error!(env, Error::ArithmeticOverflow)),
+                    )
+                    .unwrap_or_else(|| panic_with_error!(env, Error::ArithmeticOverflow))
+            } else {
+                base_prize
+            };
+            GiveawayWinnerSelected {
+                winner: winner.clone(),
+                giveaway_id: giveaway.id,
+                prize_amount,
+            }.publish(env);
+        }
+
+        giveaway.winners = winners.clone();
+        giveaway.status = GiveawayStatus::Claimable;
+        env.storage().persistent().set(giveaway_key, &giveaway);
+        
+        winners.first().unwrap_or_else(|| panic_with_error!(env, Error::NoParticipants))
+    }
+
+    /// Finalize a giveaway with manually selected winners
+    /// 
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `caller` - The address calling this function (must be creator or admin)
+    /// * `giveaway_id` - The ID of the giveaway to finalize
+    /// * `winners` - The list of winner addresses
+    pub fn finalize_manual_winners(env: Env, caller: Address, giveaway_id: u64, winners: Vec<Address>) -> Address {
+        caller.require_auth();
+
+        let giveaway_key = DataKey::Giveaway(giveaway_id);
+        let giveaway: Giveaway = env
+            .storage()
+            .persistent()
+            .get(&giveaway_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+
+        // Validate
+        ensure_creator_or_admin(&env, &caller, &giveaway);
+        ensure_ready_for_selection(&env, &giveaway);
+        
+        if giveaway.selection_method != SelectionMethod::Manual {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+
+        if winners.len() != giveaway.winner_count as usize {
+            panic_with_error!(&env, Error::InvalidWinnerCount);
+        }
+
+        validate_manual_winners(&env, giveaway_id, &winners);
+
+        finalize_winners(&env, &giveaway_key, giveaway, winners)
+    }
+
+    /// Finalize a giveaway with merit-based selected winners (by reputation)
+    /// 
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `caller` - The address calling this function (must be creator or admin)
+    /// * `giveaway_id` - The ID of the giveaway to finalize
+    pub fn finalize_merit_winners(env: Env, caller: Address, giveaway_id: u64) -> Address {
+        caller.require_auth();
+
+        let giveaway_key = DataKey::Giveaway(giveaway_id);
+        let giveaway: Giveaway = env
+            .storage()
+            .persistent()
+            .get(&giveaway_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+
+        // Validate
+        ensure_creator_or_admin(&env, &caller, &giveaway);
+        ensure_ready_for_selection(&env, &giveaway);
+        
+        if giveaway.selection_method != SelectionMethod::Merit {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+
+        let winners = select_merit_winners(&env, giveaway_id, giveaway.winner_count, giveaway.participant_count);
+        finalize_winners(&env, &giveaway_key, giveaway, winners)
     }
 }
