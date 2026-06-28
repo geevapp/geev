@@ -35,6 +35,7 @@ pub enum GiveawayStatus {
     Claimable = 1,
     Completed = 2,
     Suspended = 3,
+    UnderAppeal = 4,
 }
 
 #[derive(Clone)]
@@ -70,6 +71,7 @@ pub enum HelpRequestStatus {
     Closed = 2,
     Cancelled = 3,
     Suspended = 4,
+    UnderAppeal = 5,
 }
 
 #[derive(Clone)]

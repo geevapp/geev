@@ -1,4 +1,4 @@
-use crate::types::{DataKey, Error};
+use crate::types::{DataKey, Error, GiveawayStatus, HelpRequestStatus};
 use crate::{access::check_admin, types::HelpRequest};
 use soroban_sdk::{contract, contractevent, contractimpl, panic_with_error, token, Address, Env};
 
@@ -21,6 +21,13 @@ pub struct TokenAdded {
 pub struct RequestVerificationChanged {
     request_id: u64,
     is_verified: bool,
+}
+
+#[contractevent]
+pub struct AppealResolved {
+    #[topic]
+    target_id: u64,
+    restored: bool,
 }
 
 #[contractimpl]
@@ -94,5 +101,48 @@ impl AdminContract {
             is_verified: request.is_verified,
         }
         .publish(&env);
+    }
+
+    /// Resolve an appeal for suspended content - callable only by Admin
+    /// Allows admin to restore the content or keep it suspended
+    pub fn resolve_appeal(env: Env, target_id: u64, restore: bool) {
+        check_admin(&env);
+
+        let giveaway_key = DataKey::Giveaway(target_id);
+        let request_key = DataKey::HelpRequest(target_id);
+
+        let mut resolved = false;
+
+        // Try Giveaway first.
+        if let Some(mut giveaway) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, crate::types::Giveaway>(&giveaway_key)
+        {
+            if giveaway.status == GiveawayStatus::UnderAppeal {
+                giveaway.status = if restore { GiveawayStatus::Active } else { GiveawayStatus::Suspended };
+                env.storage().persistent().set(&giveaway_key, &giveaway);
+                resolved = true;
+            }
+        }
+
+        // Try HelpRequest if giveaway wasn't found/resolved.
+        if !resolved {
+            if let Some(mut request) = env
+                .storage()
+                .persistent()
+                .get::<DataKey, crate::types::HelpRequest>(&request_key)
+            {
+                if request.status == HelpRequestStatus::UnderAppeal {
+                    request.status = if restore { HelpRequestStatus::Open } else { HelpRequestStatus::Suspended };
+                    env.storage().persistent().set(&request_key, &request);
+                    resolved = true;
+                }
+            }
+        }
+
+        if resolved {
+            AppealResolved { target_id, restored: restore }.publish(&env);
+        }
     }
 }
