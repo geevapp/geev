@@ -41,7 +41,18 @@ export async function POST(request: NextRequest) {
       if (!stellarAddress)
         return apiError("stellarAddress is required for on-chain funding", 400);
 
-      let verified: { amount: number; asset: string };
+      // Read the custodial address from environment
+      const custodialAddress = process.env.STELLAR_CUSTODIAL_ADDRESS;
+      if (!custodialAddress) {
+        return apiError("Platform custodial address not configured", 500);
+      }
+
+      // Validate destination binding: stellarAddress must equal custodial address
+      if (stellarAddress !== custodialAddress) {
+        return apiError("Invalid destination address", 400);
+      }
+
+      let verified: { amount: number; asset: string; from: string };
       try {
         verified = await verifyStellarPayment(txHash, stellarAddress, amount);
       } catch (err) {
@@ -53,38 +64,60 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const [transaction, updatedUser] = await prisma.$transaction([
-        prisma.walletTransaction.create({
-          data: {
-            userId: currentUser.id,
-            type: "fund",
-            amount: verified.amount,
-            currency: verified.asset,
-            status: "completed",
-            method,
-            note: note ?? null,
-            txHash,
-            stellarAddress,
-          },
-        }),
-        prisma.user.update({
-          where: { id: currentUser.id },
-          data: { walletBalance: { increment: verified.amount } },
-          select: { walletBalance: true, updatedAt: true },
-        }),
-      ]);
+      // Validate ownership binding: payment sender must match caller's walletAddress
+      if (verified.from !== currentUser.walletAddress) {
+        return apiError("Payment sender does not match your wallet address", 403);
+      }
 
-      return apiSuccess(
-        {
-          balance: updatedUser.walletBalance,
-          transaction,
-          lastSync: updatedUser.updatedAt.toISOString(),
-          simulated: false,
-          txHash,
-        },
-        "Wallet funded successfully",
-        201,
-      );
+      try {
+        // Check if txHash already exists with a completed "fund" record (replay protection)
+        const existingTransaction = await prisma.walletTransaction.findUnique({
+          where: { txHash },
+        });
+
+        if (existingTransaction && existingTransaction.type === "fund" && existingTransaction.status === "completed") {
+          return apiError("Transaction already credited", 409);
+        }
+
+        const [transaction, updatedUser] = await prisma.$transaction([
+          prisma.walletTransaction.create({
+            data: {
+              userId: currentUser.id,
+              type: "fund",
+              amount: verified.amount,
+              currency: verified.asset,
+              status: "completed",
+              method,
+              note: note ?? null,
+              txHash,
+              stellarAddress,
+            },
+          }),
+          prisma.user.update({
+            where: { id: currentUser.id },
+            data: { walletBalance: { increment: verified.amount } },
+            select: { walletBalance: true, updatedAt: true },
+          }),
+        ]);
+
+        return apiSuccess(
+          {
+            balance: updatedUser.walletBalance,
+            transaction,
+            lastSync: updatedUser.updatedAt.toISOString(),
+            simulated: false,
+            txHash,
+          },
+          "Wallet funded successfully",
+          201,
+        );
+      } catch (err: any) {
+        // Handle Prisma unique constraint violation (P2002)
+        if (err.code === "P2002" && err.meta?.target?.includes("txHash")) {
+          return apiError("Transaction already credited", 409);
+        }
+        throw err;
+      }
     }
 
     const [transaction, updatedUser] = await prisma.$transaction([
