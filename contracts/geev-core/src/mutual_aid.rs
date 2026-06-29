@@ -113,11 +113,6 @@ impl MutualAidContract {
         if request.status == HelpRequestStatus::Disputed {
             panic_with_error!(&env, Error::InvalidStatus);
         }
-        if request.status == HelpRequestStatus::Cancelled
-            || request.status == HelpRequestStatus::Suspended
-        {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
 
         if request.status == HelpRequestStatus::Cancelled
             || request.status == HelpRequestStatus::Suspended
@@ -170,7 +165,7 @@ impl MutualAidContract {
             .get(&request_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
 
-            // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
+        // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
         if request.status == HelpRequestStatus::Disputed {
             panic_with_error!(&env, Error::InvalidStatus);
         }
@@ -178,10 +173,6 @@ impl MutualAidContract {
         if request.status != HelpRequestStatus::Cancelled
             && request.status != HelpRequestStatus::ResolvedRefund
         {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
-
-        if request.status != HelpRequestStatus::Cancelled {
             panic_with_error!(&env, Error::InvalidStatus);
         }
 
@@ -195,7 +186,8 @@ impl MutualAidContract {
         let token_client = token::Client::new(&env, &request.token);
         token_client.transfer(&env.current_contract_address(), &donor, &amount);
 
-        // Reset donation amount to prevent double refund
+        //
+        // Clear the donation record so the same refund can't be claimed twice
         env.storage().persistent().set(&donation_key, &0i128);
 
         RefundClaimed {
@@ -206,7 +198,7 @@ impl MutualAidContract {
         .publish(&env);
     }
 
-    pub fn cancel_request(env: Env, creator: Address, request_id: u64) {
+    pub fn cancel_request(env: Env, request_id: u64, creator: Address) {
         creator.require_auth();
 
         let request_key = DataKey::HelpRequest(request_id);
@@ -217,14 +209,11 @@ impl MutualAidContract {
             .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
 
         if request.creator != creator {
-            panic_with_error!(&env, Error::NotCreator);
+            panic_with_error!(&env, Error::NotAdmin);
         }
 
         // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
         if request.status == HelpRequestStatus::Disputed {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
-        if request.status != HelpRequestStatus::Open {
             panic_with_error!(&env, Error::InvalidStatus);
         }
 
@@ -251,7 +240,9 @@ impl MutualAidContract {
 
         let request_key = DataKey::HelpRequest(request_id);
         let mut request: HelpRequest = env
-            .storage().persistent().get(&request_key)
+            .storage()
+            .persistent()
+            .get(&request_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
 
         // Only allow disputing requests that are in a "live" state
@@ -264,7 +255,8 @@ impl MutualAidContract {
         // Verify caller is creator or a donor
         let is_creator = request.creator == caller;
         let is_donor: bool = env
-            .storage().persistent()
+            .storage()
+            .persistent()
             .has(&DataKey::Donation(request_id, caller.clone()));
 
         if !is_creator && !is_donor {
@@ -276,10 +268,18 @@ impl MutualAidContract {
 
         // Record dispute metadata
         let now = env.ledger().timestamp();
-        env.storage().persistent().set(&DataKey::DisputeRaisedAt(request_id), &now);
-        env.storage().persistent().set(&DataKey::DisputeRaisedBy(request_id, caller.clone()), &true);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DisputeRaisedAt(request_id), &now);
+        env.storage()
+            .persistent()
+            .set(&DataKey::DisputeRaisedBy(request_id, caller.clone()), &true);
 
-        RequestDisputed { request_id, raised_by: caller }.publish(&env);
+        RequestDisputed {
+            request_id,
+            raised_by: caller,
+        }
+        .publish(&env);
     }
 
     /// Admin-only: resolve a disputed help request.
@@ -292,7 +292,9 @@ impl MutualAidContract {
 
         let request_key = DataKey::HelpRequest(request_id);
         let mut request: HelpRequest = env
-            .storage().persistent().get(&request_key)
+            .storage()
+            .persistent()
+            .get(&request_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
 
         if request.status != HelpRequestStatus::Disputed {
@@ -312,6 +314,11 @@ impl MutualAidContract {
         }
 
         env.storage().persistent().set(&request_key, &request);
-        RequestResolved { request_id, release_funds, resolver }.publish(&env);
+        RequestResolved {
+            request_id,
+            release_funds,
+            resolver,
+        }
+        .publish(&env);
     }
 }
