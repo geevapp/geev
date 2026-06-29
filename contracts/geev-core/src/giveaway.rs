@@ -208,7 +208,7 @@ impl GiveawayContract {
             panic_with_error!(&env, Error::NoParticipants);
         }
 
-        let winner = Self::select_winner(&env, giveaway_id, giveaway.participant_count);
+        let winner = Self::select_winner(&env, giveaway_id, giveaway.participant_count).clone()
         giveaway.winners.push_back(winner.clone());
         giveaway.status = GiveawayStatus::Claimable;
         env.storage().persistent().set(&giveaway_key, &giveaway);
@@ -255,7 +255,7 @@ impl GiveawayContract {
     }
 
     fn select_winner(env: &Env, giveaway_id: u64, participant_count: u32) -> Address {
-        let random_index = env.prng().gen_range(0..participant_count);
+        let random_index = env.prng().gen_range(0..participant_count as u64);
         let index_key = DataKey::ParticipantIndex(giveaway_id, random_index);
         env.storage()
             .persistent()
