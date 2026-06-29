@@ -117,8 +117,8 @@ pub enum DataKey {
     FlagCount(u64),
     Reputation(Address),
     // ─── Dispute Tracking ──────────────────────────────────────────────────
-    DisputeRaisedAt(u64),           // timestamp when dispute was raised
-    DisputeRaisedBy(u64, Address),  // who raised the dispute
+    DisputeRaisedAt(u64),          // timestamp when dispute was raised
+    DisputeRaisedBy(u64, Address), // who raised the dispute
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
