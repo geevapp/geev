@@ -1944,8 +1944,6 @@ fn test_reputation_accumulates_across_giveaways() {
             .unwrap_or(0);
         assert_eq!(score, 2);
     });
-
-
     // ─── Dispute Resolution Tests ─────────────────────────────────────────────
 
 #[test]
@@ -2883,5 +2881,4 @@ fn test_admin_resolves_giveaway_dispute_refund() {
         assert_eq!(giveaway.status, GiveawayStatus::ResolvedRefund);
         assert_eq!(token_client.balance(&creator), 1000);
     }
-
 }
