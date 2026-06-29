@@ -208,7 +208,7 @@ impl GiveawayContract {
             panic_with_error!(&env, Error::NoParticipants);
         }
 
-        let winner = Self::select_winner(&env, giveaway_id, giveaway.participant_count).clone()
+        let winner = Self::select_winner(&env, giveaway_id, giveaway.participant_count).clone();
         giveaway.winners.push_back(winner.clone());
         giveaway.status = GiveawayStatus::Claimable;
         env.storage().persistent().set(&giveaway_key, &giveaway);
