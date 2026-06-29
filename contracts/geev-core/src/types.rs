@@ -43,6 +43,7 @@ pub enum GiveawayStatus {
     Disputed = 4,
     ResolvedRelease = 5,
     ResolvedRefund = 6,
+    UnderAppeal = 7,
 }
 
 #[derive(Clone)]
@@ -82,6 +83,7 @@ pub enum HelpRequestStatus {
     Disputed = 5,
     ResolvedRelease = 6,
     ResolvedRefund = 7,
+    UnderAppeal = 8,
 }
 
 #[derive(Clone)]
