@@ -51,6 +51,10 @@ pub struct RequestResolved {
 
 #[contractimpl]
 impl MutualAidContract {
+    pub fn get_request(env: Env, request_id: u64) -> Option<HelpRequest> {
+    let request_key = DataKey::HelpRequest(request_id);
+    env.storage().persistent().get(&request_key)
+}
     pub fn post_help_request(
         env: Env,
         creator: Address,
