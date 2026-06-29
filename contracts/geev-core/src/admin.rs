@@ -23,6 +23,14 @@ pub struct RequestVerificationChanged {
     is_verified: bool,
 }
 
+// ─── Dispute Resolution Events ─────────────────────────────────────────────
+#[contractevent]
+pub struct DisputeResolvedByAdmin {
+    item_id: u64,
+    item_type: u32, // 0 = giveaway, 1 = help request
+    release_funds: bool,
+}
+
 #[contractimpl]
 impl AdminContract {
     /// Emergency withdraw function - callable only by Admin
@@ -94,5 +102,17 @@ impl AdminContract {
             is_verified: request.is_verified,
         }
         .publish(&env);
+    }
+
+    /// Admin resolves a disputed help request.
+    pub fn resolve_help_request_dispute(env: Env, request_id: u64, release_funds: bool) {
+        check_admin(&env);
+        crate::mutual_aid::MutualAidContract::resolve_dispute(env, request_id, release_funds);
+    }
+
+    /// Admin resolves a disputed giveaway.
+    pub fn resolve_giveaway_dispute(env: Env, giveaway_id: u64, release_funds: bool) {
+        check_admin(&env);
+        crate::giveaway::GiveawayContract::resolve_giveaway_dispute(env, giveaway_id, release_funds);
     }
 }

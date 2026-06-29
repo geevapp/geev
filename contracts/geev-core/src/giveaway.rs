@@ -29,6 +29,20 @@ pub struct GiveawayWinnerSelected {
     prize_amount: i128,
 }
 
+// ─── Dispute Events ─────────────────────────────────────────────────────────
+#[contractevent]
+pub struct GiveawayDisputed {
+    giveaway_id: u64,
+    raised_by: Address,
+}
+
+#[contractevent]
+pub struct GiveawayResolved {
+    giveaway_id: u64,
+    release_funds: bool,
+    resolver: Address,
+}
+
 #[allow(clippy::too_many_arguments)]
 #[contractimpl]
 impl GiveawayContract {
@@ -122,6 +136,12 @@ impl GiveawayContract {
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
+            // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
+        if giveaway.status == GiveawayStatus::Disputed {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+        if giveaway.status != GiveawayStatus::Active { panic_with_error!(&env, Error::InvalidStatus); }
+
         if giveaway.status != GiveawayStatus::Active {
             panic_with_error!(&env, Error::InvalidStatus);
         }
@@ -175,6 +195,11 @@ impl GiveawayContract {
             .persistent()
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+
+            // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
+        if giveaway.status == GiveawayStatus::Disputed {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
 
         if giveaway.status != GiveawayStatus::Active {
             panic_with_error!(&env, Error::InvalidStatus);
@@ -274,6 +299,12 @@ impl GiveawayContract {
                 .persistent()
                 .get(&giveaway_key)
                 .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+
+                // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
+        if giveaway.status == GiveawayStatus::Disputed {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+        if giveaway.status != GiveawayStatus::Claimable { panic_with_error!(&env, Error::InvalidStatus); }
 
             if giveaway.status != GiveawayStatus::Claimable {
                 panic_with_error!(&env, Error::InvalidStatus);
@@ -413,5 +444,82 @@ impl GiveawayContract {
             // 4. Set 'CollectedFees(token)' to 0
             env.storage().persistent().set(&collected_fees_key, &0i128);
         }
+    }
+
+    // ─── DISPUTE FUNCTIONS ───────────────────────────────────────────────────
+
+    /// Raise a dispute on a giveaway. Callable by the creator or any participant.
+    /// Blocks winner selection and prize distribution until resolved by admin.
+    pub fn dispute_giveaway(env: Env, giveaway_id: u64, caller: Address) {
+        caller.require_auth();
+
+        let giveaway_key = DataKey::Giveaway(giveaway_id);
+        let mut giveaway: Giveaway = env
+            .storage().persistent().get(&giveaway_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+
+        if giveaway.status != GiveawayStatus::Active
+            && giveaway.status != GiveawayStatus::Claimable
+        {
+            panic_with_error!(&env, Error::InvalidStatus);
+        }
+
+        let is_creator = giveaway.creator == caller;
+        let is_participant: bool = env
+            .storage().persistent()
+            .has(&DataKey::HasEntered(giveaway_id, caller.clone()));
+
+        if !is_creator && !is_participant {
+            panic_with_error!(&env, Error::NotAuthorizedResolver);
+        }
+
+        giveaway.status = GiveawayStatus::Disputed;
+        env.storage().persistent().set(&giveaway_key, &giveaway);
+
+        let now = env.ledger().timestamp();
+        env.storage().persistent().set(&DataKey::DisputeRaisedAt(giveaway_id), &now);
+        env.storage().persistent().set(&DataKey::DisputeRaisedBy(giveaway_id, caller.clone()), &true);
+
+        GiveawayDisputed { giveaway_id, raised_by: caller }.publish(&env);
+    }
+
+    /// Admin-only: resolve a disputed giveaway.
+    /// `release_funds = true`  → distribute prizes to winners (ResolvedRelease)
+    /// `release_funds = false` → refund creator (ResolvedRefund)
+    pub fn resolve_giveaway_dispute(env: Env, giveaway_id: u64, release_funds: bool) {
+        use crate::access::check_admin;
+
+        let resolver = check_admin(&env);
+
+        let giveaway_key = DataKey::Giveaway(giveaway_id);
+        let mut giveaway: Giveaway = env
+            .storage().persistent().get(&giveaway_key)
+            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+
+        if giveaway.status != GiveawayStatus::Disputed {
+            panic_with_error!(&env, Error::NotDisputed);
+        }
+
+        let token_client = token::Client::new(&env, &giveaway.token);
+
+        if release_funds {
+            let prize = giveaway.amount / i128::from(giveaway.winner_count);
+            with_reentrancy_guard(&env, || {
+                for winner in giveaway.winners.iter() {
+                    token_client.transfer(&env.current_contract_address(), &winner, &prize);
+                }
+            });
+            giveaway.status = GiveawayStatus::ResolvedRelease;
+        } else {
+            token_client.transfer(
+                &env.current_contract_address(),
+                &giveaway.creator,
+                &giveaway.amount,
+            );
+            giveaway.status = GiveawayStatus::ResolvedRefund;
+        }
+
+        env.storage().persistent().set(&giveaway_key, &giveaway);
+        GiveawayResolved { giveaway_id, release_funds, resolver }.publish(&env);
     }
 }
