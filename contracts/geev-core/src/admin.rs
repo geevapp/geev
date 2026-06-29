@@ -120,7 +120,11 @@ impl AdminContract {
             .get::<DataKey, crate::types::Giveaway>(&giveaway_key)
         {
             if giveaway.status == GiveawayStatus::UnderAppeal {
-                giveaway.status = if restore { GiveawayStatus::Active } else { GiveawayStatus::Suspended };
+                giveaway.status = if restore {
+                    GiveawayStatus::Active
+                } else {
+                    GiveawayStatus::Suspended
+                };
                 env.storage().persistent().set(&giveaway_key, &giveaway);
                 resolved = true;
             }
@@ -134,7 +138,11 @@ impl AdminContract {
                 .get::<DataKey, crate::types::HelpRequest>(&request_key)
             {
                 if request.status == HelpRequestStatus::UnderAppeal {
-                    request.status = if restore { HelpRequestStatus::Open } else { HelpRequestStatus::Suspended };
+                    request.status = if restore {
+                        HelpRequestStatus::Open
+                    } else {
+                        HelpRequestStatus::Suspended
+                    };
                     env.storage().persistent().set(&request_key, &request);
                     resolved = true;
                 }
@@ -142,7 +150,11 @@ impl AdminContract {
         }
 
         if resolved {
-            AppealResolved { target_id, restored: restore }.publish(&env);
+            AppealResolved {
+                target_id,
+                restored: restore,
+            }
+            .publish(&env);
         }
     }
 }
