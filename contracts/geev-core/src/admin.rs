@@ -1,5 +1,5 @@
-use crate::types::{DataKey, Error};
-use crate::{access::check_admin, types::HelpRequest};
+use crate::types::{DataKey, Error, HelpRequest};
+use crate::{access::check_admin, types::HelpRequestStatus};
 use soroban_sdk::{contract, contractevent, contractimpl, panic_with_error, token, Address, Env};
 
 #[contract]
@@ -33,28 +33,10 @@ pub struct DisputeResolvedByAdmin {
 
 #[contractimpl]
 impl AdminContract {
-    /// Emergency withdraw function - callable only by Admin
-    /// Allows rescuing funds in case of critical bugs, exploits, or migration needs
-    ///
-    /// # Arguments
-    /// * `env` - The contract environment
-    /// * `token` - The token address to withdraw
-    /// * `amount` - The amount to withdraw
-    /// * `to` - The safe address to send funds to
-    ///
-    /// # Panics
-    /// Panics if called by non-admin address
     pub fn admin_withdraw(env: Env, token: Address, amount: i128, to: Address) {
-        // Check admin authentication
         check_admin(&env);
-
-        // Initialize Token Client
         let token_client = token::Client::new(&env, &token);
-
-        // Execute transfer: From contract -> to
         token_client.transfer(&env.current_contract_address(), &to, &amount);
-
-        // Emit EmergencyWithdraw event
         EmergencyWithdraw {
             token: token.clone(),
             amount,
@@ -63,24 +45,10 @@ impl AdminContract {
         .publish(&env);
     }
 
-    /// Add a token to the whitelist - callable only by Admin
-    /// Allows specific tokens to be used for giveaway creation
-    ///
-    /// # Arguments
-    /// * `env` - The contract environment
-    /// * `token` - The token address to whitelist
-    ///
-    /// # Panics
-    /// Panics if called by non-admin address
     pub fn add_token(env: Env, token: Address) {
-        // Check admin authentication
         check_admin(&env);
-
-        // Add token to whitelist
         let token_key = DataKey::AllowedToken(token.clone());
         env.storage().instance().set(&token_key, &true);
-
-        // Emit TokenAdded event
         TokenAdded { token }.publish(&env);
     }
 
@@ -105,14 +73,20 @@ impl AdminContract {
     }
 
     /// Admin resolves a disputed help request.
+    /// Delegates to MutualAidContract::resolve_dispute.
     pub fn resolve_help_request_dispute(env: Env, request_id: u64, release_funds: bool) {
         check_admin(&env);
         crate::mutual_aid::MutualAidContract::resolve_dispute(env, request_id, release_funds);
     }
 
     /// Admin resolves a disputed giveaway.
+    /// Delegates to GiveawayContract::resolve_giveaway_dispute.
     pub fn resolve_giveaway_dispute(env: Env, giveaway_id: u64, release_funds: bool) {
         check_admin(&env);
-        crate::giveaway::GiveawayContract::resolve_giveaway_dispute(env, giveaway_id, release_funds);
+        crate::giveaway::GiveawayContract::resolve_giveaway_dispute(
+            env,
+            giveaway_id,
+            release_funds,
+        );
     }
 }
