@@ -39,11 +39,11 @@ pub enum GiveawayStatus {
     Claimable = 1,
     Completed = 2,
     Suspended = 3,
-    UnderAppeal = 4,
     // ─── Dispute States ────────────────────────────────────────────────────
     Disputed = 4,
     ResolvedRelease = 5,
     ResolvedRefund = 6,
+    UnderAppeal = 7,
 }
 
 #[derive(Clone)]
@@ -79,11 +79,11 @@ pub enum HelpRequestStatus {
     Closed = 2,
     Cancelled = 3,
     Suspended = 4,
-    UnderAppeal = 5,
     // ─── Dispute States ────────────────────────────────────────────────────
     Disputed = 5,
     ResolvedRelease = 6,
     ResolvedRefund = 7,
+    UnderAppeal = 8,
 }
 
 #[derive(Clone)]
