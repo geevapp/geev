@@ -164,6 +164,7 @@ impl MutualAidContract {
         let token_client = token::Client::new(&env, &request.token);
         token_client.transfer(&env.current_contract_address(), &donor, &amount);
 
+        // Reset donation amount to prevent double refund
         env.storage().persistent().set(&donation_key, &0i128);
 
         RefundClaimed {
