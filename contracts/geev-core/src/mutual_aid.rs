@@ -35,26 +35,13 @@ pub struct RequestCancelled {
     creator: Address,
 }
 
-// ─── Dispute Events ─────────────────────────────────────────────────────────
-#[contractevent]
-pub struct RequestDisputed {
-    request_id: u64,
-    raised_by: Address,
-}
-
-#[contractevent]
-pub struct RequestResolved {
-    request_id: u64,
-    release_funds: bool,
-    resolver: Address,
-}
-
 #[contractimpl]
 impl MutualAidContract {
     pub fn get_request(env: Env, request_id: u64) -> Option<HelpRequest> {
-    let request_key = DataKey::HelpRequest(request_id);
-    env.storage().persistent().get(&request_key)
-}
+        let request_key = DataKey::HelpRequest(request_id);
+        env.storage().persistent().get(&request_key)
+    }
+
     pub fn post_help_request(
         env: Env,
         creator: Address,
@@ -79,7 +66,7 @@ impl MutualAidContract {
             creator: creator.clone(),
             token,
             goal,
-            raised_amount: 0, // ✅ bucket starts empty — no funds locked
+            raised_amount: 0,
             status: HelpRequestStatus::Open,
             is_verified: false,
         };
@@ -95,6 +82,7 @@ impl MutualAidContract {
 
         request_id
     }
+
     pub fn donate(env: Env, donor: Address, request_id: u64, amount: i128) {
         donor.require_auth();
 
@@ -113,11 +101,6 @@ impl MutualAidContract {
             panic_with_error!(&env, Error::HelpRequestAlreadyFullyFunded);
         }
 
-        // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
-        if request.status == HelpRequestStatus::Disputed {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
-
         if request.status == HelpRequestStatus::Cancelled
             || request.status == HelpRequestStatus::Suspended
         {
@@ -128,7 +111,6 @@ impl MutualAidContract {
 
         token_client.transfer(&donor, env.current_contract_address(), &amount);
 
-        // ✅ Track individual donation for refund logic
         let donation_key = DataKey::Donation(request_id, donor.clone());
         let previous_donation: i128 = env.storage().persistent().get(&donation_key).unwrap_or(0);
         let new_donation = previous_donation
@@ -136,7 +118,6 @@ impl MutualAidContract {
             .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
         env.storage().persistent().set(&donation_key, &new_donation);
 
-        // ✅ Explicit overflow check for total raised
         let new_raised = request
             .raised_amount
             .checked_add(amount)
@@ -169,14 +150,7 @@ impl MutualAidContract {
             .get(&request_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
 
-        // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
-        if request.status == HelpRequestStatus::Disputed {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
-
-        if request.status != HelpRequestStatus::Cancelled
-            && request.status != HelpRequestStatus::ResolvedRefund
-        {
+        if request.status != HelpRequestStatus::Cancelled {
             panic_with_error!(&env, Error::InvalidStatus);
         }
 
@@ -190,8 +164,6 @@ impl MutualAidContract {
         let token_client = token::Client::new(&env, &request.token);
         token_client.transfer(&env.current_contract_address(), &donor, &amount);
 
-        //
-        // Clear the donation record so the same refund can't be claimed twice
         env.storage().persistent().set(&donation_key, &0i128);
 
         RefundClaimed {
@@ -202,7 +174,7 @@ impl MutualAidContract {
         .publish(&env);
     }
 
-    pub fn cancel_request(env: Env, request_id: u64, creator: Address) {
+    pub fn cancel_request(env: Env, creator: Address, request_id: u64) {
         creator.require_auth();
 
         let request_key = DataKey::HelpRequest(request_id);
@@ -213,12 +185,7 @@ impl MutualAidContract {
             .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
 
         if request.creator != creator {
-            panic_with_error!(&env, Error::NotAdmin);
-        }
-
-        // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
-        if request.status == HelpRequestStatus::Disputed {
-            panic_with_error!(&env, Error::InvalidStatus);
+            panic_with_error!(&env, Error::NotCreator);
         }
 
         if request.status != HelpRequestStatus::Open {
@@ -231,97 +198,6 @@ impl MutualAidContract {
         RequestCancelled {
             request_id,
             creator,
-        }
-        .publish(&env);
-    }
-
-    // ─── DISPUTE FUNCTIONS ───────────────────────────────────────────────────
-
-    /// Raise a dispute on a help request. Callable by the creator or any donor.
-    /// Blocks all normal payout/refund paths until resolved by admin.
-    pub fn dispute_request(env: Env, request_id: u64, caller: Address) {
-        caller.require_auth();
-
-        let request_key = DataKey::HelpRequest(request_id);
-        let mut request: HelpRequest = env
-            .storage()
-            .persistent()
-            .get(&request_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
-
-        // Only allow disputing requests that are in a "live" state
-        if request.status != HelpRequestStatus::Open
-            && request.status != HelpRequestStatus::FullyFunded
-        {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
-
-        // Verify caller is creator or a donor
-        let is_creator = request.creator == caller;
-        let is_donor: bool = env
-            .storage()
-            .persistent()
-            .has(&DataKey::Donation(request_id, caller.clone()));
-
-        if !is_creator && !is_donor {
-            panic_with_error!(&env, Error::NotAuthorizedResolver);
-        }
-
-        request.status = HelpRequestStatus::Disputed;
-        env.storage().persistent().set(&request_key, &request);
-
-        // Record dispute metadata
-        let now = env.ledger().timestamp();
-        env.storage()
-            .persistent()
-            .set(&DataKey::DisputeRaisedAt(request_id), &now);
-        env.storage()
-            .persistent()
-            .set(&DataKey::DisputeRaisedBy(request_id, caller.clone()), &true);
-
-        RequestDisputed {
-            request_id,
-            raised_by: caller,
-        }
-        .publish(&env);
-    }
-
-    /// Admin-only: resolve a disputed help request.
-    /// `release_funds = true`  → transfer raised funds to creator (ResolvedRelease)
-    /// `release_funds = false` → enable donor refunds (ResolvedRefund)
-    pub fn resolve_dispute(env: Env, request_id: u64, release_funds: bool) {
-        use crate::access::check_admin;
-
-        let resolver = check_admin(&env);
-
-        let request_key = DataKey::HelpRequest(request_id);
-        let mut request: HelpRequest = env
-            .storage()
-            .persistent()
-            .get(&request_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::HelpRequestNotFound));
-
-        if request.status != HelpRequestStatus::Disputed {
-            panic_with_error!(&env, Error::NotDisputed);
-        }
-
-        if release_funds {
-            let token_client = token::Client::new(&env, &request.token);
-            token_client.transfer(
-                &env.current_contract_address(),
-                &request.creator,
-                &request.raised_amount,
-            );
-            request.status = HelpRequestStatus::ResolvedRelease;
-        } else {
-            request.status = HelpRequestStatus::ResolvedRefund;
-        }
-
-        env.storage().persistent().set(&request_key, &request);
-        RequestResolved {
-            request_id,
-            release_funds,
-            resolver,
         }
         .publish(&env);
     }
