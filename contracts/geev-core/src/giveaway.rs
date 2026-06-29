@@ -29,20 +29,6 @@ pub struct GiveawayWinnerSelected {
     prize_amount: i128,
 }
 
-// ─── Dispute Events ─────────────────────────────────────────────────────────
-#[contractevent]
-pub struct GiveawayDisputed {
-    giveaway_id: u64,
-    raised_by: Address,
-}
-
-#[contractevent]
-pub struct GiveawayResolved {
-    giveaway_id: u64,
-    release_funds: bool,
-    resolver: Address,
-}
-
 #[allow(clippy::too_many_arguments)]
 #[contractimpl]
 impl GiveawayContract {
@@ -136,10 +122,6 @@ impl GiveawayContract {
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
-        // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
-        if giveaway.status == GiveawayStatus::Disputed {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
         if giveaway.status != GiveawayStatus::Active {
             panic_with_error!(&env, Error::InvalidStatus);
         }
@@ -173,13 +155,13 @@ impl GiveawayContract {
                     .get(&allowed_key)
                     .unwrap_or(false);
                 if !authorized {
-                    panic_with_error!(env, Error::UnauthorizedParticipant);
+                    panic_with_error!(&env, Error::UnauthorizedParticipant);
                 }
             }
             2 => {
                 let reputation = ProfileContract::get_reputation(env.clone(), participant.clone());
                 if reputation < giveaway.min_reputation {
-                    panic_with_error!(env, Error::UnauthorizedParticipant);
+                    panic_with_error!(&env, Error::UnauthorizedParticipant);
                 }
             }
             _ => {}
@@ -194,10 +176,6 @@ impl GiveawayContract {
             .get(&giveaway_key)
             .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
-        // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
-        if giveaway.status == GiveawayStatus::Disputed {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
         if giveaway.status != GiveawayStatus::Active {
             panic_with_error!(&env, Error::InvalidStatus);
         }
@@ -207,162 +185,233 @@ impl GiveawayContract {
         if giveaway.participant_count == 0 {
             panic_with_error!(&env, Error::NoParticipants);
         }
+        if giveaway.participant_count < giveaway.winner_count {
+            panic_with_error!(&env, Error::InsufficientParticipants);
+        }
 
-        let winner = Self::select_winner(&env, giveaway_id, giveaway.participant_count).clone();
-        giveaway.winners.push_back(winner.clone());
+        let random_seed = env.prng().gen::<u64>();
+        let mut selected_indexes: Vec<u32> = Vec::new(&env);
+        let mut winners: Vec<Address> = Vec::new(&env);
+
+        let total = giveaway.participant_count;
+        let target_count = giveaway.winner_count;
+
+        for i in 0..target_count {
+            let mut index = ((random_seed.wrapping_add(i as u64)) % total as u64) as u32;
+            while {
+                let mut duplicate = false;
+                for picked in selected_indexes.iter() {
+                    if picked == index {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                duplicate
+            } {
+                index = (index + 1) % total;
+            }
+
+            selected_indexes.push_back(index);
+
+            let participant_key = DataKey::ParticipantIndex(giveaway_id, index);
+            let winner_address: Address = env
+                .storage()
+                .persistent()
+                .get(&participant_key)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::InvalidIndex));
+            winners.push_back(winner_address.clone());
+
+            // Publish the approximate prize share for each winner.
+            let fee_key = DataKey::Fee;
+            let fee_bps: u32 = env.storage().instance().get(&fee_key).unwrap_or(100);
+            let fee_amount = giveaway
+                .amount
+                .checked_mul(fee_bps as i128)
+                .and_then(|v| v.checked_div(10_000))
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+            let net_prize = giveaway
+                .amount
+                .checked_sub(fee_amount)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+            let winner_count = target_count as i128;
+            let base_prize = net_prize
+                .checked_div(winner_count)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+            let prize_amount = if i == 0 {
+                net_prize
+                    .checked_sub(
+                        base_prize
+                            .checked_mul(winner_count - 1)
+                            .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow)),
+                    )
+                    .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow))
+            } else {
+                base_prize
+            };
+
+            GiveawayWinnerSelected {
+                winner: winner_address.clone(),
+                giveaway_id,
+                prize_amount,
+            }
+            .publish(&env);
+        }
+
+        giveaway.winners = winners.clone();
         giveaway.status = GiveawayStatus::Claimable;
         env.storage().persistent().set(&giveaway_key, &giveaway);
 
-        let prize = giveaway.amount / i128::from(giveaway.winner_count);
-
-        GiveawayWinnerSelected {
-            winner,
-            giveaway_id,
-            prize_amount: prize,
-        }
-        .publish(&env);
-
-        winner
+        winners
+            .first()
+            .unwrap_or_else(|| panic_with_error!(&env, Error::NoParticipants))
     }
 
     pub fn distribute_prize(env: Env, giveaway_id: u64) {
-        let giveaway_key = DataKey::Giveaway(giveaway_id);
-        let mut giveaway: Giveaway = env
-            .storage()
-            .persistent()
-            .get(&giveaway_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
-
-        // ─── BLOCKED WHILE DISPUTED ──────────────────────────────────────────
-        if giveaway.status == GiveawayStatus::Disputed {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
-        if giveaway.status != GiveawayStatus::Claimable {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
-
-        let token_client = token::Client::new(&env, &giveaway.token);
-        let prize = giveaway.amount / i128::from(giveaway.winner_count);
-
         with_reentrancy_guard(&env, || {
-            for winner in giveaway.winners.iter() {
-                token_client.transfer(&env.current_contract_address(), &winner, &prize);
-            }
-        });
+            let giveaway_key = DataKey::Giveaway(giveaway_id);
+            let mut giveaway: Giveaway = env
+                .storage()
+                .persistent()
+                .get(&giveaway_key)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
 
-        giveaway.status = GiveawayStatus::Completed;
-        env.storage().persistent().set(&giveaway_key, &giveaway);
+            if giveaway.status != GiveawayStatus::Claimable {
+                panic_with_error!(&env, Error::InvalidStatus);
+            }
+
+            let winners = giveaway.winners.clone();
+            if winners.is_empty() {
+                panic_with_error!(&env, Error::NoParticipants);
+            }
+
+            // 1. Load 'fee_bps' from storage
+            let fee_key = DataKey::Fee;
+            let fee_bps: u32 = env.storage().instance().get(&fee_key).unwrap_or(100); // Default to 100 bps (1%)
+
+            // 2. Calculate 'fee_amount' (fee_bps / 10000 * amount)
+            let fee_amount = giveaway
+                .amount
+                .checked_mul(fee_bps as i128)
+                .and_then(|v| v.checked_div(10_000))
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+
+            // Calculate net prize
+            let net_prize = giveaway
+                .amount
+                .checked_sub(fee_amount)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+
+            let winner_count = winners.len() as i128;
+            let base_share = net_prize
+                .checked_div(winner_count)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+
+            let mut distributed = 0i128;
+            let token_client = token::Client::new(&env, &giveaway.token);
+
+            for (index, winner) in winners.iter().enumerate() {
+                let mut prize_amount = base_share;
+                if index == 0 {
+                    let remainder =
+                        net_prize
+                            .checked_sub(base_share.checked_mul(winner_count - 1).unwrap_or_else(
+                                || panic_with_error!(&env, Error::ArithmeticOverflow),
+                            ))
+                            .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+                    prize_amount = remainder;
+                }
+                distributed = distributed
+                    .checked_add(prize_amount)
+                    .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+                token_client.transfer(&env.current_contract_address(), winner, &prize_amount);
+            }
+
+            // 4. Add 'fee_amount' to CollectedFees storage counter
+            let collected_fees_key = DataKey::CollectedFees(giveaway.token.clone());
+            let current_fees: i128 = env
+                .storage()
+                .persistent()
+                .get(&collected_fees_key)
+                .unwrap_or(0);
+            let new_fees = current_fees
+                .checked_add(fee_amount)
+                .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
+            env.storage()
+                .persistent()
+                .set(&collected_fees_key, &new_fees);
+
+            giveaway.status = GiveawayStatus::Completed;
+            env.storage().persistent().set(&giveaway_key, &giveaway);
+
+            // Increment creator's reputation — internal call, not user-accessible.
+            ProfileContract::increment_reputation(&env, giveaway.creator.clone());
+        })
     }
 
-    fn select_winner(env: &Env, giveaway_id: u64, participant_count: u32) -> Address {
-        let random_index = env.prng().gen_range(0..participant_count as u64);
-        let index_key = DataKey::ParticipantIndex(giveaway_id, random_index);
-        env.storage()
-            .persistent()
-            .get(&index_key)
-            .unwrap_or_else(|| panic_with_error!(env, Error::InvalidIndex))
+    pub fn init(env: Env, admin: Address, fee_bps: u32) {
+        let admin_key = DataKey::Admin;
+
+        // Check if already initialized
+        if env.storage().instance().has(&admin_key) {
+            panic_with_error!(&env, Error::AlreadyInitialized);
+        }
+
+        // Store admin address
+        env.storage().instance().set(&admin_key, &admin);
+
+        // Store fee basis points
+        let fee_key = DataKey::Fee;
+        env.storage().instance().set(&fee_key, &fee_bps);
     }
 
     fn generate_id(env: &Env) -> u64 {
-        let counter_key = DataKey::GiveawayCounter;
-        let current: u64 = env.storage().persistent().get(&counter_key).unwrap_or(0);
-        let next = current + 1;
-        env.storage().persistent().set(&counter_key, &next);
-        next
-    }
-
-    // ─── DISPUTE FUNCTIONS ───────────────────────────────────────────────────
-
-    /// Raise a dispute on a giveaway. Callable by the creator or any participant.
-    /// Blocks winner selection and prize distribution until resolved by admin.
-    pub fn dispute_giveaway(env: Env, giveaway_id: u64, caller: Address) {
-        caller.require_auth();
-
-        let giveaway_key = DataKey::Giveaway(giveaway_id);
-        let mut giveaway: Giveaway = env
+        let mut counter: u64 = env
             .storage()
-            .persistent()
-            .get(&giveaway_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
-
-        if giveaway.status != GiveawayStatus::Active && giveaway.status != GiveawayStatus::Claimable
-        {
-            panic_with_error!(&env, Error::InvalidStatus);
-        }
-
-        let is_creator = giveaway.creator == caller;
-        let is_participant: bool = env
-            .storage()
-            .persistent()
-            .has(&DataKey::HasEntered(giveaway_id, caller.clone()));
-
-        if !is_creator && !is_participant {
-            panic_with_error!(&env, Error::NotAuthorizedResolver);
-        }
-
-        giveaway.status = GiveawayStatus::Disputed;
-        env.storage().persistent().set(&giveaway_key, &giveaway);
-
-        let now = env.ledger().timestamp();
+            .instance()
+            .get(&DataKey::GiveawayCounter)
+            .unwrap_or(0);
+        counter += 1;
         env.storage()
-            .persistent()
-            .set(&DataKey::DisputeRaisedAt(giveaway_id), &now);
-        env.storage().persistent().set(
-            &DataKey::DisputeRaisedBy(giveaway_id, caller.clone()),
-            &true,
-        );
-
-        GiveawayDisputed {
-            giveaway_id,
-            raised_by: caller,
-        }
-        .publish(&env);
+            .instance()
+            .set(&DataKey::GiveawayCounter, &counter);
+        counter
     }
 
-    /// Admin-only: resolve a disputed giveaway.
-    /// `release_funds = true`  → distribute prizes to winners (ResolvedRelease)
-    /// `release_funds = false` → refund creator (ResolvedRefund)
-    pub fn resolve_giveaway_dispute(env: Env, giveaway_id: u64, release_funds: bool) {
-        use crate::access::check_admin;
+    /// Withdraw collected fees for a specific token - callable only by Admin
+    /// Transfers all accumulated fees for the specified token to the admin address
+    ///
+    /// # Arguments
+    /// * `env` - The contract environment
+    /// * `token` - The token address to withdraw fees for
+    ///
+    /// # Panics
+    /// Panics if called by non-admin address
+    pub fn withdraw_fees(env: Env, token: Address) {
+        // 1. Admin auth
+        let admin_key = DataKey::Admin;
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&admin_key)
+            .expect("Admin not set");
+        admin.require_auth();
 
-        let resolver = check_admin(&env);
-
-        let giveaway_key = DataKey::Giveaway(giveaway_id);
-        let mut giveaway: Giveaway = env
+        // 2. Read 'CollectedFees(token)' amount
+        let collected_fees_key = DataKey::CollectedFees(token.clone());
+        let fee_amount: i128 = env
             .storage()
             .persistent()
-            .get(&giveaway_key)
-            .unwrap_or_else(|| panic_with_error!(&env, Error::GiveawayNotFound));
+            .get(&collected_fees_key)
+            .unwrap_or(0);
 
-        if giveaway.status != GiveawayStatus::Disputed {
-            panic_with_error!(&env, Error::NotDisputed);
+        // Only proceed if there are fees to withdraw
+        if fee_amount > 0 {
+            // 3. Transfer that amount to Admin
+            let token_client = token::Client::new(&env, &token);
+            token_client.transfer(&env.current_contract_address(), &admin, &fee_amount);
+
+            // 4. Set 'CollectedFees(token)' to 0
+            env.storage().persistent().set(&collected_fees_key, &0i128);
         }
-
-        let token_client = token::Client::new(&env, &giveaway.token);
-
-        if release_funds {
-            let prize = giveaway.amount / i128::from(giveaway.winner_count);
-            with_reentrancy_guard(&env, || {
-                for winner in giveaway.winners.iter() {
-                    token_client.transfer(&env.current_contract_address(), &winner, &prize);
-                }
-            });
-            giveaway.status = GiveawayStatus::ResolvedRelease;
-        } else {
-            token_client.transfer(
-                &env.current_contract_address(),
-                &giveaway.creator,
-                &giveaway.amount,
-            );
-            giveaway.status = GiveawayStatus::ResolvedRefund;
-        }
-
-        env.storage().persistent().set(&giveaway_key, &giveaway);
-        GiveawayResolved {
-            giveaway_id,
-            release_funds,
-            resolver,
-        }
-        .publish(&env);
     }
 }
