@@ -38,21 +38,24 @@ From `new.app/app/`, create `.env` (or copy `.env.example`):
 cp .env.example .env
 ```
 
-Minimum required values:
+Ensure the following minimum required values are configured:
 
-```env
-DATABASE_URL=postgresql://geev:bridgelet_pass@localhost:5432/geev
-AUTH_SECRET=<random-secret>
-NEXTAUTH_SECRET=<random-secret>
-```
+- `DATABASE_URL`: PostgreSQL connection string.
+- `AUTH_SECRET` & `NEXTAUTH_SECRET`: Used by NextAuth.js. Generate a strong secret:
+  ```bash
+  openssl rand -base64 32
+  ```
+- **Stellar Web Authentication (SEP-10)**:
+  - `STELLAR_NETWORK`: Use `testnet` for local development.
+  - `STELLAR_SERVER_SECRET`: You **must** generate a unique server keypair for SEP-10 to work. Generate a Testnet keypair [here](https://laboratory.stellar.org/#account-creator?network=testnet) and paste the Secret Key.
+  - `STELLAR_HOME_DOMAIN` & `STELLAR_WEB_AUTH_DOMAIN`: Set to `localhost:3000` for local testing.
 
-Generate a strong secret (use the same value for both secrets if you want):
+## 3) Install Freighter Wallet
 
-```bash
-openssl rand -base64 32
-```
+For local development and testing, you must install the [Freighter browser extension](https://www.freighter.app/). 
+Once installed, open the extension settings and ensure your network is set to **Testnet** (matching your `STELLAR_NETWORK` env var).
 
-## 3) Prepare the Database
+## 4) Prepare the Database
 
 Run these commands from `new.app/app/`:
 
@@ -68,7 +71,7 @@ What seeding adds:
 - Default badges
 - 5 dummy users for development login/testing
 
-## 4) Run the App
+## 5) Run the App
 
 From `new.app/app/`:
 
@@ -80,14 +83,24 @@ Open:
 
 - http://localhost:3000
 
-## 5) Verify Dev Login
+## 6) Verify Dev Login
 
-In development mode, use the Dev User Switcher (bottom-right) to sign in as a seeded user.
+In development mode, use the Dev User Switcher (bottom-right) to sign in as a seeded user, or use Freighter to test the Web3 authentication flow.
 
 Expected behavior:
 
 - Navbar/sidebar update to authenticated state
 - Main content redirects to `/feed`
+
+## How Authentication Works
+
+Geev uses [SEP-10 Stellar Web Authentication](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0010.md) for Web3 login via the Freighter extension.
+
+1. **Challenge**: The client requests a challenge transaction from the Next.js API. The server generates this challenge, signing it with `STELLAR_SERVER_SECRET`.
+2. **Sign**: The client prompts the user to sign the challenge transaction using their Freighter wallet.
+3. **Verify**: The client sends the signed transaction back to the server. The server verifies the signature and the network passphrase before issuing a session cookie via NextAuth.
+
+**Testing Locally (Caveat)**: Ensure that your `STELLAR_NETWORK` is set to `testnet` and that Freighter is also set to Testnet. A misconfigured network passphrase will cause the signature verification to silently fail.
 
 ## Useful Commands
 
