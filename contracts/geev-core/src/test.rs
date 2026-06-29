@@ -938,7 +938,7 @@ fn test_refund_flow() {
     assert_eq!(token_client.balance(&contract_id), 500);
 
     // 2. Cancel request
-    contract_client.cancel_request(&request_id, &creator);
+    contract_client.cancel_request(&creator, &request_id);
 
     // 3. Claim refund
     contract_client.claim_refund(&donor, &request_id);
