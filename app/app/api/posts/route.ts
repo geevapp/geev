@@ -210,6 +210,7 @@ const GET = async (request: NextRequest) => {
 
     const q = searchParams.get("q");
     const type = searchParams.get("type");
+    const category = searchParams.get("category");
     const sort = searchParams.get("sort");
     const filter = searchParams.get("filter");
     const userId = searchParams.get("userId");
@@ -234,6 +235,10 @@ const GET = async (request: NextRequest) => {
 
     if (type) {
       where.type = type as any;
+    }
+
+    if (category) {
+      where.category = category as any;
     }
 
     if (userId) {

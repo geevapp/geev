@@ -8,6 +8,7 @@ import {
   Gift,
   Home,
   Plus,
+  Search,
   Settings,
   ShieldCheck,
   TrendingUp,
@@ -32,6 +33,7 @@ export function DesktopSidebar() {
 
   const navigation = [
     { name: 'Feed', href: '/feed', icon: Home },
+    { name: 'Search', href: '/search', icon: Search },
     { name: 'Activity', href: '/activity', icon: TrendingUp },
     { name: 'Leaderboard', href: '/leaderboard', icon: Trophy },
     ...(['admin', 'moderator'].includes(user?.role ?? '')
