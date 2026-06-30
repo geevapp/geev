@@ -103,6 +103,38 @@ describe("Posts API", () => {
       expect(data.data.limit).toBe(10);
     });
 
+    it("should not 500 on non-numeric pagination params and fall back to defaults", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?page=abc&limit=-5",
+      );
+      const response = await GET(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.page).toBe(1);
+      expect(data.data.limit).toBe(1);
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 1 }),
+      );
+    });
+
+    it("should clamp an oversized limit to the maximum", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?limit=100000",
+      );
+      const response = await GET(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.limit).toBe(100);
+    });
+
     // ✅ NEW TEST: search query, type filter, sort
     it("should handle search query, type filter, and sort", async () => {
       const mockPosts = [
@@ -158,6 +190,24 @@ describe("Posts API", () => {
               lte: expect.any(Date),
             }),
           }),
+        }),
+      );
+    });
+
+    it("should filter by category", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?category=electronics",
+      );
+      const response = await GET(request);
+      const { status } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ category: "electronics" }),
         }),
       );
     });

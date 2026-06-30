@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { readJsonBody } from "@/lib/parse-json-body";
 import { POST_SLUG_MAX_LENGTH, sanitizePostSlug } from "@/lib/post-slug";
 import { checkAndAwardBadges } from "@/lib/badges";
+import { parsePagination } from "@/lib/pagination";
 
 const SLUG_SUFFIX_LENGTH = 6;
 
@@ -209,14 +210,14 @@ const GET = async (request: NextRequest) => {
 
     const q = searchParams.get("q");
     const type = searchParams.get("type");
+    const category = searchParams.get("category");
     const sort = searchParams.get("sort");
     const filter = searchParams.get("filter");
     const userId = searchParams.get("userId");
     const status = searchParams.get("status");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const { page, limit, skip } = parsePagination(searchParams);
 
     const where: Prisma.PostWhereInput = {};
     where.moderationStatus = { notIn: ["suspended", "banned"] };
@@ -234,6 +235,10 @@ const GET = async (request: NextRequest) => {
 
     if (type) {
       where.type = type as any;
+    }
+
+    if (category) {
+      where.category = category as any;
     }
 
     if (userId) {
@@ -266,7 +271,7 @@ const GET = async (request: NextRequest) => {
       prisma.post.findMany({
         where,
         orderBy,
-        skip: (page - 1) * limit,
+        skip,
         take: limit,
         include: {
           user: {

@@ -11,6 +11,7 @@ import {
   createNotificationInTransaction,
   fanOutNotificationsInTransaction,
 } from "@/lib/notifications";
+import { parsePagination } from "@/lib/pagination";
 
 function hasEntryProof(proofUrl: unknown, proofImage: unknown): boolean {
   const urlOk = typeof proofUrl === "string" && proofUrl.trim().length > 0;
@@ -303,14 +304,7 @@ export async function GET(
     const { id: postId } = await params;
     const { searchParams } = new URL(request.url);
 
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const skip = (page - 1) * limit;
-
-    // Validate pagination params
-    if (page < 1 || limit < 1 || limit > 100) {
-      return apiError("Invalid pagination parameters", 400);
-    }
+    const { page, limit, skip } = parsePagination(searchParams);
 
     // Check if post exists
     const post = await prisma.post.findUnique({
