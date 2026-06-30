@@ -37,6 +37,11 @@ pub struct RequestCancelled {
 
 #[contractimpl]
 impl MutualAidContract {
+    pub fn get_request(env: Env, request_id: u64) -> Option<HelpRequest> {
+        let request_key = DataKey::HelpRequest(request_id);
+        env.storage().persistent().get(&request_key)
+    }
+
     pub fn post_help_request(
         env: Env,
         creator: Address,
@@ -61,7 +66,7 @@ impl MutualAidContract {
             creator: creator.clone(),
             token,
             goal,
-            raised_amount: 0, // ✅ bucket starts empty — no funds locked
+            raised_amount: 0,
             status: HelpRequestStatus::Open,
             is_verified: false,
         };
@@ -77,6 +82,7 @@ impl MutualAidContract {
 
         request_id
     }
+
     pub fn donate(env: Env, donor: Address, request_id: u64, amount: i128) {
         donor.require_auth();
 
@@ -105,7 +111,6 @@ impl MutualAidContract {
 
         token_client.transfer(&donor, env.current_contract_address(), &amount);
 
-        // ✅ Track individual donation for refund logic
         let donation_key = DataKey::Donation(request_id, donor.clone());
         let previous_donation: i128 = env.storage().persistent().get(&donation_key).unwrap_or(0);
         let new_donation = previous_donation
@@ -113,7 +118,6 @@ impl MutualAidContract {
             .unwrap_or_else(|| panic_with_error!(&env, Error::ArithmeticOverflow));
         env.storage().persistent().set(&donation_key, &new_donation);
 
-        // ✅ Explicit overflow check for total raised
         let new_raised = request
             .raised_amount
             .checked_add(amount)

@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Moon, Settings, Sun, User, Wallet } from "lucide-react";
+import { LogOut, Moon, Search, Settings, Sun, User, Wallet } from "lucide-react";
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,24 +24,33 @@ export function Navbar() {
   const { user, logout, theme, toggleTheme } = useAppContext();
   const router = useRouter();
 
-  // ✅ Search state
+  // Quick-search state. The input is an entry point to the full /search page;
+  // it also shows a small live preview of matching posts as you type.
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<{ id: string; title: string }[]>([]);
 
   const handleLogout = () => {
     logout();
     router.push("/");
   };
 
-  // ✅ Debounce search
+  const goToSearch = () => {
+    const trimmed = query.trim();
+    router.push(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search");
+    setResults([]);
+  };
+
+  // Debounced live preview of matching posts.
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (query) {
-        fetch(`/api/posts?q=${query}`)
+      const trimmed = query.trim();
+      if (trimmed) {
+        fetch(`/api/posts?q=${encodeURIComponent(trimmed)}&limit=5`)
           .then((res) => res.json())
           .then((data) => {
             setResults(data?.data?.posts || []);
-          });
+          })
+          .catch(() => setResults([]));
       } else {
         setResults([]);
       }
@@ -67,27 +76,46 @@ export function Navbar() {
             />
           </Link>
 
-          {/* ✅ Search Bar */}
+          {/* Search Bar */}
           <div className="relative hidden md:block">
-            <input
-              type="text"
-              placeholder="Search posts..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="px-3 py-1 border rounded-md w-64"
-            />
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                goToSearch();
+              }}
+              className="relative"
+            >
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search posts and people..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search"
+                className="pl-9 pr-3 py-1.5 border border-gray-200 dark:border-gray-700 bg-transparent rounded-md w-72 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </form>
 
-            {/* ✅ Search Results Dropdown */}
-            {query && results.length > 0 && (
-              <div className="absolute top-10 left-0 w-full bg-white dark:bg-gray-800 shadow-md rounded-md p-2 z-50">
-                {results.map((post: any) => (
-                  <div
+            {/* Live preview dropdown */}
+            {query.trim() && results.length > 0 && (
+              <div className="absolute top-11 left-0 w-full bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-lg rounded-md p-1 z-50">
+                {results.map((post) => (
+                  <Link
                     key={post.id}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer rounded"
+                    href={`/post/${post.id}`}
+                    onClick={() => setResults([])}
+                    className="block p-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer rounded truncate"
                   >
                     {post.title}
-                  </div>
+                  </Link>
                 ))}
+                <button
+                  type="button"
+                  onClick={goToSearch}
+                  className="w-full text-left p-2 text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                >
+                  View all results
+                </button>
               </div>
             )}
           </div>

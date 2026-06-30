@@ -4,7 +4,7 @@ import { apiError, apiSuccess } from "@/lib/api-response";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readJsonBody } from "@/lib/parse-json-body";
-import { submitStellarWithdrawal } from "@/lib/stellar";
+import { submitStellarWithdrawal, convertUSDtoXLM } from "@/lib/stellar";
 
 const withdrawSchema = z.object({
   amount: z.number().positive("Amount must be greater than 0"),
@@ -93,10 +93,18 @@ export async function POST(request: NextRequest) {
       const { pendingTx, updatedUser } = reservation;
       let txHash: string;
       try {
+        // Validate parameters before submission
+        if (!user.walletAddress) {
+          throw new Error("User wallet address not configured");
+        }
+        if (!Number.isFinite(xlmAmount) || xlmAmount <= 0) {
+          throw new Error(`Invalid XLM amount for submission: ${xlmAmount}`);
+        }
+
         txHash = await submitStellarWithdrawal({
           sourceAddress: user.walletAddress,
           destinationAddress,
-          amount,
+          amount: xlmAmount,
           asset,
         });
       } catch (err) {
@@ -112,7 +120,7 @@ export async function POST(request: NextRequest) {
         ]);
 
         return apiError(
-          err instanceof Error ? err.message : "Stellar submission failed",
+          `Stellar submission failed: ${errorMsg}`,
           502,
         );
       }
@@ -129,6 +137,13 @@ export async function POST(request: NextRequest) {
           lastSync: updatedUser.updatedAt.toISOString(),
           simulated: false,
           txHash,
+          conversionInfo: {
+            originalAmount: amount,
+            originalCurrency: "USD",
+            convertedAmount: xlmAmount,
+            convertedCurrency: asset,
+            rate: (xlmAmount / amount).toFixed(7),
+          },
         },
         "Withdrawal completed successfully",
       );
@@ -143,12 +158,32 @@ export async function POST(request: NextRequest) {
       if (!user) throw new Error("USER_NOT_FOUND");
       if (user.walletBalance < amount) throw new Error("INSUFFICIENT_BALANCE");
 
+      // For simulated withdrawals, still calculate what XLM amount would be
+      // This helps with testing and audit trail
+      let xlmAmount = amount;
+      try {
+        xlmAmount = await convertUSDtoXLM(amount);
+        
+        // Validate the converted amount
+        if (!Number.isFinite(xlmAmount) || xlmAmount <= 0) {
+          console.warn(`Invalid simulated conversion result: ${xlmAmount} from USD ${amount}, using fallback`);
+          xlmAmount = amount;
+        }
+      } catch (err) {
+        // If conversion fails, fallback to 1:1 (for testing)
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`Simulated withdrawal conversion failed, using fallback: ${errorMsg}`);
+        xlmAmount = amount;
+      }
+
       const transaction = await tx.walletTransaction.create({
         data: {
           userId: currentUser.id,
           type: "withdraw",
           amount,
+          convertedAmount: xlmAmount,
           currency: "USD",
+          convertedCurrency: "XLM",
           status: "pending",
           method,
           note: note ?? null,
@@ -174,16 +209,26 @@ export async function POST(request: NextRequest) {
         transaction: result.transaction,
         lastSync: result.updatedAt.toISOString(),
         simulated,
+        conversionInfo: {
+          originalAmount: amount,
+          originalCurrency: "USD",
+          convertedAmount: result.transaction.convertedAmount,
+          convertedCurrency: "XLM",
+          rate: (result.transaction.convertedAmount / amount).toFixed(7),
+        },
       },
       "Withdrawal initiated successfully",
     );
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error(`Withdrawal POST handler error: ${errorMsg}`, { error });
+    
     if (error instanceof Error) {
       if (error.message === "INSUFFICIENT_BALANCE")
         return apiError("Insufficient wallet balance", 400);
       if (error.message === "USER_NOT_FOUND")
         return apiError("User not found", 404);
     }
-    return apiError("Failed to process withdrawal", 500);
+    return apiError(`Failed to process withdrawal: ${errorMsg}`, 500);
   }
 }

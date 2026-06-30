@@ -59,7 +59,7 @@ If you're working on the frontend application, the `app` directory contains the 
 
 1. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
 2. Configure environment variables in `.env`:
    ```env
@@ -67,16 +67,16 @@ If you're working on the frontend application, the `app` directory contains the 
    ```
 3. Generate Prisma Client:
    ```bash
-   npx prisma generate
+   pnpm prisma generate
    ```
 4. Run the development server:
    ```bash
-   npm run dev
+   pnpm dev
    ```
    Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing and creating pages and components. The backend API routes are located in `app/api/` and can be modified to implement the necessary functionality for the application.
-Refer to the [app/README.md](app/README.md) for more detailed information on the frontend and backend infrastructure, documentation, and resources.
+**Note**: For the full local setup guide, including how to configure Stellar web authentication (SEP-10) and required environment variables, refer to the [app/README.md](app/README.md).
 
 ### Smart Contracts
 

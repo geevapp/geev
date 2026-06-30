@@ -723,7 +723,11 @@ describe('Entry API Endpoints', () => {
       });
     });
 
-    it('should reject invalid pagination parameters', async () => {
+    it('should clamp out-of-range pagination parameters to safe defaults', async () => {
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findMany = vi.fn().mockResolvedValue([]);
+      prisma.entry.count = vi.fn().mockResolvedValue(0);
+
       const request = createMockRequest(
         `http://localhost:3000/api/posts/${post.id}/entries?page=0&limit=-1`,
       );
@@ -733,12 +737,17 @@ describe('Entry API Endpoints', () => {
       });
       const { status, data } = await parseResponse(response);
 
-      expect(status).toBe(400);
-      expect(data.success).toBe(false);
-      expect(data.error).toBe('Invalid pagination parameters');
+      expect(status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.pagination.page).toBe(1);
+      expect(data.data.pagination.limit).toBe(1);
     });
 
-    it('should reject limit greater than 100', async () => {
+    it('should clamp limit greater than 100 down to 100', async () => {
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findMany = vi.fn().mockResolvedValue([]);
+      prisma.entry.count = vi.fn().mockResolvedValue(0);
+
       const request = createMockRequest(
         `http://localhost:3000/api/posts/${post.id}/entries?limit=101`,
       );
@@ -748,9 +757,29 @@ describe('Entry API Endpoints', () => {
       });
       const { status, data } = await parseResponse(response);
 
-      expect(status).toBe(400);
-      expect(data.success).toBe(false);
-      expect(data.error).toBe('Invalid pagination parameters');
+      expect(status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.pagination.limit).toBe(100);
+    });
+
+    it('should fall back to defaults for non-numeric pagination parameters', async () => {
+      prisma.post.findUnique = vi.fn().mockResolvedValue(post);
+      prisma.entry.findMany = vi.fn().mockResolvedValue([]);
+      prisma.entry.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        `http://localhost:3000/api/posts/${post.id}/entries?page=abc&limit=xyz`,
+      );
+
+      const response = await GetEntries(request, {
+        params: Promise.resolve({ id: post.id }),
+      });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(data.data.pagination.page).toBe(1);
+      expect(data.data.pagination.limit).toBe(10);
     });
 
     it('should return 404 for non-existent post', async () => {

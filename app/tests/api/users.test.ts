@@ -87,7 +87,9 @@ describe('Users API', () => {
       expect(status).toBe(200);
       expect(data.success).toBe(true);
       expect(data.data.id).toBe('user_1');
-      expect(data.data.walletAddress).toBe('GUSER1WALLET');
+      // Anonymous request should not see sensitive fields with default privacy
+      expect(data.data.email).not.toBeDefined();
+      expect(data.data.walletAddress).not.toBeDefined();
     });
 
     it('should return 404 for a non-existent user', async () => {
@@ -144,6 +146,73 @@ describe('Users API', () => {
       expect(data.data.isFollowing).toBe(false);
       // No follow lookup should be performed for anonymous visitors
       expect(mockPrisma.follow.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('should strip email when requester is third party and showEmail=false', async () => {
+      const userWithDefaultPrivacy = {
+        ...user2,
+        profileVisibility: 'public',
+        showEmail: false,
+        showWalletAddress: false,
+      };
+
+      (getCurrentUser as any).mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue(userWithDefaultPrivacy);
+
+      const request = createMockRequest('http://localhost:3000/api/users/user_2');
+      const response = await GET(request, { params: Promise.resolve({ id: 'user_2' }) });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.email).not.toBeDefined();
+      expect(data.data.id).toBe('user_2');
+      expect(data.data.walletAddress).not.toBeDefined();
+    });
+
+    it('should strip email when requester is third party and profileVisibility=followers without following', async () => {
+      const userWithDefaultPrivacy = {
+        ...user2,
+        profileVisibility: 'followers',
+        showEmail: false,
+        showWalletAddress: false,
+      };
+
+      (getCurrentUser as any).mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue(userWithDefaultPrivacy);
+      mockPrisma.follow.findUnique.mockResolvedValue(null);
+
+      const request = createMockRequest('http://localhost:3000/api/users/user_2');
+      const response = await GET(request, { params: Promise.resolve({ id: 'user_2' }) });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(403);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe('Profile not accessible');
+    });
+
+    it('should allow third party to see email when profileVisibility=followers and user is following', async () => {
+      const userWithDefaultPrivacy = {
+        ...user2,
+        profileVisibility: 'followers',
+        showEmail: true,
+        showWalletAddress: true,
+      };
+
+      (getCurrentUser as any).mockResolvedValue(user1);
+      mockPrisma.user.findUnique.mockResolvedValue(userWithDefaultPrivacy);
+      mockPrisma.follow.findUnique.mockResolvedValue({
+        userId: user1.id,
+        followingId: user2.id,
+      });
+
+      const request = createMockRequest('http://localhost:3000/api/users/user_2');
+      const response = await GET(request, { params: Promise.resolve({ id: 'user_2' }) });
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.email).toBe('bob@example.com');
+      expect(data.data.walletAddress).toBe('GUSER2WALLET');
+      expect(data.data.isFollowing).toBe(true);
     });
   });
 

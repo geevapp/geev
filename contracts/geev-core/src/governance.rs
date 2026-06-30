@@ -22,6 +22,13 @@ pub struct ContentAutoSuspended {
     count: u32,
 }
 
+#[contractevent]
+pub struct ContentAppealed {
+    #[topic]
+    target_id: u64,
+    user: Address,
+}
+
 #[contractimpl]
 impl GovernanceContract {
     /// Flag a piece of content (Giveaway or HelpRequest) by its ID.
@@ -59,6 +66,57 @@ impl GovernanceContract {
         }
 
         Ok(())
+    }
+
+    /// File an appeal for a suspended content.
+    /// Only the creator of the content can file an appeal.
+    pub fn file_appeal(env: Env, user: Address, target_id: u64) -> Result<(), Error> {
+        user.require_auth();
+
+        let giveaway_key = DataKey::Giveaway(target_id);
+        let request_key = DataKey::HelpRequest(target_id);
+
+        // Try Giveaway first
+        if let Some(mut giveaway) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, crate::types::Giveaway>(&giveaway_key)
+        {
+            if giveaway.creator != user {
+                return Err(Error::NotCreator);
+            }
+            if giveaway.status != GiveawayStatus::Suspended {
+                return Err(Error::InvalidStatus);
+            }
+            giveaway.status = GiveawayStatus::UnderAppeal;
+            env.storage().persistent().set(&giveaway_key, &giveaway);
+
+            ContentAppealed { target_id, user }.publish(&env);
+            return Ok(());
+        }
+
+        // Try HelpRequest
+        if let Some(mut request) = env
+            .storage()
+            .persistent()
+            .get::<DataKey, crate::types::HelpRequest>(&request_key)
+        {
+            if request.creator != user {
+                return Err(Error::NotCreator);
+            }
+            if request.status != HelpRequestStatus::Suspended {
+                return Err(Error::InvalidStatus);
+            }
+            request.status = HelpRequestStatus::UnderAppeal;
+            env.storage().persistent().set(&request_key, &request);
+
+            ContentAppealed { target_id, user }.publish(&env);
+            return Ok(());
+        }
+
+        // If neither exists, could be future content or invalid ID.
+        // We'll return GiveawayNotFound as a fallback.
+        Err(Error::GiveawayNotFound)
     }
 
     /// Returns the total number of flags for a given content ID.

@@ -26,6 +26,10 @@ pub enum Error {
     TokenNotSupported = 20,
     UsernameTaken = 21,
     AlreadyFlagged = 22,
+    // ─── Dispute Errors ────────────────────────────────────────────────────
+    AlreadyDisputed = 23,
+    NotDisputed = 24,
+    NotAuthorizedResolver = 25,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -35,6 +39,11 @@ pub enum GiveawayStatus {
     Claimable = 1,
     Completed = 2,
     Suspended = 3,
+    // ─── Dispute States ────────────────────────────────────────────────────
+    Disputed = 4,
+    ResolvedRelease = 5,
+    ResolvedRefund = 6,
+    UnderAppeal = 7,
 }
 
 #[derive(Clone)]
@@ -70,6 +79,11 @@ pub enum HelpRequestStatus {
     Closed = 2,
     Cancelled = 3,
     Suspended = 4,
+    // ─── Dispute States ────────────────────────────────────────────────────
+    Disputed = 5,
+    ResolvedRelease = 6,
+    ResolvedRefund = 7,
+    UnderAppeal = 8,
 }
 
 #[derive(Clone)]
@@ -104,6 +118,9 @@ pub enum DataKey {
     FlagRecord(u64, Address),
     FlagCount(u64),
     Reputation(Address),
+    // ─── Dispute Tracking ──────────────────────────────────────────────────
+    DisputeRaisedAt(u64),          // timestamp when dispute was raised
+    DisputeRaisedBy(u64, Address), // who raised the dispute
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

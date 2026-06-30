@@ -2,18 +2,15 @@ import { apiError, apiSuccess } from '@/lib/api-response';
 
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { parsePagination } from '@/lib/pagination';
 
 export async function GET (request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'all-time';
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-
-    // Validate pagination parameters
-    if (page < 1 || limit < 1 || limit > 100) {
-      return apiError('Invalid pagination parameters', 400);
-    }
+    const { page, limit, skip } = parsePagination(searchParams, {
+      defaultLimit: 50,
+    });
 
     let dateFilter: Date | undefined;
     if (period === 'weekly') {
@@ -47,7 +44,7 @@ export async function GET (request: NextRequest) {
         xp: 'desc',
       },
       take: limit,
-      skip: (page - 1) * limit,
+      skip,
     });
 
     const tierOrder = { bronze: 1, silver: 2, gold: 3, platinum: 4 };

@@ -7,80 +7,94 @@ import { readJsonBody } from "@/lib/parse-json-body";
 const PROFILE_VISIBILITIES = new Set(["public", "followers", "private"]);
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const { id } = await params;
+   request: NextRequest,
+   { params }: { params: Promise<{ id: string }> },
+ ) {
+   try {
+     const { id } = await params;
+ 
+     const currentUser = await getCurrentUser(request);
+ 
+     const user = await prisma.user.findUnique({
+       where: { id },
+       select: {
+         id: true,
+         walletAddress: true,
+         name: true,
+         username: true,
+         bio: true,
+         email: true,
+         avatarUrl: true,
+         xp: true,
+         walletBalance: true,
+         profileVisibility: true,
+         showEmail: true,
+         showWalletAddress: true,
+         emailNotifications: true,
+         pushNotifications: true,
+         marketingNotifications: true,
+         createdAt: true,
+         updatedAt: true,
+         _count: {
+           select: {
+             followers: true,
+             followings: true,
+           },
+         },
+         badges: {
+           include: { badge: true },
+         },
+       },
+     });
+ 
+     if (!user) {
+       return apiError("User not found", 404);
+     }
+ 
+     let isFollowing = false;
+     if (currentUser) {
+       const follow = await prisma.follow.findUnique({
+         where: {
+           userId_followingId: {
+             userId: currentUser.id,
+             followingId: id,
+           },
+         },
+       });
+       isFollowing = !!follow;
+     }
+ 
+const canAccessProfile =
+        currentUser?.id === user.id ||
+        user.profileVisibility === 'public' ||
+        (user.profileVisibility === 'followers' && isFollowing);
 
-    try {
-      const currentUser = await getCurrentUser(request);
-
-      const user = await prisma.user.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          walletAddress: true,
-          name: true,
-          username: true,
-          bio: true,
-          email: true,
-          avatarUrl: true,
-          xp: true,
-          walletBalance: true,
-          profileVisibility: true,
-          showEmail: true,
-          showWalletAddress: true,
-          emailNotifications: true,
-          pushNotifications: true,
-          marketingNotifications: true,
-          createdAt: true,
-          updatedAt: true,
-          _count: {
-            select: {
-              followers: true,
-              followings: true,
-            },
-          },
-          badges: {
-            include: { badge: true },
-          },
-        },
-      });
-
-      if (user) {
-        let isFollowing = false;
-        if (currentUser) {
-          const follow = await prisma.follow.findUnique({
-            where: {
-              userId_followingId: {
-                userId: currentUser.id,
-                followingId: id,
-              },
-            },
-          });
-          isFollowing = !!follow;
-        }
-
-        const normalizedUser = {
-          ...user,
-          badges: (user.badges || []).map((userBadge: any) => ({
-            ...userBadge.badge,
-            awardedAt: userBadge.awardedAt,
-          })),
-        };
-
-        return apiSuccess({ ...normalizedUser, isFollowing });
+      if (!canAccessProfile) {
+        return apiError("Profile not accessible", 403);
       }
-    } catch (dbError) {
-      // Database error - fallback already handled above
-    }
 
-    return apiError("User not found", 404);
-  } catch (error) {
-    return apiError("Failed to fetch user", 500);
-  }
-}
+      const normalizedUser = {
+        ...user,
+        badges: (user.badges || []).map((userBadge: any) => ({
+          ...userBadge.badge,
+          awardedAt: userBadge.awardedAt,
+        })),
+      };
+
+      if (currentUser?.id !== user.id) {
+        if (!normalizedUser.showEmail) {
+          delete normalizedUser.email;
+        }
+        if (!normalizedUser.showWalletAddress) {
+          delete normalizedUser.walletAddress;
+        }
+      }
+
+      return apiSuccess({ ...normalizedUser, isFollowing });
+   } catch (error) {
+     return apiError("Failed to fetch user", 500);
+   }
+ }
 
 export async function PATCH(
   request: NextRequest,

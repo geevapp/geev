@@ -103,6 +103,38 @@ describe("Posts API", () => {
       expect(data.data.limit).toBe(10);
     });
 
+    it("should not 500 on non-numeric pagination params and fall back to defaults", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?page=abc&limit=-5",
+      );
+      const response = await GET(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.page).toBe(1);
+      expect(data.data.limit).toBe(1);
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 0, take: 1 }),
+      );
+    });
+
+    it("should clamp an oversized limit to the maximum", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?limit=100000",
+      );
+      const response = await GET(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.limit).toBe(100);
+    });
+
     // ✅ NEW TEST: search query, type filter, sort
     it("should handle search query, type filter, and sort", async () => {
       const mockPosts = [
@@ -162,6 +194,24 @@ describe("Posts API", () => {
       );
     });
 
+    it("should filter by category", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([]);
+      prisma.post.count = vi.fn().mockResolvedValue(0);
+
+      const request = createMockRequest(
+        "http://localhost:3000/api/posts?category=electronics",
+      );
+      const response = await GET(request);
+      const { status } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(prisma.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ category: "electronics" }),
+        }),
+      );
+    });
+
     it("should sort by ending_soon", async () => {
       prisma.post.findMany = vi.fn().mockResolvedValue([]);
       prisma.post.count = vi.fn().mockResolvedValue(0);
@@ -178,6 +228,34 @@ describe("Posts API", () => {
           orderBy: [{ endsAt: "asc" }],
         }),
       );
+    });
+
+    it("should return currentAmount as sum of helpContributions for each post", async () => {
+      prisma.post.findMany = vi.fn().mockResolvedValue([
+        { id: "post_help_1", title: "Help Request Post", type: "request", user: testUser },
+        { id: "post_help_2", title: "Another Help Post", type: "request", user: testUser },
+        { id: "post_no_contrib", title: "No Contributions Post", type: "request", user: testUser },
+      ]);
+      prisma.post.count = vi.fn().mockResolvedValue(3);
+      (prisma.helpContribution as any).groupBy = vi.fn().mockResolvedValue([
+        { postId: "post_help_1", _sum: { amount: 1250 } },
+        { postId: "post_help_2", _sum: { amount: 300 } },
+      ]);
+
+      const request = createMockRequest("http://localhost:3000/api/posts?type=request");
+      const response = await GET(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(200);
+      expect(data.data.posts).toHaveLength(3);
+
+      const post1 = data.data.posts.find((p: any) => p.id === "post_help_1");
+      const post2 = data.data.posts.find((p: any) => p.id === "post_help_2");
+      const post3 = data.data.posts.find((p: any) => p.id === "post_no_contrib");
+
+      expect(post1.currentAmount).toBe(1250);
+      expect(post2.currentAmount).toBe(300);
+      expect(post3.currentAmount).toBe(0);
     });
 
     it("applies deadline active filter when filter=active", async () => {
