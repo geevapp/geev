@@ -59,6 +59,7 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Check production config secrets
+        if: github.event_name != 'pull_request'
         run: |
           if [ -z "${{ secrets.NEXTAUTH_SECRET }}" ]; then
             echo "Error: NEXTAUTH_SECRET is missing from repository secrets."
