@@ -37,13 +37,10 @@ export async function POST(request: Request) {
       expires: new Date(0), // Set to epoch to ensure expiration
     };
 
-    // 1. Clear the legacy auth-token
-    response.cookies.set("auth-token", "", cookieOptions);
-
-    // 2. Clear Auth.js session token (standard)
+    // 1. Clear Auth.js session token (standard)
     response.cookies.set("next-auth.session-token", "", cookieOptions);
 
-    // 3. Clear Auth.js session token (secure version used in production/HTTPS)
+    // 2. Clear Auth.js session token (secure version used in production/HTTPS)
     response.cookies.set("__Secure-next-auth.session-token", "", cookieOptions);
 
     return response;

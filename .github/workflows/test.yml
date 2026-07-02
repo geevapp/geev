@@ -58,10 +58,13 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/geev_test
         run: npx prisma migrate deploy
 
+
+
       - name: Run tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/geev_test
           JWT_SECRET: test-secret-key
+          NEXTAUTH_SECRET: test-secret-key
           NODE_ENV: test
         run: npm run test:ci
 

@@ -14,7 +14,7 @@ import { apiError } from "@/lib/api-response";
 /**
  * POST handler - Trigger indexer run
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest): Promise<Response> {
   try {
     const admin = await getCurrentAdmin();
     if (!admin) return apiError("Forbidden", 403);
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 /**
  * GET handler - Get indexer statistics
  */
-export async function GET(): Promise<NextResponse> {
+export async function GET(): Promise<Response> {
   try {
     const admin = await getCurrentAdmin();
     if (!admin) return apiError("Forbidden", 403);

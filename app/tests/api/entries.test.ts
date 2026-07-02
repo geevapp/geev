@@ -109,15 +109,15 @@ describe('Entry API Endpoints', () => {
 
     prisma.entry.count = vi.fn().mockResolvedValue(0);
     prisma.entry.updateMany = vi.fn().mockResolvedValue({ count: 0 });
-    prisma.postWinner = {
+    (prisma as any).postWinner = {
       count: vi.fn().mockResolvedValue(0),
       createMany: vi.fn().mockResolvedValue({ count: 0 }),
-    } as any;
+    };
     prisma.post.update = vi.fn().mockResolvedValue(post);
-    prisma.notification = {
+    (prisma as any).notification = {
       create: vi.fn().mockResolvedValue({}),
       createMany: vi.fn().mockResolvedValue({ count: 0 }),
-    } as any;
+    };
   });
 
   describe('POST /api/posts/[id]/entries', () => {

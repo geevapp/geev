@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
           originalCurrency: "USD",
           convertedAmount: result.transaction.convertedAmount,
           convertedCurrency: "XLM",
-          rate: (result.transaction.convertedAmount / amount).toFixed(7),
+          rate: ((result.transaction.convertedAmount ?? amount) / amount).toFixed(7),
         },
       },
       "Withdrawal initiated successfully",

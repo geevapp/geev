@@ -94,9 +94,7 @@ describe("GET /api/indexer/stats", () => {
   it("returns 403 for unauthenticated callers", async () => {
     mockGetCurrentAdmin.mockResolvedValue(null);
 
-    const response = await GET(
-      createMockRequest("http://localhost:3000/api/indexer/stats"),
-    );
+    const response = await GET();
     const { status, data } = await parseResponse(response);
 
     expect(status).toBe(403);
@@ -114,9 +112,7 @@ describe("GET /api/indexer/stats", () => {
       status: "synced",
     });
 
-    const response = await GET(
-      createMockRequest("http://localhost:3000/api/indexer/stats"),
-    );
+    const response = await GET();
     const { status, data } = await parseResponse(response);
 
     expect(status).toBe(200);

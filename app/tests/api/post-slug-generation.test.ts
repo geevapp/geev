@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
 const mockPrisma = vi.hoisted(() => ({
   $transaction: vi.fn(),
@@ -80,13 +81,13 @@ describe('POST /api/posts slug generation', () => {
       xp: 50,
       rankId: 'newcomer',
     });
-    prisma.$transaction.mockImplementation(async (callback: any) => callback(prisma));
-    prisma.post.findUnique.mockResolvedValue(null);
-    prisma.postRequirements.create.mockResolvedValue({
+    (prisma.$transaction as any).mockImplementation(async (callback: any) => callback(prisma));
+    (prisma.post.findUnique as any).mockResolvedValue(null);
+    (prisma.postRequirements.create as any).mockResolvedValue({
       id: 'requirements_123',
       proofRequired: false,
     });
-    prisma.post.create.mockImplementation((args: any) => Promise.resolve({
+    (prisma.post.create as any).mockImplementation((args: any) => Promise.resolve({
       id: 'post_123',
       ...args.data,
       createdAt: new Date(),
@@ -105,11 +106,11 @@ describe('POST /api/posts slug generation', () => {
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    prisma.post.findUnique
+    (prisma.post.findUnique as any)
       .mockResolvedValueOnce({ id: 'existing_post' })
       .mockResolvedValueOnce(null);
 
-    const request = createMockRequest('http://localhost:3000/api/posts', postData);
+    const request = createMockRequest('http://localhost:3000/api/posts', postData) as unknown as NextRequest;
 
     const response = await POST(request);
     const { status, data } = await parseResponse(response);
@@ -133,9 +134,9 @@ describe('POST /api/posts slug generation', () => {
       endsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
-    prisma.post.create.mockRejectedValue({ code: 'P2002' });
+    (prisma.post.create as any).mockRejectedValue({ code: 'P2002' });
 
-    const request = createMockRequest('http://localhost:3000/api/posts', postData);
+    const request = createMockRequest('http://localhost:3000/api/posts', postData) as unknown as NextRequest;
 
     const response = await POST(request);
     const { status, data } = await parseResponse(response);
