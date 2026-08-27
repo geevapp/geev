@@ -386,4 +386,62 @@ describe("Uploads API", () => {
       }
     });
   });
+
+  describe("folder validation", () => {
+    const jpegBlob = () =>
+      new Blob([new ArrayBuffer(1024)], { type: "image/jpeg" });
+
+    it("should reject path traversal in folder (../../)", async () => {
+      const formData = new FormData();
+      formData.append("file", jpegBlob(), "photo.jpg");
+      formData.append("folder", "../../x");
+
+      const request = new NextRequest("http://localhost:3000/api/uploads", {
+        method: "POST",
+        body: formData,
+      });
+
+      const response = await POST(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(400);
+      expect(data.success).toBe(false);
+    });
+
+    it("should reject folders outside the whitelist", async () => {
+      const formData = new FormData();
+      formData.append("file", jpegBlob(), "photo.jpg");
+      formData.append("folder", "evil");
+
+      const request = new NextRequest("http://localhost:3000/api/uploads", {
+        method: "POST",
+        body: formData,
+      });
+
+      const response = await POST(request);
+      const { status, data } = await parseResponse(response);
+
+      expect(status).toBe(400);
+      expect(data.success).toBe(false);
+    });
+
+    it("should accept whitelisted folders", async () => {
+      for (const folder of ["uploads", "images", "videos"]) {
+        const formData = new FormData();
+        formData.append("file", jpegBlob(), "photo.jpg");
+        formData.append("folder", folder);
+
+        const request = new NextRequest("http://localhost:3000/api/uploads", {
+          method: "POST",
+          body: formData,
+        });
+
+        const response = await POST(request);
+        const { status, data } = await parseResponse(response);
+
+        expect(status).toBe(200);
+        expect(data.success).toBe(true);
+      }
+    });
+  });
 });

@@ -27,7 +27,16 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file");
     if (!(file instanceof File)) return apiError("No file provided", 400);
 
-    const folder = (formData.get("folder") as string | null) ?? "uploads";
+    const folderRaw = (formData.get("folder") as string | null) ?? "uploads";
+
+    // Prevent path traversal and namespace squatting: restrict uploads to a
+    // fixed set of folders and reject anything that is not a plain name.
+    const ALLOWED_FOLDERS = new Set(["uploads", "images", "videos"]);
+    if (!ALLOWED_FOLDERS.has(folderRaw) || !/^[a-z0-9_-]+$/.test(folderRaw)) {
+      return apiError("Invalid folder", 400);
+    }
+
+    const folder = folderRaw;
 
     // Enhanced validation: type, size, and magic byte verification
     const validationError = await validateFileWithContent(file);
