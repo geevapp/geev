@@ -19,6 +19,9 @@ export async function GET (request: NextRequest) {
       dateFilter = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     }
 
+    // (#429) Ranking must consider every user, then slice the requested page.
+    // Selecting take/skip first made the badge sort a per-page no-op and made
+    // `total` equal the page size.
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -37,45 +40,63 @@ export async function GET (request: NextRequest) {
             entries: dateFilter
               ? { where: { createdAt: { gte: dateFilter } } }
               : true,
+            helpContributions: dateFilter
+              ? { where: { createdAt: { gte: dateFilter } } }
+              : true,
           },
         },
       },
-      orderBy: {
-        xp: 'desc',
-      },
-      take: limit,
-      skip,
     });
 
-    const tierOrder = { bronze: 1, silver: 2, gold: 3, platinum: 4 };
+    // (#429) Badge tiers are capitalized in the schema; the lowercase lookup
+    // map used to resolve to undefined for every badge. Keys are normalized
+    // case-insensitively and Diamond is included.
+    const tierRank: Record<string, number> = {
+      bronze: 1,
+      silver: 2,
+      gold: 3,
+      platinum: 4,
+      diamond: 5,
+    };
 
-    const leaderboard = users.map((user) => {
-      const badges = user.badges
-        .map((ub) => ub.badge)
-        .sort((a, b) =>
-          (tierOrder[b.tier as keyof typeof tierOrder] || 0) -
-          (tierOrder[a.tier as keyof typeof tierOrder] || 0)
-        );
+    const leaderboard = users
+      .map((user) => {
+        const badges = user.badges
+          .map((ub) => ub.badge)
+          .sort(
+            (a, b) =>
+              (tierRank[b.tier.toLowerCase()] || 0) -
+              (tierRank[a.tier.toLowerCase()] || 0)
+          );
 
-      return {
-        id: user.id,
-        name: user.name,
-        avatar_url: user.avatarUrl,
-        xp: user.xp,
-        rank: user.rank,
-        post_count: user._count.posts,
-        entry_count: user._count.entries,
-        total_contributions: user._count.posts + user._count.entries,
-        badges,
-      };
-    });
+        const activityCount =
+          user._count.posts + user._count.entries + user._count.helpContributions;
+
+        return {
+          id: user.id,
+          name: user.name,
+          avatar_url: user.avatarUrl,
+          xp: user.xp,
+          rank: user.rank,
+          post_count: user._count.posts,
+          entry_count: user._count.entries,
+          help_contribution_count: user._count.helpContributions,
+          // (#429) total contributions previously ignored helpContributions.
+          total_contributions: activityCount,
+          badges,
+          // (#429) Period leaderboards rank by activity within the window;
+          // all-time keeps the global xp ordering.
+          sortScore: dateFilter ? activityCount : user.xp,
+        };
+      })
+      .sort((a, b) => b.sortScore - a.sortScore);
 
     return apiSuccess({
       leaderboard,
       page,
       limit,
       period,
-      total: leaderboard.length,
+      total: users.length,
     });
   } catch (error) {
     console.error('Leaderboard API error:', error);

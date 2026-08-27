@@ -150,10 +150,13 @@ export async function GET(
     const totalRaised = aggregate._sum.amount || 0;
 
     return apiSuccess({
-      contributions: contributions.map(c => ({
-        ...c,
-        user: c.isAnonymous ? { id: 'anonymous', name: 'Anonymous', avatarUrl: null, rank: null } : c.user
-      })),
+      contributions: contributions.map(c => {
+        if (!c.isAnonymous) return c;
+        // (#427) The spread below used to retain c.userId, de-anonymizing
+        // "anonymous" contributions. Strip the id along with the user.
+        const { userId: _leakUserId, user: _leakUser, ...safe } = c;
+        return { ...safe, user: { id: 'anonymous', name: 'Anonymous', avatarUrl: null, rank: null } };
+      }),
       totalRaised
     });
   } catch (error) {

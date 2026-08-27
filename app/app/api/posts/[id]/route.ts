@@ -84,7 +84,15 @@ const GET = async (
 
         const currentAmount = post.contributions?.reduce((sum, c) => sum + c.amount, 0) || 0;
 
-        return apiSuccess({ ...post, currentAmount });
+        // (#427) Anonymous help contributions must not leak the contributor:
+        // strip the user relation and the userId from anonymous entries.
+        const sanitizedContributions = post.contributions.map((c) => {
+            if (!c.isAnonymous) return c;
+            const { user: _leakUser, userId: _leakUserId, ...safe } = c;
+            return { ...safe, user: { id: 'anonymous', name: 'Anonymous', avatarUrl: null, username: null } };
+        });
+
+        return apiSuccess({ ...post, contributions: sanitizedContributions, currentAmount });
     } catch (error) {
         return apiError('Failed to fetch post', 500);
     }

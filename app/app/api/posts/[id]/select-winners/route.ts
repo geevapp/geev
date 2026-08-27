@@ -68,41 +68,63 @@ export const POST = async (
     }
     const body = parsed.data;
 
-    const post = await prisma.post.findUnique({
-      where: { id },
-      include: {
-        entries: {
-          include: { burns: true },
-          orderBy: { createdAt: "asc" },
+    // ── (#426) TOCTOU fix ────────────────────────────────────────────────
+    // The post (status + winners) used to be read OUTSIDE the transaction,
+    // so two concurrent selection requests could both pass the
+    // completed-check and both create winner sets. Re-read the post INSIDE
+    // the interactive transaction and run every guard against that read;
+    // the status flip below is conditional, so even if two transactions
+    // interleave, only the first claim wins and the loser aborts cleanly.
+    const outcome = await prisma.$transaction(async (tx) => {
+      const post = await tx.post.findUnique({
+        where: { id },
+        include: {
+          entries: {
+            include: { burns: true },
+            orderBy: { createdAt: "asc" },
+          },
+          winners: true,
         },
-        winners: true,
-      },
-    });
+      });
 
-    if (!post) return apiError("Post not found", 404);
-    if (post.userId !== user.id) return apiError("Forbidden", 403);
-    if (["suspended", "banned"].includes(post.moderationStatus)) {
-      return apiError("Cannot select winners for moderated content", 403);
-    }
+      if (!post)
+        return { ok: false as const, response: apiError("Post not found", 404) };
+      if (post.userId !== user.id)
+        return { ok: false as const, response: apiError("Forbidden", 403) };
+      if (["suspended", "banned"].includes(post.moderationStatus)) {
+        return {
+          ok: false as const,
+          response: apiError("Cannot select winners for moderated content", 403),
+        };
+      }
 
-    if (post.status === "completed") {
-      return apiError("Winners already selected for this post", 400);
-    }
-    if (!["open", "active", "in_progress"].includes(post.status)) {
-      return apiError(
-        `Cannot select winners for a post with status "${post.status}"`,
-        400,
+      if (post.status === "completed") {
+        return {
+          ok: false as const,
+          response: apiError("Winners already selected for this post", 400),
+        };
+      }
+      if (!["open", "active", "in_progress"].includes(post.status)) {
+        return {
+          ok: false as const,
+          response: apiError(
+            `Cannot select winners for a post with status "${post.status}"`,
+            400,
+          ),
+        };
+      }
+      if (post.entries.length === 0) {
+        return {
+          ok: false as const,
+          response: apiError("No entries to select from", 400),
+        };
+      }
+
+      // Exclude users who are already winners (prevents duplicates across calls)
+      const existingWinnerUserIds = new Set(post.winners.map((w) => w.userId));
+      const eligibleEntries = post.entries.filter(
+        (e) => !existingWinnerUserIds.has(e.userId),
       );
-    }
-    if (post.entries.length === 0) {
-      return apiError("No entries to select from", 400);
-    }
-
-    // Exclude users who are already winners (prevents duplicates across calls)
-    const existingWinnerUserIds = new Set(post.winners.map((w) => w.userId));
-    const eligibleEntries = post.entries.filter(
-      (e) => !existingWinnerUserIds.has(e.userId),
-    );
 
     const maxWinners = post.maxWinners ?? 1;
     let selectedEntries: typeof eligibleEntries = [];
@@ -179,57 +201,82 @@ export const POST = async (
       );
     }
 
-    // ── Persist in a single transaction ──────────────────────────────────
-    await prisma.$transaction(async (tx) => {
-      const entryIds = selectedEntries.map((e) => e.id);
-
-      await tx.entry.updateMany({
-        where: { id: { in: entryIds } },
-        data: { isWinner: true },
-      });
-
-      await tx.postWinner.createMany({
-        data: selectedEntries.map((e) => ({
-          postId: post.id,
-          userId: e.userId,
-          assignedBy: user.id,
-        })),
-        skipDuplicates: true,
-      });
-
-      await tx.post.update({
-        where: { id: post.id },
-        data: { status: "completed" },
-      });
-
-      // Notify each winner using delivery layer
-      const fanOut = fanOutNotificationsInTransaction(tx);
-      await fanOut({
-        userIds: selectedEntries.map((e) => e.userId),
-        type: "giveaway_win",
-        message: `Congratulations! You won the giveaway "${post.title}".`,
-        link: `/posts/${post.id}`,
-      });
-    });
-
-    // Award badges to winners async (best-effort)
-    for (const entry of selectedEntries) {
-      checkAndAwardBadges(entry.userId).catch(console.error);
+    if (selectedEntries.length === 0) {
+      return {
+        ok: false as const,
+        response: apiError(
+          "No eligible entries found for the requested selection",
+          400,
+        ),
+      };
     }
 
-    return apiSuccess(
-      {
+    // ── Conditional claim inside the same transaction ────────────────────
+    // Only the first concurrent request can flip the status away from the
+    // selectable set; the loser sees count 0 and aborts without creating
+    // winners, entries.isWinner flags, or notifications.
+    const claimed = await tx.post.updateMany({
+      where: { id: post.id, status: { in: ["open", "active", "in_progress"] } },
+      data: { status: "completed" },
+    });
+    if (claimed.count === 0) {
+      return {
+        ok: false as const,
+        response: apiError("Winners already selected for this post", 400),
+      };
+    }
+
+    const entryIds = selectedEntries.map((e) => e.id);
+
+    await tx.entry.updateMany({
+      where: { id: { in: entryIds } },
+      data: { isWinner: true },
+    });
+
+    await tx.postWinner.createMany({
+      data: selectedEntries.map((e) => ({
+        postId: post.id,
+        userId: e.userId,
+        assignedBy: user.id,
+      })),
+      skipDuplicates: true,
+    });
+
+    // Notify each winner using delivery layer
+    const fanOut = fanOutNotificationsInTransaction(tx);
+    await fanOut({
+      userIds: selectedEntries.map((e) => e.userId),
+      type: "giveaway_win",
+      message: `Congratulations! You won the giveaway "${post.title}".`,
+      link: `/posts/${post.id}`,
+    });
+
+    return {
+      ok: true as const,
+      selectedEntries,
+      data: {
         method: body.method,
         postId: post.id,
-        postStatus: "completed",
+        postStatus: "completed" as const,
         totalSelected: selectedEntries.length,
         winners: selectedEntries.map((e) => ({
           entryId: e.id,
           userId: e.userId,
         })),
       },
-      "Winners selected successfully",
-    );
+    };
+  });
+
+  if (!outcome.ok) return outcome.response;
+
+  const { selectedEntries, data } = outcome;
+
+  // Award badges to winners async (best-effort)
+  for (const entry of selectedEntries) {
+    checkAndAwardBadges(entry.userId).catch(console.error);
+  }
+
+  return apiSuccess(data, "Winners selected successfully");
   } catch (error) {
     console.error("Select winners error:", error);
     return apiError("Failed to select winners", 500);
